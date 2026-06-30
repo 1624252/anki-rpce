@@ -24,7 +24,10 @@ app the corpus is `data/roberts_rules_of_order_12th_edition.md`.
 
 from __future__ import annotations
 
+import json
+import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 # RONR paragraph citations look like "12:70", "12:70-71", or "16:1-16:5".
@@ -169,6 +172,102 @@ class BaselineExaminer(Examiner):
         verdict = "matches" if passed else "misses key points from"
         feedback = f"Your answer {verdict} the model ruling."
         return GradeResult(score, passed, feedback, citation, abstained=False)
+
+
+def build_grading_prompt(answer: str, gold_answer: str, context: str) -> str:
+    """Construct the examiner prompt: grade for accuracy against the rubric,
+    grounded in the supplied RONR context; the candidate need not cite."""
+    return (
+        "You are a strict RPCE Section II examiner. Grade the candidate's answer "
+        "for ACCURACY and reasoning against the model ruling, using only the RONR "
+        "context provided. The candidate is NOT required to cite sources. Do not "
+        "introduce facts absent from the context. Respond as JSON: "
+        '{"score": <0-5 number>, "feedback": "<one or two sentences>"}.\n\n'
+        f"RONR context:\n{context}\n\n"
+        f"Model ruling:\n{gold_answer}\n\n"
+        f"Candidate answer:\n{answer}\n"
+    )
+
+
+def _parse_llm_json(raw: str) -> dict:
+    """Extract the first JSON object from an LLM response, leniently."""
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    if not match:
+        raise ValueError("no JSON object in model output")
+    return json.loads(match.group(0))
+
+
+class LLMExaminer(Examiner):
+    """LLM-backed grader. Network access is injected as `call_fn(prompt)->str`
+    so it is testable offline; grading is grounded in retrieved RONR passages
+    and abstains when none are found (never invents)."""
+
+    def __init__(self, call_fn: Callable[[str], str], pass_score: float = 3.0) -> None:
+        self.call_fn = call_fn
+        self.pass_score = pass_score
+
+    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
+        passages = retrieve(corpus, gold_answer, k=3)
+        if not passages:
+            return GradeResult(
+                0.0, False, "No supporting RONR passage found.", None, abstained=True
+            )
+        context = "\n\n".join(p.text for p in passages)
+        try:
+            data = _parse_llm_json(
+                self.call_fn(build_grading_prompt(answer, gold_answer, context))
+            )
+            score = max(0.0, min(5.0, float(data["score"])))
+            feedback = str(data.get("feedback", "")).strip() or "(no feedback)"
+        except (ValueError, KeyError, TypeError) as exc:
+            # Malformed/unavailable model output -> abstain rather than guess.
+            return GradeResult(
+                0.0, False, f"Examiner unavailable: {exc}", None, abstained=True
+            )
+        return GradeResult(
+            score,
+            score >= self.pass_score,
+            feedback,
+            passages[0].citation,
+            abstained=False,
+        )
+
+
+def make_examiner(call_fn: Callable[[str], str] | None = None) -> Examiner:
+    """Return an LLM examiner when a grader is available, else the offline
+    baseline. `call_fn` (or an env API key) opts into the LLM; with neither, the
+    app still grades via :class:`BaselineExaminer` (AI-off)."""
+    if call_fn is not None:
+        return LLMExaminer(call_fn)
+    if os.environ.get("RPCE_AI_KEY") or os.environ.get("OPENAI_API_KEY"):
+        return LLMExaminer(_default_llm_call)
+    return BaselineExaminer()
+
+
+def _default_llm_call(prompt: str) -> str:  # pragma: no cover - requires network + key
+    """Minimal OpenAI-compatible chat call using only the stdlib. Reads
+    RPCE_AI_KEY/OPENAI_API_KEY, optional RPCE_AI_BASE_URL and RPCE_AI_MODEL.
+    Only invoked when a key is configured; never exercised in tests."""
+    import urllib.request
+
+    key = os.environ.get("RPCE_AI_KEY") or os.environ["OPENAI_API_KEY"]
+    base = os.environ.get("RPCE_AI_BASE_URL", "https://api.openai.com/v1")
+    model = os.environ.get("RPCE_AI_MODEL", "gpt-4o-mini")
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        f"{base}/chat/completions",
+        data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read())
+    return data["choices"][0]["message"]["content"]
 
 
 @dataclass

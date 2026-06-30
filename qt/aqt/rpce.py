@@ -249,7 +249,9 @@ class ScenarioDialog(QDialog):
         if not answer:
             return
         s = self._scenarios[self._idx]
-        result = examiner.BaselineExaminer().grade(
+        # Uses the LLM examiner when an API key is configured, else the offline
+        # baseline (the app always grades, AI on or off).
+        result = examiner.make_examiner().grade(
             answer, s.gold_answer, self._corpus or s.gold_answer
         )
         scores.record_scenario(self._mw.col)

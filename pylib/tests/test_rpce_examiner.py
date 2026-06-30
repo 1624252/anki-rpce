@@ -71,6 +71,44 @@ def test_evaluate_reports_accuracy_against_cutoff():
     assert result.passed_cutoff is True
 
 
+def test_llm_examiner_grades_via_injected_call_and_cites():
+    def fake_call(_prompt: str) -> str:
+        return 'Sure: {"score": 4, "feedback": "Correct on the two-thirds vote."} done'
+
+    examiner = ex.LLMExaminer(fake_call, pass_score=3.0)
+    result = examiner.grade(
+        "two-thirds vote, not debatable",
+        "Previous Question requires a two-thirds vote and is not debatable.",
+        CORPUS,
+    )
+    assert result.passed is True
+    assert result.score == 4.0
+    assert result.citation == "16:1-16:5"
+    assert result.abstained is False
+
+
+def test_llm_examiner_abstains_without_supporting_passage():
+    examiner = ex.LLMExaminer(lambda _p: '{"score":5,"feedback":"x"}')
+    result = examiner.grade("anything", "rule about xylophones not present", CORPUS)
+    assert result.abstained is True
+
+
+def test_llm_examiner_abstains_on_malformed_output():
+    examiner = ex.LLMExaminer(lambda _p: "not json at all")
+    result = examiner.grade(
+        "two-thirds", "Previous Question requires a two-thirds vote.", CORPUS
+    )
+    assert result.abstained is True
+
+
+def test_make_examiner_falls_back_to_baseline_without_key(monkeypatch):
+    monkeypatch.delenv("RPCE_AI_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert isinstance(ex.make_examiner(), ex.BaselineExaminer)
+    # Providing a call_fn opts into the LLM examiner.
+    assert isinstance(ex.make_examiner(lambda _p: "{}"), ex.LLMExaminer)
+
+
 def test_find_leaks_flags_near_duplicates_and_passes_when_clean():
     train = ["The Previous Question requires a two-thirds vote and is not debatable."]
     # Near-identical to a held-out item -> must be flagged.
