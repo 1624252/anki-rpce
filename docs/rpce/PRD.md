@@ -4,7 +4,7 @@
 
 | | |
 | --- | --- |
-| **Owner** | Jiaying Song |
+| **Owner** | Project owner |
 | **Status** | Draft v1 (MVP definition) |
 | **Exam (locked)** | RPCE — NAP Registered Parliamentarian Credentialing Exam |
 | **License** | AGPL-3.0-or-later, with credit to Anki (Ankitects). Some upstream parts are BSD-3-Clause. |
@@ -53,13 +53,13 @@ predictions were, the *range* of likely outcomes, and the single best next thing
 
 We deliberately start with **one** narrow user, not "test-prep students" in general.
 
-### Primary persona — "Dana, the working-adult RP candidate"
+### Primary persona — "the working-adult RP candidate"
 
 - **Who:** A 30–55-year-old working professional embedded in a governance setting — association staff, an HOA/union/church board officer, or an attorney who advises boards.
-- **Prior knowledge:** **High.** Dana has *already passed* the NAP membership (RONRIB) exam, so she knows the basics and needs *application and reflection*, not more worked examples (Insight 3).
-- **Goal:** Pass **both** RPCE sections (≥80% each) within a quarterly window, while holding a full-time job — so she studies in two places: at a desk in the evening and **on her phone between meetings**.
-- **Pain today:** Lecture/cohort prep is scheduled and passive; the official app is a flat quiz bank with occasional wrong answers; no tool tells her honestly whether she is ready or which domain is her weakest.
-- **Definition of success for Dana:** "I know my real weak spot today, I can practice Section II scenarios and get graded like an examiner would, and the app tells me — with a confidence range — when I'm actually ready, instead of guessing."
+- **Prior knowledge:** **High.** The candidate has *already passed* the NAP membership (RONRIB) exam, so they know the basics and need *application and reflection*, not more worked examples (Insight 3).
+- **Goal:** Pass **both** RPCE sections (≥80% each) within a quarterly window, while holding a full-time job — so they study in two places: at a desk in the evening and **on their phone between meetings**.
+- **Pain today:** Lecture/cohort prep is scheduled and passive; the official app is a flat quiz bank with occasional wrong answers; no tool tells them honestly whether they are ready or which domain is their weakest.
+- **Definition of success:** "I know my real weak spot today, I can practice Section II scenarios and get graded like an examiner would, and the app tells me — with a confidence range — when I'm actually ready, instead of guessing."
 
 ### Secondary / later personas (not the MVP focus)
 
@@ -72,14 +72,14 @@ We deliberately start with **one** narrow user, not "test-prep students" in gene
 
 ### 4a. Stories we ARE focused on (MVP)
 
-- As **Dana**, I want to **review RPCE flashcards scheduled by spaced repetition** so that **I retain RONR facts without re-studying everything every night.**
-- As **Dana**, I want the **same fact to resurface in different formats** (recall, applied MCQ, scenario) so that **I prove I can apply it, not just recognize the wording.**
-- As **Dana**, I want to **answer free-text Section II scenarios and get immediate, examiner-style feedback with RONR citations** so that **I learn to justify rulings the way the graders expect.**
-- As **Dana**, I want to **see three separate scores — memory, performance, readiness — each with a range** so that **I'm not misled by a single blended number.**
-- As **Dana**, I want the app to **refuse to show a readiness score until it has enough data** so that **I trust it when it finally does.**
-- As **Dana**, I want a **coverage map of all seven Performance Expectation domains** so that **I can see which high-weight domain I've barely touched.**
-- As **Dana**, I want to **review on my phone offline, then sync to my desktop** so that **I can study between meetings and pick up where I left off at my desk.**
-- As **Dana**, I want **timed practice that mirrors the 3-hour limit** so that **I build pacing, not just untimed knowledge.**
+- As **the candidate**, I want to **review RPCE flashcards scheduled by spaced repetition** so that **I retain RONR facts without re-studying everything every night.**
+- As **the candidate**, I want the **same fact to resurface in different formats** (recall, applied MCQ, scenario) so that **I prove I can apply it, not just recognize the wording.**
+- As **the candidate**, I want to **answer free-text Section II scenarios and get immediate, examiner-style feedback with RONR citations** so that **I learn to justify rulings the way the graders expect.**
+- As **the candidate**, I want to **see three separate scores — memory, performance, readiness — each with a range** so that **I'm not misled by a single blended number.**
+- As **the candidate**, I want the app to **refuse to show a readiness score until it has enough data** so that **I trust it when it finally does.**
+- As **the candidate**, I want a **coverage map of all seven Performance Expectation domains** so that **I can see which high-weight domain I've barely touched.**
+- As **the candidate**, I want to **review on my phone offline, then sync to my desktop** so that **I can study between meetings and pick up where I left off at my desk.**
+- As **the candidate**, I want **timed practice that mirrors the 3-hour limit** so that **I build pacing, not just untimed knowledge.**
 
 ### 4b. Stories we are NOT focused on (out of scope for MVP)
 
