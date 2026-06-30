@@ -59,6 +59,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** per-concept format rotation (cloze → applied MCQ → free-text scenario → advising) layered on FSRS due-ordering via `paraphrase_group`/`format_rung`.
 - **Proof:** a concept resurfaces in a different format; data recorded for the M9 experiment.
+- **Status:** **[partial]** — ladder logic done in `anki.rpce.transfer_ladder` (rung order, advance/hold/drop, recommended rung, no-repeat); 6 tests pass. Remaining: wire rung selection into the reviewer UI + record `format_rung` on attempts.
 
 ### M5 — Phone companion (Android) · spec §3, §6 (Wed mobile)
 
