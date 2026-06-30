@@ -65,7 +65,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** AnkiDroid-based app reusing the shared Rust core (build native libs for Android targets); load the RPCE deck; run a real review on the shared engine.
 - **Proof:** screen recording of a review session on a device/emulator.
-- **Status:** **[partial]** — Android toolchain installed (SDK + NDK 26.1.10909125 + build-tools + platform-tools + cmake), Rust Android targets + `cargo-ndk` added, and the **shared `anki` engine cross-compiles for `aarch64-linux-android`** (`cargo ndk -t arm64-v8a build -p anki --lib --features rustls`, exit 0). Remaining: AnkiDroid app shell + JNI bridge → signed APK running a review on a device.
+- **Status:** **[partial — engine + bridge done]** — Android SDK/NDK installed; the shared `anki` engine cross-compiles for `aarch64-linux-android`; a **`speedrun_jni` JNI bridge crate** links the shared engine and is callable from Kotlin (`NativeBridge.engineInfo()`), cross-compiled to `libspeedrun_jni.so` and placed in the app's `jniLibs`; a minimal **Android Studio app scaffold** (`mobile/app`) loads it. Host + Android builds verified. Remaining: the full review/sync UI (reuse AnkiDroid surfaces over this engine) → signed APK running real reviews on a device.
 
 ### M6 — Two-way sync + conflict rule · spec §3, §7b, §6 (Fri)
 

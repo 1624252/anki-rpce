@@ -25,3 +25,8 @@ docs/_build/
 docs/autoapi/
 .complexipy_cache
 /data/
+# Android companion build artifacts (native libs are regenerated via cargo-ndk)
+/mobile/app/app/src/main/jniLibs/
+/mobile/app/**/build/
+/mobile/app/.gradle/
+/mobile/app/local.properties

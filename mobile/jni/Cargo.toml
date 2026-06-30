@@ -1,0 +1,14 @@
+[package]
+name = "speedrun_jni"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "JNI bridge exposing the shared Anki/RPCE engine to the Android companion"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# rustls is the Android-appropriate TLS (avoids OpenSSL cross-compile pain).
+anki = { path = "../../rslib", features = ["rustls"] }
+jni = "0.21"

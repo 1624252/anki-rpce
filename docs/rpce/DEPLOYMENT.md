@@ -141,17 +141,29 @@ cargo ndk -t arm64-v8a build -p anki --lib --features rustls   # exit 0
 > Use the `rustls` feature on Android (not `native-tls`/OpenSSL). The output lands
 > in `target/aarch64-linux-android/`.
 
-### 3c. App shell & run **[plan]**
+### 3c. JNI bridge + app scaffold **[works now]**
 
-The remaining phone work is the **app shell**: an AnkiDroid-based project with a
-JNI bridge (à la AnkiDroid's `rsdroid`) that loads the cross-compiled engine as
-a native lib, then:
+A `speedrun_jni` crate (`mobile/jni`) links the shared engine and exposes JNI
+entry points; a minimal Android Studio app (`mobile/app`) loads it. Build the
+native lib straight into the app and verify:
 
-1. Open the AnkiDroid-based companion project in Android Studio.
+```bash
+cargo ndk -t arm64-v8a -o mobile/app/app/src/main/jniLibs build -p speedrun_jni --release
+```
+
+See **[`../../mobile/README.md`](../../mobile/README.md)** for the full phone
+build/run guide.
+
+### 3d. Full review/sync UI **[plan]**
+
+The remaining phone work is the review/sync surface over this engine (reuse
+AnkiDroid's review screens), then:
+
+1. Open `mobile/app/` in Android Studio and sync Gradle.
 2. Select an emulator or connected device and **Run**, or build a debug APK (`./gradlew assembleDebug`).
 3. Load the RPCE deck and run a review on the shared engine; show the three scores with ranges and the give-up rule (spec §6 Friday).
 
-### 3d. Signed APK for sideload testing **[plan]**
+### 3e. Signed APK for sideload testing **[plan]**
 
 ```bash
 ./gradlew assembleRelease     # then sign with your keystore (apksigner)
