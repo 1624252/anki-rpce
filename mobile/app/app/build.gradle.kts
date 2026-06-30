@@ -13,8 +13,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"
-        // MVP targets arm64; add other ABIs once their .so are built.
-        ndk { abiFilters += listOf("arm64-v8a") }
+        // arm64 for devices, x86_64 for the emulator.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     buildTypes {
