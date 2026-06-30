@@ -220,8 +220,9 @@ def _banner_html(col) -> str:
   {coverage_bar}
   {chips_row}
   {note}
-  <div style="margin-top:18px;font-size:13px;color:#94a3b8">Use the
-    <b style="color:#cbd5e1">RPCE</b> menu for the dashboard, Section II practice, and timed sessions.</div>
+  <div style="margin-top:18px;font-size:13px;color:#94a3b8">Use the tabs above —
+    <b style="color:#cbd5e1">Study</b> flashcards, practice <b style="color:#cbd5e1">Section II</b>,
+    open the <b style="color:#cbd5e1">Dashboard</b>, or start a <b style="color:#cbd5e1">Timed</b> session.</div>
 </div>
 """
 
@@ -492,14 +493,102 @@ def _on_answer_card(reviewer, card, ease) -> None:
 
 
 def _on_deck_browser_content(deck_browser, content) -> None:
-    """Put the RPCE readiness banner at the top of the main screen."""
+    """Replace the deck-browser home with the RPCE landing page (no deck
+    management UI — the deck is generated for the candidate)."""
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     try:
-        content.tree = _banner_html(mw.col) + content.tree
+        content.tree = _banner_html(mw.col)
+        content.stats = ""
     except Exception as exc:  # never break the deck browser over the banner
-        print(f"RPCE banner error: {exc}")
+        print(f"RPCE home error: {exc}")
+
+
+# Toolbar tabs
+######################################################################
+
+
+def _select_rpce_deck() -> bool:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return False
+    deck = mw.col.decks.by_name("RPCE")
+    if deck is None:
+        from anki.rpce import build_starter_deck
+
+        build_starter_deck(mw.col)
+        deck = mw.col.decks.by_name("RPCE")
+    if deck is None:
+        return False
+    mw.col.decks.select(deck["id"])
+    return True
+
+
+def _tab_study() -> None:
+    mw = aqt.mw
+    if mw is None or not _select_rpce_deck():
+        return
+    mw.moveToState("overview")
+
+
+def _tab_timed() -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    from anki.rpce import timed
+
+    if timed.active_session(mw.col):
+        timed.clear_session(mw.col)
+        tooltip("Timed session stopped.")
+    else:
+        timed.start_session(mw.col, "I")
+        tooltip("Started timed Section I (3-hour limit).")
+    mw.reset()
+
+
+def _on_toolbar_links(links, toolbar) -> None:
+    """Replace Anki's deck-management toolbar with RPCE tabs (keep Sync)."""
+    sync_link = links[-1] if links else None
+    links.clear()
+    links.append(
+        toolbar.create_link(
+            "rpce_study",
+            "Study",
+            _tab_study,
+            tip="Study RPCE flashcards",
+            id="rpce_study",
+        )
+    )
+    links.append(
+        toolbar.create_link(
+            "rpce_scenarios",
+            "Section II",
+            _show_scenarios,
+            tip="Performance scenario practice",
+            id="rpce_scenarios",
+        )
+    )
+    links.append(
+        toolbar.create_link(
+            "rpce_dashboard",
+            "Dashboard",
+            _show_dashboard,
+            tip="Readiness dashboard",
+            id="rpce_dashboard",
+        )
+    )
+    links.append(
+        toolbar.create_link(
+            "rpce_timed",
+            "Timed",
+            _tab_timed,
+            tip="Start/stop a 3-hour timed session",
+            id="rpce_timed",
+        )
+    )
+    if sync_link is not None:
+        links.append(sync_link)
 
 
 def setup() -> None:
@@ -508,3 +597,4 @@ def setup() -> None:
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
+    gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
