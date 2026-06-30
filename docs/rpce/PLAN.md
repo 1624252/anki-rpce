@@ -76,6 +76,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 - **Work:** grade Section II free-text **for accuracy** (no candidate citations required) with retrieval over `data/roberts_rules_of_order_12th_edition.md`; every AI reply cites that text or abstains; AI-off fallback.
 - **Tests:** gold set (≥50 from `data/RPCE-Sample-Questions-v4-100625.md`) with pre-set cutoff; beats keyword/vector baseline; leakage scanner clean.
 - **Proof:** eval numbers + baseline side-by-side; app still scores with AI off.
+- **Status:** **[partial]** — `anki.rpce.examiner` implemented: corpus retrieval + RONR citation, offline `BaselineExaminer` (AI-off fallback + baseline to beat), `evaluate` (gold-set accuracy vs cutoff), `find_leaks` (leakage scanner); 6 tests pass. Remaining: the LLM-backed `Examiner` (needs an API key) + real gold set wired from `data/`.
 
 ### M8 — Performance & readiness models · spec §4, §9 Steps 2–3, §7d, PRD §8
 
