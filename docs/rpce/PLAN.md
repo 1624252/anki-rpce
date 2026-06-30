@@ -83,11 +83,13 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** performance model P(correct on new item) from mastery/difficulty/timing/coverage; readiness = P(pass each section ≥80%) with range; paraphrase test.
 - **Proof:** held-out accuracy + reported paraphrase gap; readiness range with confidence.
+- **Status:** **[partial]** — `anki.rpce.metrics`: Brier, log-loss, reliability bins, ECE (calibration, §9 Step 1) + `paraphrase_gap` (§7d); 6 tests. Performance/readiness scoring already in M3. Remaining: feed real FSRS predictions + reworded-question results into the metrics on held-out data.
 
 ### M9 — Study-feature experiment · spec §8, PRD §9
 
 - **Work:** three builds at equal study time — full (rotation on) / ablation (rotation off) / plain Anki; pre-state the metric.
 - **Proof:** fair 3-way comparison with a range; null results reported honestly.
+- **Status:** **[partial]** — `anki.rpce.experiment`: pre-registered metric, 3-way `compare` with 95% intervals, feature-effect (full−ablation) and vs-plain, and honest-null handling (`feature_helped=None` when the interval straddles 0); 5 tests. Remaining: run the three real builds and collect learner results.
 
 ### M10 — Packaging, benchmarks & robustness · spec §6 (Sun), §7g, §7h, §10, PRD §14
 
