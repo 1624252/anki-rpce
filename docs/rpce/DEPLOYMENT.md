@@ -106,23 +106,41 @@ The phone companion is built on **AnkiDroid**, reusing the **same Rust core** vi
 the protobuf/FFI boundary (no scheduler rewrite — spec §3). iOS (Rust C-FFI +
 TestFlight) is future and out of MVP scope.
 
-### 3a. Toolchain **[plan]**
+### 3a. Toolchain **[works now]**
 
-- **Android Studio** (latest) with an SDK + an emulator image, **or** a physical device with USB debugging.
-- Rust Android targets for the shared core:
+Already installed and verified on this machine:
+
+- **Android Studio** + SDK at `%LOCALAPPDATA%\Android\Sdk` with **NDK 26.1.10909125**, platform-tools, build-tools 34.0.0, platform android-34, cmake, and an emulator. `ANDROID_HOME` / `ANDROID_SDK_ROOT` / `ANDROID_NDK_HOME` are set as user env vars.
+- Rust Android targets + `cargo-ndk`:
 
 ```bash
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+cargo install cargo-ndk
 ```
 
-### 3b. Build & run **[plan]**
+### 3b. Cross-compile the shared engine **[works now]**
 
-1. Build the shared Rust backend for Android (produces the native libs the app loads).
-2. Open the AnkiDroid-based companion project in Android Studio.
-3. Select an emulator or connected device and **Run**, or from the CLI build a debug APK with the project's Gradle wrapper (`./gradlew assembleDebug`).
-4. Load the RPCE deck and run a review — it executes on the shared engine, and shows the three scores with ranges and the give-up rule (spec §6 Friday).
+The shared Anki Rust engine (including the RPCE points-at-stake queue) builds
+for Android — verified:
 
-### 3c. Signed APK for sideload testing **[plan]**
+```bash
+cargo ndk -t arm64-v8a build -p anki --lib --features rustls   # exit 0
+```
+
+> Use the `rustls` feature on Android (not `native-tls`/OpenSSL). The output lands
+> in `target/aarch64-linux-android/`.
+
+### 3c. App shell & run **[plan]**
+
+The remaining phone work is the **app shell**: an AnkiDroid-based project with a
+JNI bridge (à la AnkiDroid's `rsdroid`) that loads the cross-compiled engine as
+a native lib, then:
+
+1. Open the AnkiDroid-based companion project in Android Studio.
+2. Select an emulator or connected device and **Run**, or build a debug APK (`./gradlew assembleDebug`).
+3. Load the RPCE deck and run a review on the shared engine; show the three scores with ranges and the give-up rule (spec §6 Friday).
+
+### 3d. Signed APK for sideload testing **[plan]**
 
 ```bash
 ./gradlew assembleRelease     # then sign with your keystore (apksigner)
