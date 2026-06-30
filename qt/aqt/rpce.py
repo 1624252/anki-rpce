@@ -15,10 +15,39 @@ and is easy to remove for an upstream merge.
 
 from __future__ import annotations
 
+import os
+
 import aqt
 from aqt import gui_hooks
-from aqt.qt import QMenu, qconnect
+from aqt.qt import (
+    QDialog,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QTextBrowser,
+    QTextEdit,
+    QVBoxLayout,
+    qconnect,
+)
 from aqt.utils import showInfo, tooltip
+
+
+def _load_corpus() -> str:
+    """Load the transcribed RONR 12th-ed. corpus if present (for citations)."""
+    for path in (
+        "data/roberts_rules_of_order_12th_edition.md",
+        os.path.join(
+            os.path.dirname(__file__), "data", "roberts_rules_of_order_12th_edition.md"
+        ),
+    ):
+        if os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    return f.read()
+            except OSError:
+                pass
+    return ""
+
 
 APP_TITLE = "Speedrun for the RPCE"
 
@@ -167,6 +196,85 @@ def _show_dashboard() -> None:
     showInfo(_readiness_html(mw.col), title="RPCE", textFormat="rich")
 
 
+class ScenarioDialog(QDialog):
+    """Section II performance practice: read a scenario, write a ruling, and get
+    examiner-style feedback graded for accuracy (no citation required)."""
+
+    def __init__(self, mw) -> None:
+        super().__init__(mw)
+        from anki.rpce import scenarios
+
+        self._mw = mw
+        self._corpus = _load_corpus()
+        self._scenarios = list(scenarios.all_scenarios())
+        self._idx = 0
+
+        self.setWindowTitle("RPCE — Section II scenario practice")
+        self.resize(660, 580)
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("<b>Section II — performance scenario</b>"))
+        self._domain = QLabel()
+        layout.addWidget(self._domain)
+        self._prompt = QTextBrowser()
+        self._prompt.setMinimumHeight(90)
+        layout.addWidget(self._prompt)
+        layout.addWidget(QLabel("Your ruling & reasoning (no RONR citation required):"))
+        self._answer = QTextEdit()
+        layout.addWidget(self._answer)
+        self._grade_btn = QPushButton("Grade my answer")
+        qconnect(self._grade_btn.clicked, self._grade)
+        layout.addWidget(self._grade_btn)
+        self._result = QTextBrowser()
+        self._result.setMinimumHeight(140)
+        layout.addWidget(self._result)
+        self._next_btn = QPushButton("Next scenario →")
+        qconnect(self._next_btn.clicked, self._next)
+        layout.addWidget(self._next_btn)
+        self._load()
+
+    def _load(self) -> None:
+        from anki.rpce import domain_by_code
+
+        s = self._scenarios[self._idx]
+        d = domain_by_code(s.domain_code)
+        self._domain.setText(f"<i>Domain {d.code}: {d.name}</i>")
+        self._prompt.setText(s.prompt)
+        self._answer.clear()
+        self._result.clear()
+
+    def _grade(self) -> None:
+        from anki.rpce import examiner, scores
+
+        answer = self._answer.toPlainText().strip()
+        if not answer:
+            return
+        s = self._scenarios[self._idx]
+        result = examiner.BaselineExaminer().grade(
+            answer, s.gold_answer, self._corpus or s.gold_answer
+        )
+        scores.record_scenario(self._mw.col)
+        verdict = "pass" if result.passed else "keep practicing"
+        citation = (
+            f"<br><b>RONR reference:</b> {result.citation}" if result.citation else ""
+        )
+        self._result.setHtml(
+            f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
+            f"<b>Feedback:</b> {result.feedback}{citation}<br><br>"
+            f"<b>Model ruling:</b> {s.gold_answer}</div>"
+        )
+
+    def _next(self) -> None:
+        self._idx = (self._idx + 1) % len(self._scenarios)
+        self._load()
+
+
+def _show_scenarios() -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    ScenarioDialog(mw).exec()
+
+
 def _add_menu() -> None:
     mw = aqt.mw
     if mw is None:
@@ -176,6 +284,8 @@ def _add_menu() -> None:
     mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
     build_action = menu.addAction("Build starter deck")
     qconnect(build_action.triggered, _build_deck)
+    scenario_action = menu.addAction("Section II scenario practice…")
+    qconnect(scenario_action.triggered, _show_scenarios)
     dash_action = menu.addAction("Readiness dashboard…")
     qconnect(dash_action.triggered, _show_dashboard)
 
