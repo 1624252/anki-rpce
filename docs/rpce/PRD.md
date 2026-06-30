@@ -49,7 +49,7 @@ Grounded in the RPCE BrainLift research insights:
 1. **The "simulation vs. flashcards" false binary (Insight 1).** Existing prep picks one. Flashcards build durable recall but not applied judgment; simulation builds judgment but decays without spaced re-exposure. **We build a hybrid** whose two modes mirror the two exam sections.
 2. **Recall practice breeds false mastery (SPOV 1).** Drilling one question format trains pattern-matching to the *format*, not the *concept*. A real meeting never presents a rule in the tidy shape a flashcard did. **We rotate formats** over the same content to force transfer.
 3. **Feedback is the active ingredient (Insight 4).** Simulation *with* debrief beats simulation alone; the incumbent's feedback is delayed and instructor-mediated. **We give immediate, per-item AI debrief.**
-4. **The AI should be an examiner, not a tutor (SPOV 3).** Candidates already passed the RONRIB membership exam and the corpus (RONR 12th ed.) is closed and citable. An AI inventing facts is actively harmful (see NAPMobile's wrong answers). **The AI grades and probes Section II answers against the Performance Expectations and demands RONR citations** — it does not lecture facts.
+4. **The AI should be an examiner, not a tutor (SPOV 3).** Candidates already passed the RONRIB membership exam and the corpus (RONR 12th ed.) is closed and citable. An AI inventing facts is actively harmful (see NAPMobile's wrong answers). **The AI grades and probes Section II answers against the Performance Expectations for accuracy and cites RONR in its own feedback** — it does not lecture facts, and the candidate is *not* required to cite sections or memorize section numbers.
 5. **Nobody offers an honest readiness signal (Insight 10).** NAP has content but no adaptivity or readiness score; NAPMobile is a plain (sometimes wrong) quiz bank. **We show a calibrated readiness range with its evidence — and abstain when we lack data.**
 
 ---
@@ -63,7 +63,7 @@ The three Spiky Points of View from the BrainLift are the backbone of the produc
 | --- | --- | --- | --- |
 | **SPOV 1 — Consistency is a trap.** Practicing one format breeds false mastery; vary the format even for the same content. | Mastery = transferring one idea across *different* contexts, exactly what Section I vs. Section II demand. | **Transfer Ladder** (§7.1): each concept resurfaces in escalating formats — cloze recall → applied MCQ → free-text scenario → advising prompt — never the same shape twice in a row. | **Paraphrase test** (spec §7d): 30 cards × 2 reworded questions; report the recall-vs-reworded gap. This is also the gated study-feature experiment (§9). |
 | **SPOV 2 — One method is never enough.** Combine methods; each builds a different skill. | Recall fights decay (Section I); simulation builds applied competence (Section II); only together do they cover the exam. | **Dual-Mode Hybrid Engine** (§7.2): spaced-retrieval mode for Section I + scenario-simulation mode for Section II, with **scaffolding that fades** (worked examples → reflection) as mastery grows (Insight 3). | Both modes ship in MVP; coverage map proves both halves are exercised; ablation build turns the hybrid down to recall-only. |
-| **SPOV 3 — The AI is an examiner, not a tutor.** High-prior-knowledge candidates need grading + reflection, not fact-lectures; an inventing AI is harmful. | The hard skill is *application + citation*; the closed RONR corpus makes grading verifiable. | **AI Examiner** (§7.3): grades Section II free-text against the seven Performance Expectations, demands an RONR citation, probes the reasoning, and **refuses to teach new facts**. Every output is source-traced. | Gold-set eval + wrong-answer rate vs. cutoff; beats keyword/vector baseline; leakage scan clean (spec §7e, §7f). |
+| **SPOV 3 — The AI is an examiner, not a tutor.** High-prior-knowledge candidates need grading + reflection, not fact-lectures; an inventing AI is harmful. | The hard skill is *application*; the closed RONR corpus makes grading verifiable. | **AI Examiner** (§7.3): grades Section II free-text against the seven Performance Expectations **for accuracy**, probes the reasoning, cites RONR in its *own* feedback (the candidate need not cite), and **refuses to teach new facts**. Every output is source-traced. | Gold-set eval + wrong-answer rate vs. cutoff; beats keyword/vector baseline; leakage scan clean (spec §7e, §7f). |
 
 A fourth, cross-cutting feature carries the **honesty rule** and the **Rust requirement**:
 
@@ -99,7 +99,7 @@ We deliberately start with **one** narrow user, not "test-prep students" in gene
 
 - As **the candidate**, I want to **review RPCE flashcards scheduled by spaced repetition** so that **I retain RONR facts without re-studying everything every night.**
 - As **the candidate**, I want the **same fact to resurface in different formats** (recall, applied MCQ, scenario) so that **I prove I can apply it, not just recognize the wording.**
-- As **the candidate**, I want to **answer free-text Section II scenarios and get immediate, examiner-style feedback with RONR citations** so that **I learn to justify rulings the way the graders expect.**
+- As **the candidate**, I want to **answer free-text Section II scenarios and get immediate, examiner-style feedback that grades my answer for accuracy** (with RONR references *in the feedback*) so that **I learn to justify rulings the way the graders expect — without having to memorize exact section numbers.**
 - As **the candidate**, I want to **see three separate scores — memory, performance, readiness — each with a range** so that **I'm not misled by a single blended number.**
 - As **the candidate**, I want the app to **refuse to show a readiness score until it has enough data** so that **I trust it when it finally does.**
 - As **the candidate**, I want a **coverage map of all seven Performance Expectation domains** so that **I can see which high-weight domain I've barely touched.**
@@ -134,7 +134,7 @@ No AI ships before the apps review the same deck on a shared engine.
 
 - RPCE deck mapped to the **seven Performance Expectation domains**, each card tagged to a domain (and, where possible, a specific PE).
 - **Transfer Ladder** format rotation for each concept: cloze recall, applied MCQ, free-text scenario, advising prompt (§7.1).
-- **Section II scenario practice** with **AI Examiner** grading against the Performance Expectations, demanding RONR citations, with immediate debrief (§7.3).
+- **Section II scenario practice** with **AI Examiner** grading against the Performance Expectations **for accuracy**, with immediate debrief that references RONR (candidate citations not required) (§7.3).
 
 **The three scores (each with a range + give-up rule)** — §8
 
@@ -196,7 +196,7 @@ No AI ships before the apps review the same deck on a shared engine.
 
 - **Section I mode — spaced retrieval.** Standard Anki review loop over MCQ/cloze cards, scheduled by FSRS and re-ordered by the Points-at-Stake Queue (§7.5).
 - **Section II mode — scenario simulation + debrief.** Free-text scenario prompts graded by the AI Examiner (§7.3); the *debrief* is the active ingredient (Insight 4).
-- **Scaffolding fade (Insight 3).** Early on, scenarios offer worked-example structure (model ruling + citation shown after attempt); as mastery rises, support fades to reflection-only prompts ("justify your ruling; cite RONR").
+- **Scaffolding fade (Insight 3).** Early on, scenarios offer worked-example structure (model ruling + RONR reference shown *after* the attempt); as mastery rises, support fades to reflection-only prompts ("justify your ruling"). The candidate is never asked to supply citations.
 - **Shared substrate.** Both modes write `attempts` (§11) into the same collection DB, so memory/performance/readiness draw from one history and sync across devices.
 
 ### 7.3 AI Examiner (SPOV 3)
@@ -204,8 +204,9 @@ No AI ships before the apps review the same deck on a shared engine.
 **Goal.** Grade and probe Section II answers like a trained examiner; never lecture facts.
 
 - **Inputs.** Candidate free-text answer + the scenario's `gold_answer`/rubric + the relevant Performance Expectation(s) + retrieved RONR passages.
-- **Outputs.** A 0–5 rubric score, targeted debrief, a required **RONR citation** for the correct ruling, and probing follow-up questions — **no new factual lecture** (the candidate is presumed to know the basics).
-- **Grounding & safety.** Retrieval over the RONR markdown corpus; every output carries a `source_citation` (§11). If retrieval finds no supporting passage, the Examiner abstains rather than inventing (anti-NAPMobile rule).
+- **Grading criterion.** Answers are scored on the **accuracy of the ruling and the soundness of the reasoning** against the rubric — **not** on whether the candidate quotes RONR. Candidates do not need to cite sections or memorize section numbers.
+- **Outputs.** A 0–5 rubric score, targeted debrief, an RONR reference for the correct ruling **supplied by the AI** (so the candidate can verify), and probing follow-up questions — **no new factual lecture** (the candidate is presumed to know the basics).
+- **Grounding & safety.** Retrieval over the RONR markdown corpus; every AI output carries a `source_citation` (§11) for *traceability of the AI's own feedback* (spec §6 requirement), independent of the candidate's answer. If retrieval finds no supporting passage, the Examiner abstains rather than inventing (anti-NAPMobile rule).
 - **AI-off fallback.** With AI disabled, Section II falls back to self-scoring against the shown rubric; the app still produces all three scores (spec §6, §11).
 
 ### 7.4 Honest Readiness Panel (honesty rule)
