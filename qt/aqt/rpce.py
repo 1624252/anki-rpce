@@ -80,6 +80,24 @@ def _badge(label: str, value: str, confidence: str) -> str:
     )
 
 
+def _timer_line(col) -> str:
+    from anki.rpce import timed
+
+    status = timed.active_session(col)
+    if status is None:
+        return ""
+    if status.expired:
+        return (
+            "<div style='margin-top:8px;font-size:13px;color:#f85149'>"
+            f"⏱ Section {status.section} time is up (3:00:00 limit reached).</div>"
+        )
+    return (
+        "<div style='margin-top:8px;font-size:13px;color:#2f81f7'>"
+        f"⏱ Section {status.section} timed practice: "
+        f"<b>{timed.format_hms(status.remaining_secs)}</b> remaining</div>"
+    )
+
+
 def _banner_html(col) -> str:
     from anki.rpce import scores
 
@@ -126,6 +144,7 @@ def _banner_html(col) -> str:
   <div style="display:flex;gap:10px;flex-wrap:wrap">{badges}</div>
   <div style="margin-top:10px;font-size:13px"><b>Coverage:</b> {pct:.0%} of {total} Performance-Expectation domains</div>
   {next_topic}
+  {_timer_line(col)}
   {note}
   <div style="margin-top:10px;font-size:12px;opacity:.6">Use the <b>RPCE</b> menu for the full dashboard and to build the deck.</div>
 </div>
@@ -277,6 +296,28 @@ def _show_scenarios() -> None:
     ScenarioDialog(mw).exec()
 
 
+def _start_timer(section: str) -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    from anki.rpce import timed
+
+    timed.start_session(mw.col, section)
+    mw.reset()
+    tooltip(f"Started timed Section {section} (3-hour limit).")
+
+
+def _stop_timer() -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    from anki.rpce import timed
+
+    timed.clear_session(mw.col)
+    mw.reset()
+    tooltip("Stopped the practice timer.")
+
+
 def _add_menu() -> None:
     mw = aqt.mw
     if mw is None:
@@ -290,6 +331,14 @@ def _add_menu() -> None:
     qconnect(scenario_action.triggered, _show_scenarios)
     dash_action = menu.addAction("Readiness dashboard…")
     qconnect(dash_action.triggered, _show_dashboard)
+    menu.addSeparator()
+    timer_menu = menu.addMenu("Timed practice")
+    t1 = timer_menu.addAction("Start Section I (3h)")
+    qconnect(t1.triggered, lambda: _start_timer("I"))
+    t2 = timer_menu.addAction("Start Section II (3h)")
+    qconnect(t2.triggered, lambda: _start_timer("II"))
+    t3 = timer_menu.addAction("Stop timer")
+    qconnect(t3.triggered, _stop_timer)
 
 
 def _on_profile_open() -> None:
