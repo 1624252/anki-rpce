@@ -4,14 +4,7 @@ This guide explains how to build, run, and package **Speedrun for the RPCE** on
 **desktop** and on a **phone**, plus how to set up sync and the optional AI
 layer so you can test the full flow. It complements the PRD (see
 [`PRD.md`](./PRD.md) §14 Deployment) and the spec ([`spec.txt`](./spec.txt) §6).
-
-> **Status legend** — each step is tagged so you know what is runnable today:
-> **[works now]** uses the upstream Anki toolchain in this repo and runs today ·
-> **[RPCE]** depends on the RPCE features/deck being wired up · **[plan]** is the
-> intended path per the spec/PRD and may not be fully wired yet.
->
-> If a **[RPCE]**/**[plan]** step doesn't behave as written, that's a gap to fix —
-> please flag it and we'll resolve it.
+Sections marked _(planned)_ are not built yet.
 
 ---
 
@@ -32,7 +25,7 @@ See **[`../development.md`](../development.md)** for the full upstream build ref
 
 ## 1. Prepare the RPCE corpus & deck
 
-**[RPCE]** The AI grounding and the gold set read the transcribed corpus in
+The AI grounding and the gold set read the transcribed corpus in
 `data/` (kept out of version control — regenerate locally):
 
 ```bash
@@ -53,7 +46,7 @@ local (see `data/README.md`).
 
 ## 2. Desktop
 
-### 2a. Run in development **[works now]**
+### 2a. Run in development
 
 From the repo root:
 
@@ -75,7 +68,7 @@ just run-optimized
 For live web-UI iteration (macOS/Linux), run `just web-watch` in a second
 terminal.
 
-### 2b. Use the RPCE features in the app **[works now]**
+### 2b. Use the RPCE features in the app
 
 The desktop app adds an **RPCE menu** (left of Help) with two actions:
 
@@ -94,7 +87,7 @@ stays in **abstain** until there are enough graded reviews, ≥50% coverage, and
 > Tip: use a throwaway profile for testing — start with `.\run.bat -- -p test`
 > (or `just run -- -p test`) so you don't touch your real collection.
 
-### 2c. Build a clean-machine installer **[works now]**
+### 2c. Build a clean-machine installer
 
 ```bash
 tools/build-installer        # .\tools\build-installer on Windows
@@ -117,7 +110,7 @@ The phone companion is built on **AnkiDroid**, reusing the **same Rust core** vi
 the protobuf/FFI boundary (no scheduler rewrite — spec §3). iOS (Rust C-FFI +
 TestFlight) is future and out of MVP scope.
 
-### 3a. Toolchain **[works now]**
+### 3a. Toolchain
 
 Already installed and verified on this machine:
 
@@ -129,7 +122,7 @@ rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-and
 cargo install cargo-ndk
 ```
 
-### 3b. Cross-compile the shared engine **[works now]**
+### 3b. Cross-compile the shared engine
 
 The shared Anki Rust engine (including the RPCE points-at-stake queue) builds
 for Android — verified:
@@ -141,7 +134,7 @@ cargo ndk -t arm64-v8a build -p anki --lib --features rustls   # exit 0
 > Use the `rustls` feature on Android (not `native-tls`/OpenSSL). The output lands
 > in `target/aarch64-linux-android/`.
 
-### 3c. JNI bridge + app scaffold **[works now]**
+### 3c. JNI bridge + app scaffold
 
 A `speedrun_jni` crate (`mobile/jni`) links the shared engine and exposes JNI
 entry points; a minimal Android Studio app (`mobile/app`) loads it. Build the
@@ -154,7 +147,7 @@ cargo ndk -t arm64-v8a -o mobile/app/app/src/main/jniLibs build -p speedrun_jni 
 See **[`../../mobile/README.md`](../../mobile/README.md)** for the full phone
 build/run guide.
 
-### 3d. Full review/sync UI **[plan]**
+### 3d. Full review/sync UI _(planned)_
 
 The remaining phone work is the review/sync surface over this engine (reuse
 AnkiDroid's review screens), then:
@@ -163,7 +156,7 @@ AnkiDroid's review screens), then:
 2. Select an emulator or connected device and **Run**, or build a debug APK (`./gradlew assembleDebug`).
 3. Load the RPCE deck and run a review on the shared engine; show the three scores with ranges and the give-up rule (spec §6 Friday).
 
-### 3e. Signed APK for sideload testing **[plan]**
+### 3e. Signed APK for sideload testing _(planned)_
 
 ```bash
 ./gradlew assembleRelease     # then sign with your keystore (apksigner)
@@ -182,9 +175,9 @@ This signed APK is the deliverable you sideload to test on a real device.
 
 ---
 
-## 4. Sync between desktop & phone
+## 4. Sync between desktop & phone _(planned)_
 
-**[plan]** Speedrun uses a **self-hosted Anki sync server** so reviews flow both
+Speedrun uses a **self-hosted Anki sync server** so reviews flow both
 ways.
 
 1. Start a sync server (run locally for testing). Anki ships a built-in server; see **[`../syncserver/`](../syncserver)** / the Docker setup under `../docker/` for a containerized option.
@@ -203,12 +196,12 @@ confirm all 20 land once with none lost or doubled (spec §7b).
 The AI Examiner (Section II grading + debrief) is **optional**; both apps must
 still score with it off.
 
-- **AI-off baseline (works now):** `anki.rpce.examiner.BaselineExaminer` grades
+- **AI-off baseline:** `anki.rpce.examiner.BaselineExaminer` grades
   answers offline by keyword overlap and grounds feedback in the RONR corpus via
   `retrieve(...)`, citing a passage or **abstaining** when none is found. This is
   both the AI-off fallback and the baseline an LLM must beat (spec §7f). The
   eval harness (`evaluate`) and leakage scanner (`find_leaks`) also run offline.
-- **LLM grader [plan]:** an LLM-backed grader implements the same `Examiner`
+- **LLM grader _(planned)_:** an LLM-backed grader implements the same `Examiner`
   interface. Provide the provider API key via env/local config (never commit it);
   with no key, the app uses the baseline above.
 - **Grounding:** retrieval runs over `data/roberts_rules_of_order_12th_edition.md`
@@ -240,8 +233,7 @@ These cover the queue, content model, three scores + abstain rule, Transfer
 Ladder, AI examiner/baseline/eval/leakage, calibration metrics, and the
 study-feature experiment (40 tests total with the Rust ones).
 
-**[works now]** Performance targets (spec §10) are reported by a one-command
-benchmark:
+Performance targets (spec §10) are reported by a one-command benchmark:
 
 ```bash
 just bench                      # quick check (2,000-card deck)
@@ -255,21 +247,15 @@ points-at-stake queue, flagging any result over its spec target.
 
 ## 7. Quick test checklist
 
-- [ ] `just run` / `.\run.bat` launches the desktop app **[works now]**
-- [ ] **RPCE ▸ Build starter deck** seeds all seven domains **[works now]**
-- [ ] **RPCE ▸ Readiness dashboard…** shows three scores + coverage map and **abstains** until thresholds are met **[works now]**
-- [ ] `cargo ndk -t arm64-v8a build -p anki --lib --features rustls` cross-compiles the engine for Android **[works now]**
-- [ ] `just bench` reports p50/p95/worst under spec targets **[works now]**
-- [ ] RPCE Rust + Python tests pass **[works now]**
-- [ ] `tools/build-installer` produces an installer that runs on a clean VM **[works now]**
-- [ ] AI-off baseline examiner grades + cites/abstains offline **[works now]**
-- [ ] Phone app shell runs a review on the shared engine **[plan]**
-- [ ] A card reviewed on the phone appears on desktop after sync **[plan]**
-- [ ] Offline-then-sync works; same-card conflict resolves per the documented rule **[plan]**
-- [ ] LLM-backed examiner grades with an API key (AI-off still scores) **[plan]**
-
----
-
-_If any step marked **[RPCE]** or **[plan]** does not work as written, it's a
-known gap between the current build and the PRD/spec — please report it so we can
-close it._
+- [ ] `just run` / `.\run.bat` launches the desktop app
+- [ ] **RPCE ▸ Build starter deck** seeds all seven domains
+- [ ] **RPCE ▸ Readiness dashboard…** shows three scores + coverage map and **abstains** until thresholds are met
+- [ ] `cargo ndk -t arm64-v8a build -p anki --lib --features rustls` cross-compiles the engine for Android
+- [ ] `just bench` reports p50/p95/worst under spec targets
+- [ ] RPCE Rust + Python tests pass
+- [ ] `tools/build-installer` produces an installer that runs on a clean VM
+- [ ] AI-off baseline examiner grades + cites/abstains offline
+- [ ] _(planned)_ Phone app shell runs a review on the shared engine
+- [ ] _(planned)_ A card reviewed on the phone appears on desktop after sync
+- [ ] _(planned)_ Offline-then-sync works; same-card conflict resolves per the documented rule
+- [ ] _(planned)_ LLM-backed examiner grades with an API key (AI-off still scores)
