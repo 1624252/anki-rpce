@@ -329,14 +329,31 @@ flowchart TB
 
 ### 11a. Tech stack
 
-- **Core engine:** Anki's **Rust** backend (`rslib`), forked. The Points-at-Stake Queue lives here so it ships to **both** desktop and phone. Protobuf for the Rust↔client boundary.
-- **Desktop client:** Anki's **Python + PyQt (aqt)** shell with **Svelte/TypeScript** webviews for dashboards (three scores, coverage map).
-- **Mobile client:** **AnkiDroid** (Kotlin, AGPL) for Android, reusing the shared Rust backend; **iOS** via Anki's Rust C-interface (FFI) is *future*. MVP targets Android first.
-- **Sync:** self-hosted **Anki sync server** (HTTP); documented last-writer / higher-`usn` conflict rule for the same-card-offline case (spec §7b).
-- **Local storage:** **SQLite** — Anki's `collection.anki2` on each device, plus our custom tables (§11b).
-- **AI layer:** an LLM API (examiner grading + scenario debrief) behind a thin service, with **retrieval over the RONR markdown corpus** for citation grounding. **Baseline** = keyword/vector search for the side-by-side. All AI is **optional** (app fully works AI-off).
-- **Source corpus pipeline:** existing Python converters (`convert_ronr.py`, `convert_rpce.py`) using `pymupdf` → faithful Markdown + rendered rubric images. *Source PDFs are copyrighted and stay out of version control.*
-- **Quality:** Rust unit tests + Python integration test for the engine change; held-out eval harness (re-runnable, deterministic seed); leakage scanner; **linters** (`ruff` for Python, Anki's `./ninja format`/`fix`, `cargo clippy`) wired into CI.
+**Stack at a glance (by layer).**
+
+| Layer | Technology | Language | Why this choice |
+| --- | --- | --- | --- |
+| **Core engine** | Anki `rslib` (forked) + FSRS scheduler; our Points-at-Stake Queue | **Rust** | Shared by both apps below the protobuf boundary; the spec requires a *real* engine change here, and the hot scheduling path must hit the §10 speed targets. |
+| **Cross-language API** | Protocol Buffers (`proto/`) → generated Rust/Python/TS bindings; `pylib/rsbridge` (PyO3) | **Protobuf / Rust / Python** | One typed contract drives all clients; a new message exposes the queue to Python (spec §7a). |
+| **Desktop shell** | Anki `aqt` (PyQt6/Qt WebEngine) | **Python** | Reuses Anki's proven desktop host; embeds web dashboards. |
+| **Desktop UI / dashboards** | Svelte + TypeScript webviews (3 scores, coverage map), served by Anki's `mediasrv` | **TypeScript / Svelte** | Anki's native web stack; fast, reactive dashboards for the honesty panel. |
+| **Mobile** | AnkiDroid (reuses shared Rust core via FFI) | **Kotlin** | AGPL, open source, already runs the shared engine; MVP = Android first (iOS via Rust C-FFI is future). |
+| **Local storage** | SQLite (`collection.anki2`) + our custom RPCE tables (§11b) | **SQL** | Anki's on-device store; our tables sync for free by living in the same DB. |
+| **Sync** | Self-hosted Anki sync server (HTTP) | **Rust** | Reuses Anki's sync; documented higher-`usn` / last-writer conflict rule (spec §7b). |
+| **AI service** | LLM API behind a thin grading/debrief service + **retrieval (RAG)** over the RONR corpus | **Python** | Examiner grading needs citation grounding; isolated so the app runs fully **AI-off**. |
+| **AI baseline** | Keyword + vector search over RONR markdown | **Python** | The simpler method the AI must beat side-by-side (spec §7f). |
+| **Corpus pipeline** | `convert_ronr.py` / `convert_rpce.py` via `pymupdf` → Markdown + rubric images | **Python** | Produces the closed, citable corpus; source PDFs stay out of VCS. |
+| **Build / tasks** | `just` recipes wrapping Anki's Ninja-based build (`build/`) | **just / Python / Rust** | Single entry point (`just run`, `just check`, `just bench`); no direct `./ninja`. |
+| **Packaging** | Briefcase installers (`qt/installer`) + signed Android APK | — | See §14 deployment. |
+| **Tooling / CI** | `cargo clippy` + `cargo test`; `ruff` + `mypy` + `pytest`; `svelte-check` + `tsc`; Anki's `./ninja format`/`fix`; Playwright e2e | Rust / Python / TS | Lint + types + tests per language, wired into CI; deterministic eval harness with a fixed seed. |
+
+**Key decisions & constraints.**
+
+- **One engine, two apps.** The Points-at-Stake Queue lives in `rslib` so it ships unchanged to desktop *and* phone — rewriting the scheduler in JS/Swift is explicitly disallowed (spec §3, §7a).
+- **AI is optional and isolated.** The LLM endpoint/key is read from local config/env at runtime, never compiled in; with AI off both apps still compute all three scores (spec §6, §11).
+- **Citation-grounded AI.** Every AI output is retrieved-and-cited against the RONR markdown corpus or it abstains; a keyword/vector baseline is kept for the required side-by-side.
+- **Reproducible evals.** Held-out eval harness runs with a deterministic seed so anyone can re-run and get the same numbers (spec §6, §11); the leakage scanner keeps gold/held-out items out of prompts/training.
+- **Versions.** We track Anki's upstream pins (Rust toolchain, Python, Node) from the fork rather than introducing divergent versions; new Rust deps go in the workspace root with `dep.workspace = true`.
 
 ### 11b. Data schema
 
