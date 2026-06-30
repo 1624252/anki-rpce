@@ -153,6 +153,10 @@ ftl-sync:
 ftl-deprecate:
     {{ ninja }} ftl-deprecate
 
+# RPCE: benchmark key operations (spec §7h). Pass --cards 50000 for the reference size.
+bench *args:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_bench.py {{ args }}
+
 # Build documentation site
 docs:
     {{ uv }} run --group docs sphinx-build -b html docs out/docs/html

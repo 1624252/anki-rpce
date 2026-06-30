@@ -95,6 +95,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** desktop installer (Briefcase/`tools\build-installer`) + signed Android APK; one-command `bench`; crash/offline tests.
 - **Proof:** clean-device install recordings for both; p50/p95/worst-case numbers; zero corrupted collections in the crash test.
+- **Status:** **[partial]** — one-command **`just bench`** done (`pylib/tools/rpce_bench.py`): p50/p95/worst for next-card, answer (button ack), and the points-at-stake queue, with spec targets flagged (all well under on a 2k deck). Desktop installer recipe exists (`tools/build-installer`). Remaining: signed APK, 50k-card run, crash/offline test runs.
 
 ---
 

@@ -196,12 +196,16 @@ just test-ts        # TypeScript/Svelte tests
 just lint           # clippy + mypy + ruff + eslint + svelte + tsc
 ```
 
-**[RPCE]** Performance targets (spec §10) are reported by a one-command
-benchmark on the 50,000-card deck:
+**[works now]** Performance targets (spec §10) are reported by a one-command
+benchmark:
 
 ```bash
-just bench          # prints p50 / p95 / worst-case per action
+just bench                      # quick check (2,000-card deck)
+just bench --cards 50000        # spec reference size
 ```
+
+It prints p50 / p95 / worst-case for next-card, answer (button ack), and the
+points-at-stake queue, flagging any result over its spec target.
 
 ---
 
