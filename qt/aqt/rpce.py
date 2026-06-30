@@ -52,15 +52,57 @@ def _load_corpus() -> str:
 
 APP_TITLE = "Speedrun for the RPCE"
 
-# Confidence -> accent colour (modern palette).
-_CONF_COLOR = {
-    "abstain": "#94a3b8",  # slate
-    "low": "#f59e0b",  # amber
-    "medium": "#10b981",  # emerald
-    "high": "#3b82f6",  # blue
-}
-
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+# One cohesive "Aurora" theme (indigo -> cyan accents on deep indigo), shared by
+# the home banner and the dashboard as CSS classes so everything matches.
+_THEME_CSS = (
+    ".rpce-root{font-family:" + _FONT + ";color:#e8eaf6}"
+    ".rpce-hero{max-width:980px;margin:28px auto 12px;padding:30px 34px;border-radius:24px;"
+    "border:1px solid rgba(129,140,248,.35);box-shadow:0 18px 50px rgba(79,70,229,.28);"
+    "background:radial-gradient(120% 140% at 0% 0%,rgba(99,102,241,.30),rgba(34,211,238,.08) 52%,rgba(2,6,23,0) 100%),"
+    "linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.06))}"
+    ".rpce-head{display:flex;align-items:center;gap:14px}"
+    ".rpce-logo{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;"
+    "justify-content:center;font-weight:800;font-size:18px;color:#fff;"
+    "background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 8px 22px rgba(99,102,241,.55)}"
+    ".rpce-h1{font-size:26px;font-weight:800;letter-spacing:-.3px;color:#fff}"
+    ".rpce-h1 small{opacity:.55;font-weight:600;font-size:15px}"
+    ".rpce-sub{color:#9aa3c7;font-size:13.5px}"
+    ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-top:22px}"
+    ".rpce-card{background:rgba(129,140,248,.07);border:1px solid rgba(129,140,248,.22);border-radius:18px;"
+    "padding:20px 22px;box-shadow:0 2px 12px rgba(2,6,23,.35)}"
+    ".rpce-row{display:flex;justify-content:space-between;align-items:center;gap:8px}"
+    ".rpce-label{font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:#9aa3c7}"
+    ".rpce-val{font-size:38px;font-weight:800;margin-top:10px;line-height:1.05;letter-spacing:-.5px;color:#fff}"
+    ".rpce-pill{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:999px}"
+    ".rpce-bar{height:6px;border-radius:999px;background:rgba(148,163,184,.20);margin-top:16px;overflow:hidden}"
+    ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
+    ".rpce-cf-abstain{color:#94a3b8}.rpce-pill.rpce-cf-abstain{background:rgba(148,163,184,.20)}"
+    ".rpce-cf-low{color:#fbbf24}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.18)}"
+    ".rpce-cf-medium{color:#34d399}.rpce-pill.rpce-cf-medium{background:rgba(52,211,153,.18)}"
+    ".rpce-cf-high{color:#818cf8}.rpce-pill.rpce-cf-high{background:rgba(129,140,248,.22)}"
+    ".rpce-covhead{display:flex;justify-content:space-between;font-size:13px;margin:22px 0 8px;color:#9aa3c7}"
+    ".rpce-covhead b{font-weight:600;letter-spacing:.4px;text-transform:uppercase}"
+    ".rpce-cov{height:10px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden}"
+    ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22d3ee)}"
+    ".rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}"
+    ".rpce-chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:#c7cdf2;"
+    "background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.26);padding:6px 12px;border-radius:999px}"
+    ".rpce-note{margin-top:16px;font-size:14px;color:#fcd34d;background:rgba(251,191,36,.10);"
+    "border:1px solid rgba(251,191,36,.28);border-radius:12px;padding:12px 16px}"
+    ".rpce-foot{margin-top:18px;font-size:13px;color:#9aa3c7}.rpce-foot b{color:#c7cdf2}"
+    ".rpce-tbl{border-collapse:collapse;width:100%;font-size:14.5px}"
+    ".rpce-tbl th{color:#9aa3c7;font-size:12px;text-transform:uppercase;letter-spacing:.5px;"
+    "text-align:left;padding:10px 12px;border-bottom:2px solid rgba(129,140,248,.30)}"
+    ".rpce-tbl td{padding:11px 12px;border-bottom:1px solid rgba(129,140,248,.14)}"
+    ".rpce-colbar{height:6px;width:130px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden}"
+    ".rpce-colbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22d3ee)}"
+)
+
+
+def _theme_style() -> str:
+    return f"<style>{_THEME_CSS}</style>"
 
 
 def _fmt_range(point: float | None, low: float | None, high: float | None) -> str:
@@ -74,34 +116,24 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
 def _score_card(
     label: str, value: str, confidence: str, fill: float | None = None
 ) -> str:
-    """A modern score card: label, big value, confidence pill, optional bar."""
-    color = _CONF_COLOR.get(confidence, "#94a3b8")
+    """A themed score card: label, big value, confidence pill, optional bar."""
+    cf = f"rpce-cf-{confidence}"
     bar = ""
     if fill is not None:
         pct = max(0.0, min(100.0, fill * 100))
         bar = (
-            "<div style='height:6px;border-radius:999px;background:rgba(148,163,184,.18);"
-            "margin-top:16px;overflow:hidden'>"
-            f"<div style='height:100%;width:{pct:.0f}%;background:{color};border-radius:999px'></div></div>"
+            f"<div class='rpce-bar'><i class='{cf}' style='width:{pct:.0f}%'></i></div>"
         )
     return (
-        "<div style='background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.16);"
-        "border-radius:18px;padding:20px 22px;box-shadow:0 1px 2px rgba(0,0,0,.25)'>"
-        "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px'>"
-        f"<span style='font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:#94a3b8'>{label}</span>"
-        f"<span style='font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;"
-        f"color:{color};background:{color}26;padding:3px 9px;border-radius:999px'>{confidence}</span></div>"
-        f"<div style='font-size:38px;font-weight:800;margin-top:10px;line-height:1.05;letter-spacing:-.5px'>{value}</div>"
-        f"{bar}</div>"
+        "<div class='rpce-card'><div class='rpce-row'>"
+        f"<span class='rpce-label'>{label}</span>"
+        f"<span class='rpce-pill {cf}'>{confidence}</span></div>"
+        f"<div class='rpce-val'>{value}</div>{bar}</div>"
     )
 
 
-def _chip(text: str, color: str = "#cbd5e1") -> str:
-    return (
-        f"<span style='display:inline-flex;align-items:center;gap:6px;font-size:13.5px;"
-        f"background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);"
-        f"color:{color};padding:6px 12px;border-radius:999px'>{text}</span>"
-    )
+def _chip(text: str) -> str:
+    return f"<span class='rpce-chip'>{text}</span>"
 
 
 def _timer_chip(col) -> str:
@@ -111,10 +143,9 @@ def _timer_chip(col) -> str:
     if status is None:
         return ""
     if status.expired:
-        return _chip(f"⏱ Section {status.section} time is up", "#f87171")
+        return _chip(f"⏱ Section {status.section} time is up")
     return _chip(
-        f"⏱ Section {status.section}: <b>{timed.format_hms(status.remaining_secs)}</b> left",
-        "#60a5fa",
+        f"⏱ Section {status.section}: <b>{timed.format_hms(status.remaining_secs)}</b> left"
     )
 
 
@@ -163,67 +194,34 @@ def _banner_html(col) -> str:
     note = ""
     if sec1.abstained or sec2.abstained:
         note = (
-            "<div style='margin-top:16px;font-size:14px;color:#fbbf24;"
-            "background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.28);"
-            "border-radius:12px;padding:12px 16px'>"
+            "<div class='rpce-note'>"
             f"⚠ Readiness stays hidden until there's enough data — {sec1.evidence}</div>"
         )
     from anki.rpce import progression
 
     phase = progression.current_phase(col)
-    _phase_color = {
-        "foundations": "#60a5fa",
-        "application": "#34d399",
-        "mastery": "#a78bfa",
-    }
-    chips = _chip(
-        f"📈 Phase: <b>{phase.title}</b> — {phase.focus}",
-        _phase_color.get(phase.key, "#cbd5e1"),
-    )
+    chips = _chip(f"📈 Phase: <b>{phase.title}</b> — {phase.focus}")
     if sec1.best_next_topic:
         chips += _chip(f"🎯 Next: <b>{sec1.best_next_topic}</b>")
     chips += _timer_chip(col)
-    chips_row = (
-        f"<div style='display:flex;flex-wrap:wrap;gap:10px;margin-top:18px'>{chips}</div>"
-        if chips
-        else ""
-    )
-    coverage_bar = f"""
-  <div style="margin-top:22px">
-    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:#94a3b8">
-      <span style="font-weight:600;letter-spacing:.4px;text-transform:uppercase">Domain coverage</span>
-      <span>{pct:.0%} of {total} domains</span>
-    </div>
-    <div style="height:10px;border-radius:999px;background:rgba(148,163,184,.18);overflow:hidden">
-      <div style="height:100%;width:{pct * 100:.0f}%;border-radius:999px;
-                  background:linear-gradient(90deg,#3b82f6,#10b981)"></div>
-    </div>
-  </div>"""
-    return f"""
-<div style="font-family:{_FONT};max-width:980px;margin:28px auto 12px;padding:30px 32px;
-            border-radius:24px;border:1px solid rgba(148,163,184,.16);
-            box-shadow:0 10px 34px rgba(0,0,0,.28);
-            background:radial-gradient(130% 150% at 0% 0%, rgba(59,130,246,.18),
-                       rgba(16,185,129,.05) 55%, rgba(2,6,23,0) 100%), rgba(148,163,184,.05)">
-  <div style="display:flex;align-items:center;gap:14px">
-    <div style="width:46px;height:46px;border-radius:14px;display:flex;align-items:center;
-                justify-content:center;font-weight:800;font-size:17px;color:#fff;
-                background:linear-gradient(135deg,#3b82f6,#10b981);
-                box-shadow:0 6px 16px rgba(59,130,246,.45)">RP</div>
+    chips_row = f"<div class='rpce-chips'>{chips}</div>" if chips else ""
+    return f"""{_theme_style()}
+<div class="rpce-root"><div class="rpce-hero">
+  <div class="rpce-head">
+    <div class="rpce-logo">RP</div>
     <div>
-      <div style="font-size:25px;font-weight:800;letter-spacing:-.3px">Speedrun
-        <span style="opacity:.5;font-weight:600">for the RPCE</span></div>
-      <div style="opacity:.6;font-size:13.5px">Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
+      <div class="rpce-h1">Speedrun <small>for the RPCE</small></div>
+      <div class="rpce-sub">Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-top:22px">{cards}</div>
-  {coverage_bar}
+  <div class="rpce-grid">{cards}</div>
+  <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
+  <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   {chips_row}
   {note}
-  <div style="margin-top:18px;font-size:13px;color:#94a3b8">Use the tabs above —
-    <b style="color:#cbd5e1">Study</b> flashcards, practice <b style="color:#cbd5e1">Section II</b>,
-    open the <b style="color:#cbd5e1">Dashboard</b>, or start a <b style="color:#cbd5e1">Timed</b> session.</div>
-</div>
+  <div class="rpce-foot">Use the tabs above — <b>Study</b> flashcards, practice
+    <b>Section II</b>, open the <b>Dashboard</b>, or start a <b>Timed</b> session.</div>
+</div></div>
 """
 
 
@@ -270,40 +268,32 @@ def _readiness_html(col) -> str:
         ]
     )
 
-    def cov_bar(weight: float, has_cards: bool) -> str:
-        color = "#10b981" if has_cards else "#475569"
-        return (
-            "<div style='height:6px;width:120px;border-radius:999px;background:rgba(148,163,184,.18);overflow:hidden'>"
-            f"<div style='height:100%;width:{min(100, weight * 200):.0f}%;background:{color};border-radius:999px'></div></div>"
-        )
+    def cov_bar(weight: float) -> str:
+        return f"<div class='rpce-colbar'><i style='width:{min(100, weight * 200):.0f}%'></i></div>"
 
     cov_rows = "".join(
-        "<tr style='border-bottom:1px solid rgba(148,163,184,.12)'>"
-        f"<td style='padding:11px 12px'>{c.code}. {c.name}</td>"
-        f"<td style='padding:11px 12px;text-align:center;color:{'#e2e8f0' if c.cards else '#64748b'}'>{c.cards}</td>"
-        f"<td style='padding:11px 12px'>{cov_bar(c.weight, c.cards > 0)}</td></tr>"
+        "<tr>"
+        f"<td>{c.code}. {c.name}</td>"
+        f"<td style='text-align:center'>{c.cards}</td>"
+        f"<td>{cov_bar(c.weight)}</td></tr>"
         for c in s["coverage"]
     )
     next_topic = (
-        f"<p style='font-size:15px;color:#cbd5e1'>🎯 <b>Best next topic:</b> {sec1.best_next_topic}</p>"
+        f"<p class='rpce-sub' style='font-size:15px'>🎯 <b style='color:#c7cdf2'>Best next topic:</b> {sec1.best_next_topic}</p>"
         if sec1.best_next_topic
         else ""
     )
-    return f"""
-<div style="font-family:{_FONT};max-width:900px;margin:0 auto;padding:14px 10px;color:#e2e8f0">
-  <div style="font-size:28px;font-weight:800;letter-spacing:-.3px">RPCE readiness</div>
-  <div style="opacity:.6;margin-bottom:22px;font-size:15px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">{cards}</div>
-  <p style="font-size:15px;margin-top:22px;color:#94a3b8"><b style="color:#cbd5e1">Why:</b> {sec1.evidence}</p>
+    return f"""{_theme_style()}
+<div class="rpce-root" style="max-width:900px;margin:0 auto;padding:14px 10px">
+  <div class="rpce-h1" style="font-size:28px">RPCE readiness</div>
+  <div class="rpce-sub" style="margin-bottom:22px;font-size:15px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+  <div class="rpce-grid">{cards}</div>
+  <p class="rpce-sub" style="font-size:15px;margin-top:22px"><b style="color:#c7cdf2">Why:</b> {sec1.evidence}</p>
   {next_topic}
-  <div style="font-size:18px;font-weight:700;margin:26px 0 12px">Coverage map
-    <span style="font-weight:500;color:#94a3b8;font-size:14px">· 7 Performance-Expectation domains</span></div>
-  <table style="border-collapse:collapse;width:100%;font-size:14.5px">
-    <tr style="border-bottom:2px solid rgba(148,163,184,.25);color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.5px">
-      <th style="text-align:left;padding:10px 12px">Domain</th>
-      <th style="padding:10px 12px;text-align:center">Cards</th>
-      <th style="text-align:left;padding:10px 12px">Exam weight</th>
-    </tr>
+  <div class="rpce-h1" style="font-size:18px;margin:26px 0 12px">Coverage map
+    <small>· 7 Performance-Expectation domains</small></div>
+  <table class="rpce-tbl">
+    <tr><th>Domain</th><th style="text-align:center">Cards</th><th>Exam weight</th></tr>
     {cov_rows}
   </table>
 </div>
