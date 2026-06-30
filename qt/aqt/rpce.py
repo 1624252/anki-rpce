@@ -52,13 +52,15 @@ def _load_corpus() -> str:
 
 APP_TITLE = "Speedrun for the RPCE"
 
-# Confidence -> accent colour for the badges.
+# Confidence -> accent colour (modern palette).
 _CONF_COLOR = {
-    "abstain": "#8b949e",
-    "low": "#d29922",
-    "medium": "#3fb950",
-    "high": "#2f81f7",
+    "abstain": "#94a3b8",  # slate
+    "low": "#f59e0b",  # amber
+    "medium": "#10b981",  # emerald
+    "high": "#3b82f6",  # blue
 }
+
+_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
 
 
 def _fmt_range(point: float | None, low: float | None, high: float | None) -> str:
@@ -69,33 +71,50 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
     return f"{point:.0%} (range {low:.0%}–{high:.0%})"
 
 
-def _badge(label: str, value: str, confidence: str) -> str:
-    color = _CONF_COLOR.get(confidence, "#8b949e")
+def _score_card(
+    label: str, value: str, confidence: str, fill: float | None = None
+) -> str:
+    """A modern score card: label, big value, confidence pill, optional bar."""
+    color = _CONF_COLOR.get(confidence, "#94a3b8")
+    bar = ""
+    if fill is not None:
+        pct = max(0.0, min(100.0, fill * 100))
+        bar = (
+            "<div style='height:6px;border-radius:999px;background:rgba(148,163,184,.18);"
+            "margin-top:16px;overflow:hidden'>"
+            f"<div style='height:100%;width:{pct:.0f}%;background:{color};border-radius:999px'></div></div>"
+        )
     return (
-        f"<div style='flex:1;min-width:200px;padding:20px 22px;border-radius:16px;"
-        f"background:rgba(127,127,127,.10);border:1px solid {color}66'>"
-        f"<div style='font-size:14px;text-transform:uppercase;letter-spacing:1px;opacity:.65'>{label}</div>"
-        f"<div style='font-size:40px;font-weight:800;margin-top:6px;line-height:1.1'>{value}</div>"
-        f"<div style='font-size:13px;color:{color};margin-top:6px;text-transform:uppercase;letter-spacing:1px'>{confidence}</div>"
-        f"</div>"
+        "<div style='background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.16);"
+        "border-radius:18px;padding:20px 22px;box-shadow:0 1px 2px rgba(0,0,0,.25)'>"
+        "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px'>"
+        f"<span style='font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:#94a3b8'>{label}</span>"
+        f"<span style='font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;"
+        f"color:{color};background:{color}26;padding:3px 9px;border-radius:999px'>{confidence}</span></div>"
+        f"<div style='font-size:38px;font-weight:800;margin-top:10px;line-height:1.05;letter-spacing:-.5px'>{value}</div>"
+        f"{bar}</div>"
     )
 
 
-def _timer_line(col) -> str:
+def _chip(text: str, color: str = "#cbd5e1") -> str:
+    return (
+        f"<span style='display:inline-flex;align-items:center;gap:6px;font-size:13.5px;"
+        f"background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18);"
+        f"color:{color};padding:6px 12px;border-radius:999px'>{text}</span>"
+    )
+
+
+def _timer_chip(col) -> str:
     from anki.rpce import timed
 
     status = timed.active_session(col)
     if status is None:
         return ""
     if status.expired:
-        return (
-            "<div style='margin-top:12px;font-size:16px;color:#f85149'>"
-            f"⏱ Section {status.section} time is up (3:00:00 limit reached).</div>"
-        )
-    return (
-        "<div style='margin-top:12px;font-size:16px;color:#2f81f7'>"
-        f"⏱ Section {status.section} timed practice: "
-        f"<b>{timed.format_hms(status.remaining_secs)}</b> remaining</div>"
+        return _chip(f"⏱ Section {status.section} time is up", "#f87171")
+    return _chip(
+        f"⏱ Section {status.section}: <b>{timed.format_hms(status.remaining_secs)}</b> left",
+        "#60a5fa",
     )
 
 
@@ -116,48 +135,82 @@ def _banner_html(col) -> str:
             else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
         )
 
-    badges = "".join(
+    cards = "".join(
         [
-            _badge("Memory", _fmt_range(mem.point, None, None), mem.confidence),
-            _badge("Performance", _fmt_range(perf.point, None, None), perf.confidence),
-            _badge("Pass Section I", section_value(sec1), sec1.confidence),
-            _badge("Pass Section II", section_value(sec2), sec2.confidence),
+            _score_card(
+                "Memory", _fmt_range(mem.point, None, None), mem.confidence, mem.point
+            ),
+            _score_card(
+                "Performance",
+                _fmt_range(perf.point, None, None),
+                perf.confidence,
+                perf.point,
+            ),
+            _score_card(
+                "Pass Section I",
+                section_value(sec1),
+                sec1.confidence,
+                None if sec1.abstained else sec1.p_pass,
+            ),
+            _score_card(
+                "Pass Section II",
+                section_value(sec2),
+                sec2.confidence,
+                None if sec2.abstained else sec2.p_pass,
+            ),
         ]
     )
     note = ""
     if sec1.abstained or sec2.abstained:
         note = (
-            f"<div style='margin-top:14px;font-size:15px;color:#d29922'>"
+            "<div style='margin-top:16px;font-size:14px;color:#fbbf24;"
+            "background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.28);"
+            "border-radius:12px;padding:12px 16px'>"
             f"⚠ Readiness stays hidden until there's enough data — {sec1.evidence}</div>"
         )
-    next_topic = (
-        f"<div style='margin-top:12px;font-size:16px'><b>Best next topic:</b> "
-        f"{sec1.best_next_topic}</div>"
-        if sec1.best_next_topic
+    chips = ""
+    if sec1.best_next_topic:
+        chips += _chip(f"🎯 Next: <b>{sec1.best_next_topic}</b>")
+    chips += _timer_chip(col)
+    chips_row = (
+        f"<div style='display:flex;flex-wrap:wrap;gap:10px;margin-top:18px'>{chips}</div>"
+        if chips
         else ""
     )
     coverage_bar = f"""
-  <div style="margin-top:18px">
-    <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px">
-      <span><b>Domain coverage</b></span><span>{pct:.0%} of {total} domains</span>
+  <div style="margin-top:22px">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:#94a3b8">
+      <span style="font-weight:600;letter-spacing:.4px;text-transform:uppercase">Domain coverage</span>
+      <span>{pct:.0%} of {total} domains</span>
     </div>
-    <div style="height:14px;border-radius:8px;background:rgba(127,127,127,.20);overflow:hidden">
-      <div style="height:100%;width:{pct * 100:.0f}%;
-                  background:linear-gradient(90deg,#2f81f7,#3fb950)"></div>
+    <div style="height:10px;border-radius:999px;background:rgba(148,163,184,.18);overflow:hidden">
+      <div style="height:100%;width:{pct * 100:.0f}%;border-radius:999px;
+                  background:linear-gradient(90deg,#3b82f6,#10b981)"></div>
     </div>
   </div>"""
     return f"""
-<div style="max-width:940px;margin:26px auto 10px;padding:30px 34px;border-radius:20px;
-            background:linear-gradient(135deg,rgba(47,129,247,.16),rgba(63,185,80,.05));
-            border:1px solid rgba(47,129,247,.40)">
-  <div style="font-size:34px;font-weight:800;letter-spacing:.3px">{APP_TITLE}</div>
-  <div style="opacity:.7;margin-bottom:22px;font-size:16px">NAP Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap">{badges}</div>
+<div style="font-family:{_FONT};max-width:980px;margin:28px auto 12px;padding:30px 32px;
+            border-radius:24px;border:1px solid rgba(148,163,184,.16);
+            box-shadow:0 10px 34px rgba(0,0,0,.28);
+            background:radial-gradient(130% 150% at 0% 0%, rgba(59,130,246,.18),
+                       rgba(16,185,129,.05) 55%, rgba(2,6,23,0) 100%), rgba(148,163,184,.05)">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div style="width:46px;height:46px;border-radius:14px;display:flex;align-items:center;
+                justify-content:center;font-weight:800;font-size:17px;color:#fff;
+                background:linear-gradient(135deg,#3b82f6,#10b981);
+                box-shadow:0 6px 16px rgba(59,130,246,.45)">RP</div>
+    <div>
+      <div style="font-size:25px;font-weight:800;letter-spacing:-.3px">Speedrun
+        <span style="opacity:.5;font-weight:600">for the RPCE</span></div>
+      <div style="opacity:.6;font-size:13.5px">Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-top:22px">{cards}</div>
   {coverage_bar}
-  {next_topic}
-  {_timer_line(col)}
+  {chips_row}
   {note}
-  <div style="margin-top:18px;font-size:14px;opacity:.6">Use the <b>RPCE</b> menu for the full dashboard, Section II scenario practice, and timed practice.</div>
+  <div style="margin-top:18px;font-size:13px;color:#94a3b8">Use the
+    <b style="color:#cbd5e1">RPCE</b> menu for the dashboard, Section II practice, and timed sessions.</div>
 </div>
 """
 
@@ -176,43 +229,68 @@ def _readiness_html(col) -> str:
             else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
         )
 
-    badges = "".join(
+    cards = "".join(
         [
-            _badge("Memory", _fmt_range(mem.point, mem.low, mem.high), mem.confidence),
-            _badge(
+            _score_card(
+                "Memory",
+                _fmt_range(mem.point, mem.low, mem.high),
+                mem.confidence,
+                mem.point,
+            ),
+            _score_card(
                 "Performance",
                 _fmt_range(perf.point, perf.low, perf.high),
                 perf.confidence,
+                perf.point,
             ),
-            _badge("Pass Section I", secval(sec1), sec1.confidence),
-            _badge("Pass Section II", secval(sec2), sec2.confidence),
+            _score_card(
+                "Pass Section I",
+                secval(sec1),
+                sec1.confidence,
+                None if sec1.abstained else sec1.p_pass,
+            ),
+            _score_card(
+                "Pass Section II",
+                secval(sec2),
+                sec2.confidence,
+                None if sec2.abstained else sec2.p_pass,
+            ),
         ]
     )
+
+    def cov_bar(weight: float, has_cards: bool) -> str:
+        color = "#10b981" if has_cards else "#475569"
+        return (
+            "<div style='height:6px;width:120px;border-radius:999px;background:rgba(148,163,184,.18);overflow:hidden'>"
+            f"<div style='height:100%;width:{min(100, weight * 200):.0f}%;background:{color};border-radius:999px'></div></div>"
+        )
+
     cov_rows = "".join(
-        f"<tr style='border-bottom:1px solid rgba(127,127,127,.18)'>"
-        f"<td style='padding:10px 12px'>{c.code}. {c.name}</td>"
-        f"<td style='padding:10px 12px;text-align:center'>{c.cards}</td>"
-        f"<td style='padding:10px 12px;text-align:center'>{c.weight:.2f}</td></tr>"
+        "<tr style='border-bottom:1px solid rgba(148,163,184,.12)'>"
+        f"<td style='padding:11px 12px'>{c.code}. {c.name}</td>"
+        f"<td style='padding:11px 12px;text-align:center;color:{'#e2e8f0' if c.cards else '#64748b'}'>{c.cards}</td>"
+        f"<td style='padding:11px 12px'>{cov_bar(c.weight, c.cards > 0)}</td></tr>"
         for c in s["coverage"]
     )
     next_topic = (
-        f"<p style='font-size:16px'><b>Best next topic:</b> {sec1.best_next_topic}</p>"
+        f"<p style='font-size:15px;color:#cbd5e1'>🎯 <b>Best next topic:</b> {sec1.best_next_topic}</p>"
         if sec1.best_next_topic
         else ""
     )
     return f"""
-<div style="font-family:sans-serif;max-width:880px;margin:0 auto;padding:8px 6px">
-  <div style="font-size:30px;font-weight:800">RPCE readiness</div>
-  <div style="opacity:.7;margin-bottom:20px;font-size:16px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap">{badges}</div>
-  <p style="font-size:16px;margin-top:22px"><b>Why:</b> {sec1.evidence}</p>
+<div style="font-family:{_FONT};max-width:900px;margin:0 auto;padding:14px 10px;color:#e2e8f0">
+  <div style="font-size:28px;font-weight:800;letter-spacing:-.3px">RPCE readiness</div>
+  <div style="opacity:.6;margin-bottom:22px;font-size:15px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">{cards}</div>
+  <p style="font-size:15px;margin-top:22px;color:#94a3b8"><b style="color:#cbd5e1">Why:</b> {sec1.evidence}</p>
   {next_topic}
-  <div style="font-size:22px;font-weight:700;margin:24px 0 10px">Coverage map · 7 Performance-Expectation domains</div>
-  <table style="border-collapse:collapse;width:100%;font-size:15px">
-    <tr style="border-bottom:2px solid rgba(127,127,127,.35)">
+  <div style="font-size:18px;font-weight:700;margin:26px 0 12px">Coverage map
+    <span style="font-weight:500;color:#94a3b8;font-size:14px">· 7 Performance-Expectation domains</span></div>
+  <table style="border-collapse:collapse;width:100%;font-size:14.5px">
+    <tr style="border-bottom:2px solid rgba(148,163,184,.25);color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.5px">
       <th style="text-align:left;padding:10px 12px">Domain</th>
-      <th style="padding:10px 12px">Cards</th>
-      <th style="padding:10px 12px">Weight</th>
+      <th style="padding:10px 12px;text-align:center">Cards</th>
+      <th style="text-align:left;padding:10px 12px">Exam weight</th>
     </tr>
     {cov_rows}
   </table>
