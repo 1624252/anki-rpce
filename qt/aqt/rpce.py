@@ -29,7 +29,8 @@ from aqt.qt import (
     QVBoxLayout,
     qconnect,
 )
-from aqt.utils import showInfo, tooltip
+from aqt.utils import tooltip
+from aqt.webview import AnkiWebView
 
 
 def _load_corpus() -> str:
@@ -71,11 +72,11 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
 def _badge(label: str, value: str, confidence: str) -> str:
     color = _CONF_COLOR.get(confidence, "#8b949e")
     return (
-        f"<div style='flex:1;min-width:120px;padding:10px 12px;border-radius:10px;"
-        f"background:rgba(127,127,127,.08);border:1px solid {color}55'>"
-        f"<div style='font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.7'>{label}</div>"
-        f"<div style='font-size:18px;font-weight:700;margin-top:2px'>{value}</div>"
-        f"<div style='font-size:11px;color:{color};margin-top:2px'>{confidence}</div>"
+        f"<div style='flex:1;min-width:200px;padding:20px 22px;border-radius:16px;"
+        f"background:rgba(127,127,127,.10);border:1px solid {color}66'>"
+        f"<div style='font-size:14px;text-transform:uppercase;letter-spacing:1px;opacity:.65'>{label}</div>"
+        f"<div style='font-size:40px;font-weight:800;margin-top:6px;line-height:1.1'>{value}</div>"
+        f"<div style='font-size:13px;color:{color};margin-top:6px;text-transform:uppercase;letter-spacing:1px'>{confidence}</div>"
         f"</div>"
     )
 
@@ -88,11 +89,11 @@ def _timer_line(col) -> str:
         return ""
     if status.expired:
         return (
-            "<div style='margin-top:8px;font-size:13px;color:#f85149'>"
+            "<div style='margin-top:12px;font-size:16px;color:#f85149'>"
             f"⏱ Section {status.section} time is up (3:00:00 limit reached).</div>"
         )
     return (
-        "<div style='margin-top:8px;font-size:13px;color:#2f81f7'>"
+        "<div style='margin-top:12px;font-size:16px;color:#2f81f7'>"
         f"⏱ Section {status.section} timed practice: "
         f"<b>{timed.format_hms(status.remaining_secs)}</b> remaining</div>"
     )
@@ -126,27 +127,37 @@ def _banner_html(col) -> str:
     note = ""
     if sec1.abstained or sec2.abstained:
         note = (
-            f"<div style='margin-top:10px;font-size:13px;color:#d29922'>"
-            f"⚠ Readiness hidden until there's enough data — {sec1.evidence}</div>"
+            f"<div style='margin-top:14px;font-size:15px;color:#d29922'>"
+            f"⚠ Readiness stays hidden until there's enough data — {sec1.evidence}</div>"
         )
     next_topic = (
-        f"<div style='margin-top:8px;font-size:13px'><b>Best next topic:</b> "
+        f"<div style='margin-top:12px;font-size:16px'><b>Best next topic:</b> "
         f"{sec1.best_next_topic}</div>"
         if sec1.best_next_topic
         else ""
     )
+    coverage_bar = f"""
+  <div style="margin-top:18px">
+    <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px">
+      <span><b>Domain coverage</b></span><span>{pct:.0%} of {total} domains</span>
+    </div>
+    <div style="height:14px;border-radius:8px;background:rgba(127,127,127,.20);overflow:hidden">
+      <div style="height:100%;width:{pct * 100:.0f}%;
+                  background:linear-gradient(90deg,#2f81f7,#3fb950)"></div>
+    </div>
+  </div>"""
     return f"""
-<div style="max-width:720px;margin:18px auto 8px;padding:18px 20px;border-radius:14px;
-            background:linear-gradient(135deg,rgba(47,129,247,.14),rgba(47,129,247,.03));
-            border:1px solid rgba(47,129,247,.35)">
-  <div style="font-size:22px;font-weight:800">{APP_TITLE}</div>
-  <div style="opacity:.7;margin-bottom:14px">NAP Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
-  <div style="display:flex;gap:10px;flex-wrap:wrap">{badges}</div>
-  <div style="margin-top:10px;font-size:13px"><b>Coverage:</b> {pct:.0%} of {total} Performance-Expectation domains</div>
+<div style="max-width:940px;margin:26px auto 10px;padding:30px 34px;border-radius:20px;
+            background:linear-gradient(135deg,rgba(47,129,247,.16),rgba(63,185,80,.05));
+            border:1px solid rgba(47,129,247,.40)">
+  <div style="font-size:34px;font-weight:800;letter-spacing:.3px">{APP_TITLE}</div>
+  <div style="opacity:.7;margin-bottom:22px;font-size:16px">NAP Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">{badges}</div>
+  {coverage_bar}
   {next_topic}
   {_timer_line(col)}
   {note}
-  <div style="margin-top:10px;font-size:12px;opacity:.6">Use the <b>RPCE</b> menu for the full dashboard and to build the deck.</div>
+  <div style="margin-top:18px;font-size:14px;opacity:.6">Use the <b>RPCE</b> menu for the full dashboard, Section II scenario practice, and timed practice.</div>
 </div>
 """
 
@@ -154,47 +165,59 @@ def _banner_html(col) -> str:
 def _readiness_html(col) -> str:
     from anki.rpce import scores
 
-    summary = scores.readiness_summary(col)
-    mem = summary["memory"]
-    perf = summary["performance"]
-    rows = [
-        "<h2>RPCE readiness</h2>",
-        "<table cellpadding=6 style='border-collapse:collapse'>",
-        "<tr><th align=left>Score</th><th align=left>Value</th><th align=left>Confidence</th></tr>",
-        f"<tr><td>Memory</td><td>{_fmt_range(mem.point, mem.low, mem.high)}</td><td>{mem.confidence}</td></tr>",
-        f"<tr><td>Performance</td><td>{_fmt_range(perf.point, perf.low, perf.high)}</td><td>{perf.confidence}</td></tr>",
-    ]
-    for key, label in (
-        ("section_I", "Readiness — Section I"),
-        ("section_II", "Readiness — Section II"),
-    ):
-        snap = summary[key]
-        value = (
+    s = scores.readiness_summary(col)
+    mem, perf = s["memory"], s["performance"]
+    sec1, sec2 = s["section_I"], s["section_II"]
+
+    def secval(snap) -> str:
+        return (
             "Abstaining"
             if snap.abstained
             else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
         )
-        rows.append(
-            f"<tr><td>{label}</td><td>{value}</td><td>{snap.confidence}</td></tr>"
-        )
-    rows.append("</table>")
 
-    # Honesty payload: evidence + what's missing + best next topic.
-    sec1 = summary["section_I"]
-    rows.append(f"<p><b>Why:</b> {sec1.evidence}</p>")
-    if sec1.best_next_topic:
-        rows.append(f"<p><b>Best next topic:</b> {sec1.best_next_topic}</p>")
-
-    # Coverage map.
-    rows.append("<h3>Coverage map (7 domains)</h3>")
-    rows.append("<table cellpadding=4 style='border-collapse:collapse'>")
-    rows.append("<tr><th align=left>Domain</th><th>Cards</th><th>Weight</th></tr>")
-    for c in summary["coverage"]:
-        rows.append(
-            f"<tr><td>{c.code}. {c.name}</td><td align=center>{c.cards}</td><td align=center>{c.weight:.2f}</td></tr>"
-        )
-    rows.append("</table>")
-    return "\n".join(rows)
+    badges = "".join(
+        [
+            _badge("Memory", _fmt_range(mem.point, mem.low, mem.high), mem.confidence),
+            _badge(
+                "Performance",
+                _fmt_range(perf.point, perf.low, perf.high),
+                perf.confidence,
+            ),
+            _badge("Pass Section I", secval(sec1), sec1.confidence),
+            _badge("Pass Section II", secval(sec2), sec2.confidence),
+        ]
+    )
+    cov_rows = "".join(
+        f"<tr style='border-bottom:1px solid rgba(127,127,127,.18)'>"
+        f"<td style='padding:10px 12px'>{c.code}. {c.name}</td>"
+        f"<td style='padding:10px 12px;text-align:center'>{c.cards}</td>"
+        f"<td style='padding:10px 12px;text-align:center'>{c.weight:.2f}</td></tr>"
+        for c in s["coverage"]
+    )
+    next_topic = (
+        f"<p style='font-size:16px'><b>Best next topic:</b> {sec1.best_next_topic}</p>"
+        if sec1.best_next_topic
+        else ""
+    )
+    return f"""
+<div style="font-family:sans-serif;max-width:880px;margin:0 auto;padding:8px 6px">
+  <div style="font-size:30px;font-weight:800">RPCE readiness</div>
+  <div style="opacity:.7;margin-bottom:20px;font-size:16px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">{badges}</div>
+  <p style="font-size:16px;margin-top:22px"><b>Why:</b> {sec1.evidence}</p>
+  {next_topic}
+  <div style="font-size:22px;font-weight:700;margin:24px 0 10px">Coverage map · 7 Performance-Expectation domains</div>
+  <table style="border-collapse:collapse;width:100%;font-size:15px">
+    <tr style="border-bottom:2px solid rgba(127,127,127,.35)">
+      <th style="text-align:left;padding:10px 12px">Domain</th>
+      <th style="padding:10px 12px">Cards</th>
+      <th style="padding:10px 12px">Weight</th>
+    </tr>
+    {cov_rows}
+  </table>
+</div>
+"""
 
 
 def _build_deck() -> None:
@@ -212,7 +235,19 @@ def _show_dashboard() -> None:
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    showInfo(_readiness_html(mw.col), title="RPCE", textFormat="rich")
+    dialog = QDialog(mw)
+    dialog.setWindowTitle("RPCE readiness")
+    dialog.resize(900, 760)
+    layout = QVBoxLayout(dialog)
+    layout.setContentsMargins(0, 0, 0, 0)
+    web = AnkiWebView(title="rpce-dashboard")
+    web.stdHtml(_readiness_html(mw.col))
+    layout.addWidget(web)
+    close = QPushButton("Close")
+    qconnect(close.clicked, dialog.accept)
+    layout.addWidget(close)
+    dialog.exec()
+    web.cleanup()
 
 
 class ScenarioDialog(QDialog):
