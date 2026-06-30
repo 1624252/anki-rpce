@@ -10,7 +10,7 @@ from tests.shared import getEmptyCol
 
 def _build_and_study(col, n: int) -> None:
     """Build the starter deck, select it, and answer up to n cards 'Good'."""
-    did = rpce.build_starter_deck(col, cards_per_domain=1)  # 7 cards, all domains
+    did = rpce.build_starter_deck(col)  # multi-format cards across all 7 domains
     col.decks.set_current(did)
     col.reset()
     for _ in range(n):
@@ -78,7 +78,7 @@ def test_readiness_summary_bundles_all_dashboard_data():
 
 def test_best_next_topic_follows_weight_times_gap():
     col = getEmptyCol()
-    rpce.build_starter_deck(col, cards_per_domain=1)
+    rpce.build_starter_deck(col)
     # Make domain 5 dominate the exam weight; with equal recall it has the
     # largest weight × gap, so it should be the recommended next topic.
     rpce.set_domain_weights(col, {d.code: 0.05 for d in rpce.DOMAINS} | {5: 0.7})

@@ -174,6 +174,30 @@ class BaselineExaminer(Examiner):
         return GradeResult(score, passed, feedback, citation, abstained=False)
 
 
+class PlaceholderExaminer(Examiner):
+    """The active grader until real AI is enabled — **no network calls**.
+
+    Grades accuracy deterministically (via the baseline) and adds a simulation
+    debrief, clearly labelled as a placeholder. Swap in `LLMExaminer` later
+    without changing callers.
+    """
+
+    def __init__(self, pass_score: float = 3.0) -> None:
+        self.pass_score = pass_score
+
+    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
+        base = BaselineExaminer(self.pass_score).grade(answer, gold_answer, corpus)
+        if base.abstained:
+            return base
+        debrief = (
+            f"{base.feedback} Debrief: compare your ruling to the model below. "
+            "(Placeholder examiner — AI grading is not enabled yet.)"
+        )
+        return GradeResult(
+            base.score, base.passed, debrief, base.citation, abstained=False
+        )
+
+
 def build_grading_prompt(answer: str, gold_answer: str, context: str) -> str:
     """Construct the examiner prompt: grade for accuracy against the rubric,
     grounded in the supplied RONR context; the candidate need not cite."""

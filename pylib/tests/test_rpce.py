@@ -15,12 +15,22 @@ def test_seven_domains_with_normalized_default_weights():
 
 def test_starter_deck_populates_every_domain():
     col = getEmptyCol()
-    rpce.build_starter_deck(col, cards_per_domain=2)
+    rpce.build_starter_deck(col)
 
     cov = rpce.coverage(col)
     assert len(cov) == 7
-    assert all(c.cards == 2 for c in cov), "each domain gets its cards"
+    # Each concept yields a cloze + an mcq card, so every domain has >= 2.
+    assert all(c.cards >= 2 for c in cov), "each domain gets cloze + mcq cards"
     assert rpce.coverage_pct(col) == 1.0
+
+
+def test_starter_deck_has_multiple_formats_per_concept():
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
+
+    # Same content surfaces in more than one format (cloze recall + applied MCQ).
+    assert col.find_cards("tag:rpce::fmt::cloze"), "cloze cards exist"
+    assert col.find_cards("tag:rpce::fmt::mcq"), "multiple-choice cards exist"
 
 
 def test_topic_weights_round_trip_through_config():
@@ -37,7 +47,7 @@ def test_topic_weights_round_trip_through_config():
 
 def test_topic_weights_feed_points_at_stake_queue():
     col = getEmptyCol()
-    rpce.build_starter_deck(col, cards_per_domain=1)
+    rpce.build_starter_deck(col)
     rpce.set_domain_weights(col, {dom.code: 0.1 for dom in rpce.DOMAINS} | {7: 0.9})
 
     # Make every card due so the queue gathers them.

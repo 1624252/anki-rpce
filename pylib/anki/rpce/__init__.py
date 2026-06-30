@@ -119,28 +119,40 @@ def coverage_pct(col: Collection) -> float:
     return covered / len(cov)
 
 
-def build_starter_deck(
-    col: Collection, name: str = "RPCE", cards_per_domain: int = 2
-) -> int:
-    """Create a small starter deck with placeholder cards tagged per domain.
+def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
+    """Create the starter deck with **multiple flashcard formats per concept**.
 
-    These are clearly-labelled *placeholders* so the app has content to review
-    and the coverage map is populated; real RONR-grounded content is added
-    separately (and AI-generated cards must pass the gold-set checker first).
-    Returns the deck id.
+    For each concept we add a **cloze** recall card and an applied
+    **multiple-choice** card (same fact, different formats / learning styles —
+    Spiky POV 1). Section II free-text scenarios are practised separately. Cards
+    are tagged with their domain (`rpce::domain::N`), concept
+    (`rpce::concept::C`), and format rung (`rpce::fmt::cloze|mcq`). Returns the
+    deck id.
     """
+    from . import flashcards
+    from .transfer_ladder import concept_tag, format_tag
+
     deck_id = col.decks.id(name)
     assert deck_id is not None
     basic = col.models.by_name("Basic")
-    if basic is None:
-        raise RuntimeError("Basic notetype not found")
-    for d in DOMAINS:
-        for i in range(cards_per_domain):
-            note = col.new_note(basic)
-            note["Front"] = f"[{d.name}] sample prompt {i + 1}"
-            note["Back"] = (
-                "Placeholder — replace with RONR (12th ed.)-grounded content."
-            )
-            note.tags = [domain_tag(d.code)]
-            col.add_note(note, deck_id)
+    cloze_model = col.models.by_name("Cloze")
+    if basic is None or cloze_model is None:
+        raise RuntimeError("Basic/Cloze notetypes not found")
+
+    for card in flashcards.all_flashcards():
+        base_tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
+
+        # Cloze recall card.
+        cloze_note = col.new_note(cloze_model)
+        cloze_note["Text"] = card.cloze
+        cloze_note.tags = [*base_tags, format_tag("cloze")]
+        col.add_note(cloze_note, deck_id)
+
+        # Applied multiple-choice card (same concept, different format).
+        mcq_note = col.new_note(basic)
+        mcq_note["Front"] = flashcards.mcq_front(card)
+        mcq_note["Back"] = flashcards.mcq_back(card)
+        mcq_note.tags = [*base_tags, format_tag("mcq")]
+        col.add_note(mcq_note, deck_id)
+
     return deck_id

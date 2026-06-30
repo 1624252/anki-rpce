@@ -168,7 +168,18 @@ def _banner_html(col) -> str:
             "border-radius:12px;padding:12px 16px'>"
             f"⚠ Readiness stays hidden until there's enough data — {sec1.evidence}</div>"
         )
-    chips = ""
+    from anki.rpce import progression
+
+    phase = progression.current_phase(col)
+    _phase_color = {
+        "foundations": "#60a5fa",
+        "application": "#34d399",
+        "mastery": "#a78bfa",
+    }
+    chips = _chip(
+        f"📈 Phase: <b>{phase.title}</b> — {phase.focus}",
+        _phase_color.get(phase.key, "#cbd5e1"),
+    )
     if sec1.best_next_topic:
         chips += _chip(f"🎯 Next: <b>{sec1.best_next_topic}</b>")
     chips += _timer_chip(col)
@@ -381,9 +392,9 @@ class ScenarioDialog(QDialog):
         if not answer:
             return
         s = self._scenarios[self._idx]
-        # Uses the LLM examiner when an API key is configured, else the offline
-        # baseline (the app always grades, AI on or off).
-        result = examiner.make_examiner().grade(
+        # Placeholder grader for now — no AI API calls yet (swap in the LLM
+        # examiner later without changing this screen).
+        result = examiner.PlaceholderExaminer().grade(
             answer, s.gold_answer, self._corpus or s.gold_answer
         )
         scores.record_scenario(self._mw.col)
