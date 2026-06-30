@@ -53,6 +53,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** calibrated memory score from FSRS/`revlog`; Svelte dashboard showing three score slots each with a range, evidence, coverage %, "how sure", last-updated; **abstain** below the give-up line.
 - **Proof:** calibration chart + Brier/log-loss on held-out reviews; abstain state visible until thresholds met.
+- **Status:** **[partial]** — scoring + honesty logic done in `anki.rpce.scores` (memory/performance/readiness with ranges, give-up/abstain rule, best-next-topic); 4 tests pass. Remaining: Svelte dashboard UI + FSRS-calibrated memory (Brier/log-loss).
 
 ### M4 — Transfer Ladder (study feature) · SPOV 1, PRD §7.1
 

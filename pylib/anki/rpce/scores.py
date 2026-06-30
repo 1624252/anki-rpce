@@ -1,0 +1,234 @@
+# Copyright: Ankitects Pty Ltd and contributors
+# License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+
+"""The three RPCE scores and the honest-readiness payload.
+
+Implements the spec's separation of **memory**, **performance**, and
+**readiness** (spec §4), each with a range, plus the **give-up rule**: no
+readiness is shown until enough data exists (spec §1, §4 honesty rule).
+
+Modeling notes (transparent bridges, not black boxes):
+
+- **Memory** = mean per-card recall estimate from review history, a
+  Laplace-smoothed ``(reps - lapses + 1) / (reps + 2)``. This is a transparent
+  proxy; the upgrade path is FSRS-calibrated retrievability with a Brier/log-loss
+  check on held-out reviews (spec §9 Step 1).
+- **Performance** = exam-weighted mean of per-domain recall (spec §9 Step 2);
+  it incorporates coverage by weighting unseen domains as 0.
+- **Readiness** = P(pass a section ≥ 80%), a logistic mapping of performance
+  around the 0.8 bar — never an invented scaled score (RPCE is pass/section).
+
+Every number carries a range and a confidence; below the give-up line the app
+**abstains** and explains what is missing.
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+from statistics import mean, pstdev
+from typing import TYPE_CHECKING
+
+from . import DOMAINS, coverage_pct, domain_tag, topic_weights
+
+if TYPE_CHECKING:
+    from anki.collection import Collection
+
+#: Config counter incremented when a Section II scenario is graded.
+SCENARIO_COUNT_KEY = "rpce:graded_scenarios"
+
+CONFIDENCE_ABSTAIN = "abstain"
+
+
+@dataclass
+class GiveUpRule:
+    """Thresholds below which readiness abstains (spec §4 give-up rule)."""
+
+    min_graded_reviews: int = 200
+    min_coverage: float = 0.5
+    min_scenarios: int = 10
+
+
+@dataclass
+class ScoreRange:
+    """A point estimate with a likely range and a confidence label."""
+
+    point: float | None
+    low: float | None
+    high: float | None
+    confidence: str  # abstain | low | medium | high
+
+
+@dataclass
+class ReadinessSnapshot:
+    """The full honest payload behind a readiness number (spec §4)."""
+
+    section: str
+    p_pass: float | None
+    range_low: float | None
+    range_high: float | None
+    confidence: str
+    pct_covered: float
+    graded_reviews: int
+    graded_scenarios: int
+    evidence: str
+    best_next_topic: str | None
+    abstained: bool
+
+
+def _recall_estimate(reps: int, lapses: int) -> float:
+    """Laplace-smoothed recall in (0, 1): fewer lapses per rep => better."""
+    return (reps - lapses + 1) / (reps + 2)
+
+
+def _reviewed_recalls(col: Collection) -> list[float]:
+    recalls: list[float] = []
+    for cid in col.find_cards("is:review OR is:due"):
+        card = col.get_card(cid)
+        if card.reps > 0:
+            recalls.append(_recall_estimate(card.reps, card.lapses))
+    return recalls
+
+
+def _range_from(values: list[float]) -> ScoreRange:
+    """Mean with a 95% normal interval; confidence scales with sample size."""
+    if not values:
+        return ScoreRange(None, None, None, CONFIDENCE_ABSTAIN)
+    point = mean(values)
+    n = len(values)
+    se = (pstdev(values) / math.sqrt(n)) if n > 1 else 0.5
+    margin = 1.96 * se
+    low = max(0.0, point - margin)
+    high = min(1.0, point + margin)
+    confidence = "high" if n >= 200 else "medium" if n >= 50 else "low"
+    return ScoreRange(point, low, high, confidence)
+
+
+def graded_reviews(col: Collection) -> int:
+    """Number of logged reviews (the raw material for the memory model)."""
+    return col.db.scalar("select count() from revlog") or 0
+
+
+def graded_scenarios(col: Collection) -> int:
+    return int(col.get_config(SCENARIO_COUNT_KEY, 0) or 0)
+
+
+def record_scenario(col: Collection) -> None:
+    """Increment the graded-scenario counter (called by the AI examiner)."""
+    col.set_config(SCENARIO_COUNT_KEY, graded_scenarios(col) + 1)
+
+
+def memory_score(col: Collection) -> ScoreRange:
+    """P(recall a taught fact now), averaged over reviewed cards."""
+    return _range_from(_reviewed_recalls(col))
+
+
+def _domain_recall(col: Collection, code: int) -> float | None:
+    recalls = [
+        _recall_estimate(c.reps, c.lapses)
+        for cid in col.find_cards(f"tag:{domain_tag(code)}")
+        if (c := col.get_card(cid)).reps > 0
+    ]
+    return mean(recalls) if recalls else None
+
+
+def performance_score(col: Collection) -> ScoreRange:
+    """Exam-weighted recall across domains; unseen domains count as 0."""
+    weights = topic_weights(col)
+    total_weight = sum(weights.values()) or 1.0
+    point = 0.0
+    seen_any = False
+    for d in DOMAINS:
+        recall = _domain_recall(col, d.code)
+        w = weights[domain_tag(d.code)] / total_weight
+        if recall is not None:
+            seen_any = True
+            point += w * recall
+        # unseen domain contributes 0, penalising incomplete coverage
+    if not seen_any:
+        return ScoreRange(None, None, None, CONFIDENCE_ABSTAIN)
+    cov = coverage_pct(col)
+    # Wider band when coverage is low (less certain about unseen material).
+    margin = 0.1 + 0.4 * (1.0 - cov)
+    return ScoreRange(
+        point,
+        max(0.0, point - margin),
+        min(1.0, point + margin),
+        "high" if cov >= 0.8 else "medium" if cov >= 0.5 else "low",
+    )
+
+
+def best_next_topic(col: Collection) -> str | None:
+    """The single highest-value thing to study: max ``weight × gap``,
+    where gap favours uncovered or weakly-recalled domains."""
+    weights = topic_weights(col)
+    best: tuple[float, str] | None = None
+    for d in DOMAINS:
+        recall = _domain_recall(col, d.code)
+        gap = 1.0 if recall is None else (1.0 - recall)
+        value = weights[domain_tag(d.code)] * gap
+        if best is None or value > best[0]:
+            best = (value, d.name)
+    return best[1] if best else None
+
+
+def _logistic_pass_probability(performance: float) -> float:
+    """Map a performance estimate to P(section ≥ 80%). Centred on the 0.8 bar;
+    the slope (k) is a documented assumption, not a fitted value yet."""
+    k = 12.0
+    return 1.0 / (1.0 + math.exp(-k * (performance - 0.8)))
+
+
+def readiness(
+    col: Collection, section: str, rule: GiveUpRule | None = None
+) -> ReadinessSnapshot:
+    """P(pass `section` ≥ 80%) with full evidence, or abstain below the line."""
+    rule = rule or GiveUpRule()
+    cov = coverage_pct(col)
+    reviews = graded_reviews(col)
+    scenarios = graded_scenarios(col)
+    next_topic = best_next_topic(col)
+
+    # Section II is the scenario half; Section I does not require scenarios.
+    needs_scenarios = section == "II"
+    missing: list[str] = []
+    if reviews < rule.min_graded_reviews:
+        missing.append(f"{reviews}/{rule.min_graded_reviews} graded reviews")
+    if cov < rule.min_coverage:
+        missing.append(f"{cov:.0%}/{rule.min_coverage:.0%} domain coverage")
+    if needs_scenarios and scenarios < rule.min_scenarios:
+        missing.append(f"{scenarios}/{rule.min_scenarios} graded scenarios")
+
+    if missing:
+        return ReadinessSnapshot(
+            section=section,
+            p_pass=None,
+            range_low=None,
+            range_high=None,
+            confidence=CONFIDENCE_ABSTAIN,
+            pct_covered=cov,
+            graded_reviews=reviews,
+            graded_scenarios=scenarios,
+            evidence="Not enough data: " + "; ".join(missing),
+            best_next_topic=next_topic,
+            abstained=True,
+        )
+
+    perf = performance_score(col)
+    assert perf.point is not None
+    p_pass = _logistic_pass_probability(perf.point)
+    low = _logistic_pass_probability(perf.low or perf.point)
+    high = _logistic_pass_probability(perf.high or perf.point)
+    return ReadinessSnapshot(
+        section=section,
+        p_pass=p_pass,
+        range_low=low,
+        range_high=high,
+        confidence=perf.confidence,
+        pct_covered=cov,
+        graded_reviews=reviews,
+        graded_scenarios=scenarios,
+        evidence=f"Based on {reviews} reviews across {cov:.0%} of domains.",
+        best_next_topic=next_topic,
+        abstained=False,
+    )
