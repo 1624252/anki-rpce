@@ -354,6 +354,19 @@ def _on_profile_open() -> None:
         mw.col.decks.set_current(deck_id)
 
 
+def _on_answer_card(reviewer, card, ease) -> None:
+    """Tally each review by its Transfer-Ladder format rung."""
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    try:
+        from anki.rpce import transfer_ladder
+
+        transfer_ladder.record_review(mw.col, card.note().tags)
+    except Exception as exc:  # never break reviewing over the tally
+        print(f"RPCE format-tally error: {exc}")
+
+
 def _on_deck_browser_content(deck_browser, content) -> None:
     """Put the RPCE readiness banner at the top of the main screen."""
     mw = aqt.mw
@@ -370,3 +383,4 @@ def setup() -> None:
     gui_hooks.main_window_did_init.append(_add_menu)
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
+    gui_hooks.reviewer_did_answer_card.append(_on_answer_card)

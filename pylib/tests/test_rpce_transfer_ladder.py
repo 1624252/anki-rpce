@@ -45,3 +45,22 @@ def test_format_tag_validation():
     assert tl.concept_tag(7) == "rpce::concept::7"
     with pytest.raises(ValueError):
         tl.format_tag("essay")
+
+
+def test_rung_of_tags():
+    assert tl.rung_of_tags(["rpce::domain::1", "rpce::fmt::scenario"]) == "scenario"
+    assert tl.rung_of_tags(["rpce::domain::1"]) is None
+    assert tl.rung_of_tags(["rpce::fmt::bogus"]) is None
+
+
+def test_record_review_tallies_by_rung():
+    from tests.shared import getEmptyCol
+
+    col = getEmptyCol()
+    assert tl.record_review(col, ["rpce::fmt::cloze"]) == "cloze"
+    assert tl.record_review(col, ["rpce::fmt::cloze"]) == "cloze"
+    assert tl.record_review(col, ["rpce::fmt::mcq"]) == "mcq"
+    # A card with no format tag is not tallied.
+    assert tl.record_review(col, ["rpce::domain::2"]) is None
+    tally = col.get_config(tl.FORMAT_REVIEWS_KEY)
+    assert tally == {"cloze": 2, "mcq": 1}

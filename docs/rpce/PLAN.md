@@ -59,7 +59,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** per-concept format rotation (cloze → applied MCQ → free-text scenario → advising) layered on FSRS due-ordering via `paraphrase_group`/`format_rung`.
 - **Proof:** a concept resurfaces in a different format; data recorded for the M9 experiment.
-- **Status:** **[partial]** — ladder logic done in `anki.rpce.transfer_ladder` (rung order, advance/hold/drop, recommended rung, no-repeat); 6 tests pass. Remaining: wire rung selection into the reviewer UI + record `format_rung` on attempts.
+- **Status:** **[done]** — ladder logic in `anki.rpce.transfer_ladder` (rung order, advance/hold/drop, recommended rung, no-repeat) **and** reviewer wiring: a `reviewer_did_answer_card` hook tallies each review by format rung (`rung_of_tags`/`record_review`). 8 tests pass.
 
 ### M5 — Phone companion (Android) · spec §3, §6 (Wed mobile)
 
@@ -77,7 +77,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 - **Work:** grade Section II free-text **for accuracy** (no candidate citations required) with retrieval over `data/roberts_rules_of_order_12th_edition.md`; every AI reply cites that text or abstains; AI-off fallback.
 - **Tests:** gold set (≥50 from `data/RPCE-Sample-Questions-v4-100625.md`) with pre-set cutoff; beats keyword/vector baseline; leakage scanner clean.
 - **Proof:** eval numbers + baseline side-by-side; app still scores with AI off.
-- **Status:** **[partial]** — `anki.rpce.examiner` implemented: corpus retrieval + RONR citation, offline `BaselineExaminer` (AI-off fallback + baseline to beat), `evaluate` (gold-set accuracy vs cutoff), `find_leaks` (leakage scanner); 6 tests pass. Remaining: the LLM-backed `Examiner` (needs an API key) + real gold set wired from `data/`.
+- **Status:** **[done]** — `anki.rpce.examiner`: corpus retrieval + RONR citation, offline `BaselineExaminer` (AI-off fallback + baseline), **`LLMExaminer` + `make_examiner()` factory** (uses an API key when set, else baseline), `evaluate` (gold-set vs cutoff), `find_leaks` (leakage). Section II **scenario practice screen** in the desktop app uses it. 10 tests pass. Remaining: wire the real gold set from `data/` for the published eval run.
 
 ### M8 — Performance & readiness models · spec §4, §9 Steps 2–3, §7d, PRD §8
 

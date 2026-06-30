@@ -18,11 +18,19 @@ the M9 study-feature experiment measures (spec §7d, §8).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anki.collection import Collection
+
 #: Format rungs in ascending order of transfer demand.
 RUNGS: tuple[str, ...] = ("cloze", "mcq", "scenario", "advising")
 
 CONCEPT_TAG_PREFIX = "rpce::concept"
 FORMAT_TAG_PREFIX = "rpce::fmt"
+
+#: Config tally of how many reviews happened at each format rung.
+FORMAT_REVIEWS_KEY = "rpce:format_reviews"
 
 #: Mastery at/above which the ladder advances to the next rung.
 ADVANCE_THRESHOLD = 0.85
@@ -72,3 +80,28 @@ def is_format_repeat(history: list[tuple[str, float]], proposed: str) -> bool:
     """True if `proposed` repeats the immediately preceding rung (which the
     Transfer Ladder avoids whenever mastery allows progression)."""
     return bool(history) and history[-1][0] == proposed
+
+
+def rung_of_tags(tags: list[str]) -> str | None:
+    """Return the format rung encoded in a note's tags, if any."""
+    prefix = f"{FORMAT_TAG_PREFIX}::"
+    for tag in tags:
+        if tag.startswith(prefix):
+            rung = tag[len(prefix) :]
+            if rung in RUNGS:
+                return rung
+    return None
+
+
+def record_review(col: Collection, tags: list[str]) -> str | None:
+    """Tally a review by its format rung (drives the M9 experiment analysis).
+    Returns the rung recorded, or None if the card has no format tag."""
+    rung = rung_of_tags(tags)
+    if rung is None:
+        return None
+    tally = col.get_config(FORMAT_REVIEWS_KEY, None)
+    if not isinstance(tally, dict):
+        tally = {}
+    tally[rung] = int(tally.get(rung, 0)) + 1
+    col.set_config(FORMAT_REVIEWS_KEY, tally)
+    return rung
