@@ -248,6 +248,29 @@ impl crate::services::SchedulerService for Collection {
             .map(Into::into)
     }
 
+    fn get_points_at_stake_queue(
+        &mut self,
+        input: scheduler::PointsAtStakeQueueRequest,
+    ) -> Result<scheduler::PointsAtStakeQueue> {
+        let entries = self.points_at_stake_queue(
+            &input.topic_weights,
+            input.default_weight,
+            input.limit as usize,
+        )?;
+        Ok(scheduler::PointsAtStakeQueue {
+            entries: entries
+                .into_iter()
+                .map(|e| scheduler::points_at_stake_queue::Entry {
+                    card_id: e.card_id.0,
+                    points_at_stake: e.points_at_stake,
+                    weakness: e.weakness,
+                    weight: e.weight,
+                    matched_tag: e.matched_tag,
+                })
+                .collect(),
+        })
+    }
+
     fn custom_study(
         &mut self,
         input: scheduler::CustomStudyRequest,

@@ -16,6 +16,10 @@ import "anki/deck_config.proto";
 
 service SchedulerService {
   rpc GetQueuedCards(GetQueuedCardsRequest) returns (QueuedCards);
+  // RPCE: order due cards by `topic exam-weight × student weakness` so the
+  // highest-value cards come first. Read-only; does not modify the collection.
+  rpc GetPointsAtStakeQueue(PointsAtStakeQueueRequest)
+      returns (PointsAtStakeQueue);
   rpc AnswerCard(CardAnswer) returns (collection.OpChanges);
   rpc SchedTimingToday(generic.Empty) returns (SchedTimingTodayResponse);
   rpc StudiedToday(generic.Empty) returns (generic.String);
@@ -153,6 +157,33 @@ message QueuedCards {
 message GetQueuedCardsRequest {
   uint32 fetch_limit = 1;
   bool intraday_learning_only = 2;
+}
+
+// RPCE "points-at-stake" queue: re-orders the due cards by how much exam value
+// is at stake for each, i.e. topic exam-weight × student weakness.
+message PointsAtStakeQueueRequest {
+  // Maps a card tag (e.g. "domain::2") to its exam-blueprint weight (0..1).
+  map<string, double> topic_weights = 1;
+  // Weight applied to a card whose tags match none of `topic_weights`.
+  double default_weight = 2;
+  // Maximum number of entries to return; 0 means return all due cards.
+  uint32 limit = 3;
+}
+
+message PointsAtStakeQueue {
+  message Entry {
+    int64 card_id = 1;
+    // topic weight × student weakness (the sort key, descending).
+    double points_at_stake = 2;
+    // Student weakness for this card, in (0, 1]; higher = weaker.
+    double weakness = 3;
+    // The exam weight that applied to this card.
+    double weight = 4;
+    // The tag that supplied the weight, or empty if the default was used.
+    string matched_tag = 5;
+  }
+
+  repeated Entry entries = 1;
 }
 
 message SchedTimingTodayResponse {

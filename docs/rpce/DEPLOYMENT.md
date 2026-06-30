@@ -150,7 +150,7 @@ ways.
 2. In **both** apps, set the sync endpoint to your server's URL and log in with the same account.
 3. Review cards on each device, then sync.
 
-**Conflict rule (documented):** if the *same card* is reviewed offline on both
+**Conflict rule (documented):** if the _same card_ is reviewed offline on both
 devices, the merge resolves by higher-`usn` / last-writer. Test it: review 10
 cards offline on the phone and 10 different cards on desktop, reconnect, and
 confirm all 20 land once with none lost or doubled (spec §7b).
@@ -200,6 +200,6 @@ just bench          # prints p50 / p95 / worst-case per action
 
 ---
 
-*If any step marked **[RPCE]** or **[plan]** does not work as written, it's a
+_If any step marked **[RPCE]** or **[plan]** does not work as written, it's a
 known gap between the current build and the PRD/spec — please report it so we can
-close it.*
+close it._
