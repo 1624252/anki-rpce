@@ -467,7 +467,8 @@ ai_outputs                              -- traceability for every AI generation/
 
 Both apps must **install and run on a clean device** and **still produce a score with AI off**
 (spec §6 Sunday, §11 hard limit). Deployment reuses Anki's existing packaging toolchain rather
-than inventing a new one.
+than inventing a new one. **Step-by-step build/run/test instructions live in
+[`DEPLOYMENT.md`](./DEPLOYMENT.md).**
 
 ### 14a. Desktop app
 
