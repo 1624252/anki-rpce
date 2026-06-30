@@ -445,7 +445,45 @@ ai_outputs                              -- traceability for every AI generation/
 
 ---
 
-## 14. Key Risks & Mitigations
+## 14. Deployment & Distribution (how it ships as an app)
+
+Both apps must **install and run on a clean device** and **still produce a score with AI off**
+(spec §6 Sunday, §11 hard limit). Deployment reuses Anki's existing packaging toolchain rather
+than inventing a new one.
+
+### 14a. Desktop app
+
+- **Build → package:** built from the forked source via the project's `just` recipes; packaged with Anki's **Briefcase-based installer** tooling (`qt/installer`, which already has `windows-template/`, `mac-template/`, `linux-template/`).
+- **Artifacts (MVP target = Windows first):** a Windows installer (`.exe`/MSI) that runs on a machine with no dev tools; macOS `.dmg` and Linux build are stretch targets.
+- **What's bundled:** the PyQt shell + Svelte webviews, the shared Rust core (compiled in), and the **read-only RONR markdown corpus + rubric images**. Copyrighted source PDFs are **never** bundled or committed — the corpus is regenerated locally by the converter pipeline.
+- **AI configuration:** the LLM endpoint/key is read from local config/env at runtime, **never compiled into or shipped with the build**; absent a key, the app starts in AI-off mode and still scores.
+- **First-run:** ships with (or downloads on first launch) the RPCE deck and the seven-domain mapping; no account required for local study.
+- **Acceptance:** a screen recording of the installer running on a clean VM, launching, and completing a review with AI off (spec §6 proof).
+
+### 14b. Phone companion (Android first)
+
+- **Build → package:** built on **AnkiDroid** (Kotlin, AGPL) reusing the shared Rust core via the same protobuf boundary; produces a **signed APK** (the MVP deliverable; Play Store listing is optional/stretch).
+- **Distribution:** signed APK for **sideload** install on a real device/emulator, or internal-track upload; **iOS via TestFlight is future** (iOS uses Anki's Rust C-FFI, out of MVP scope).
+- **Offline-first:** the deck and engine run fully offline; reviews sync to desktop when a connection returns (§14c). AI features degrade cleanly to off when offline/rate-limited and the app keeps scoring (spec §7g).
+- **Acceptance:** a recording of the signed APK installing and running a review on a clean device/emulator, and a reviewed card syncing to desktop (spec §6 proof).
+
+### 14c. Sync & data deployment
+
+- **Sync server:** a **self-hosted Anki sync server** (HTTP) is part of the deployment; either run locally for the demo or on a small instance. Devices point at it via config.
+- **Conflict rule (documented):** same-card-offline edits resolve by higher-`usn` / last-writer; this rule is stated in the repo and demonstrated (spec §7b).
+- **No secrets in artifacts or VCS:** API keys, sync credentials, and any personal data stay in local config/secret stores — never in installers, the repo, or the synced collection. The leakage scanner additionally keeps gold/held-out data out of anything shipped to the model.
+
+### 14d. Release checklist (per build, before handing in)
+
+- Clean-device install verified on desktop **and** phone; both launch and score **with AI switched off**.
+- License compliance: AGPL-3.0-or-later notice + credit to Anki (Ankitects) included in the about/readme; BSD-3-Clause notices preserved for the relevant upstream parts (spec §11).
+- Version/commit hash embedded so a build is traceable to a commit (spec §6 proof).
+- `just bench` numbers captured on the 50,000-card deck (spec §7h, §10 targets) for the release.
+- No copyrighted PDFs, keys, or personal information in the artifact or repo.
+
+---
+
+## 15. Key Risks & Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
