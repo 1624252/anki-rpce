@@ -1,17 +1,16 @@
 # Copyright: Ankitects Pty Ltd and contributors
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-"""Desktop integration for the RPCE study app.
+"""Desktop integration that makes RPCE the focus of the app.
 
-Adds an **RPCE** menu to the main window with:
+- Rebrands the window to **Speedrun for the RPCE**.
+- Puts an **RPCE readiness banner** at the top of the main screen (deck browser):
+  the three honest scores, coverage, best-next-topic, and the abstain state.
+- Auto-creates and selects the RPCE deck on first open.
+- Adds an **RPCE** menu (*Build starter deck*, *Readiness dashboard…*).
 
-- *Build starter deck* — seeds the seven-domain RPCE deck, and
-- *Readiness dashboard…* — shows the three honest scores (memory, performance,
-  readiness per section) each with a range, the coverage map, the best next
-  topic, and the **abstain** state when there isn't enough data yet.
-
-Wired from ``aqt.__init__._run`` via ``main_window_did_init`` so it adds nothing
-to the hot path and is easy to remove for an upstream merge.
+Wired from ``aqt.__init__._run`` via hooks so it adds nothing to the hot path
+and is easy to remove for an upstream merge.
 """
 
 from __future__ import annotations
@@ -21,6 +20,16 @@ from aqt import gui_hooks
 from aqt.qt import QMenu, qconnect
 from aqt.utils import showInfo, tooltip
 
+APP_TITLE = "Speedrun for the RPCE"
+
+# Confidence -> accent colour for the badges.
+_CONF_COLOR = {
+    "abstain": "#8b949e",
+    "low": "#d29922",
+    "medium": "#3fb950",
+    "high": "#2f81f7",
+}
+
 
 def _fmt_range(point: float | None, low: float | None, high: float | None) -> str:
     if point is None:
@@ -28,6 +37,70 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
     if low is None or high is None:
         return f"{point:.0%}"
     return f"{point:.0%} (range {low:.0%}–{high:.0%})"
+
+
+def _badge(label: str, value: str, confidence: str) -> str:
+    color = _CONF_COLOR.get(confidence, "#8b949e")
+    return (
+        f"<div style='flex:1;min-width:120px;padding:10px 12px;border-radius:10px;"
+        f"background:rgba(127,127,127,.08);border:1px solid {color}55'>"
+        f"<div style='font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.7'>{label}</div>"
+        f"<div style='font-size:18px;font-weight:700;margin-top:2px'>{value}</div>"
+        f"<div style='font-size:11px;color:{color};margin-top:2px'>{confidence}</div>"
+        f"</div>"
+    )
+
+
+def _banner_html(col) -> str:
+    from anki.rpce import scores
+
+    s = scores.readiness_summary(col)
+    mem, perf = s["memory"], s["performance"]
+    sec1, sec2 = s["section_I"], s["section_II"]
+    covered = sum(1 for c in s["coverage"] if c.cards > 0)
+    total = len(s["coverage"])
+    pct = covered / total if total else 0.0
+
+    def section_value(snap) -> str:
+        return (
+            "Abstaining"
+            if snap.abstained
+            else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
+        )
+
+    badges = "".join(
+        [
+            _badge("Memory", _fmt_range(mem.point, None, None), mem.confidence),
+            _badge("Performance", _fmt_range(perf.point, None, None), perf.confidence),
+            _badge("Pass Section I", section_value(sec1), sec1.confidence),
+            _badge("Pass Section II", section_value(sec2), sec2.confidence),
+        ]
+    )
+    note = ""
+    if sec1.abstained or sec2.abstained:
+        note = (
+            f"<div style='margin-top:10px;font-size:13px;color:#d29922'>"
+            f"⚠ Readiness hidden until there's enough data — {sec1.evidence}</div>"
+        )
+    next_topic = (
+        f"<div style='margin-top:8px;font-size:13px'><b>Best next topic:</b> "
+        f"{sec1.best_next_topic}</div>"
+        if sec1.best_next_topic
+        else ""
+    )
+    return f"""
+<div style="max-width:720px;margin:18px auto 8px;padding:18px 20px;border-radius:14px;
+            background:linear-gradient(135deg,rgba(47,129,247,.14),rgba(47,129,247,.03));
+            border:1px solid rgba(47,129,247,.35)">
+  <div style="font-size:22px;font-weight:800">{APP_TITLE}</div>
+  <div style="opacity:.7;margin-bottom:14px">NAP Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">{badges}</div>
+  <div style="margin-top:10px;font-size:13px"><b>Coverage:</b> {pct:.0%} of {total} Performance-Expectation domains</div>
+  {next_topic}
+  {note}
+  <div style="margin-top:10px;font-size:12px;opacity:.6">Use the <b>RPCE</b> menu for the full dashboard and to build the deck.</div>
+</div>
+"""
 
 
 def _readiness_html(col) -> str:
@@ -98,6 +171,7 @@ def _add_menu() -> None:
     mw = aqt.mw
     if mw is None:
         return
+    mw.setWindowTitle(APP_TITLE)
     menu = QMenu("&RPCE", mw)
     mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
     build_action = menu.addAction("Build starter deck")
@@ -106,6 +180,32 @@ def _add_menu() -> None:
     qconnect(dash_action.triggered, _show_dashboard)
 
 
+def _on_profile_open() -> None:
+    """Brand the window and make sure the RPCE deck exists and is selected."""
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    mw.setWindowTitle(APP_TITLE)
+    if mw.col.decks.by_name("RPCE") is None:
+        from anki.rpce import build_starter_deck
+
+        deck_id = build_starter_deck(mw.col)
+        mw.col.decks.set_current(deck_id)
+
+
+def _on_deck_browser_content(deck_browser, content) -> None:
+    """Put the RPCE readiness banner at the top of the main screen."""
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    try:
+        content.tree = _banner_html(mw.col) + content.tree
+    except Exception as exc:  # never break the deck browser over the banner
+        print(f"RPCE banner error: {exc}")
+
+
 def setup() -> None:
-    """Register the RPCE menu to be added once the main window is initialized."""
+    """Register all RPCE desktop integration hooks."""
     gui_hooks.main_window_did_init.append(_add_menu)
+    gui_hooks.profile_did_open.append(_on_profile_open)
+    gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
