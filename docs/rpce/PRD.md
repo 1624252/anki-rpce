@@ -56,7 +56,7 @@ We deliberately start with **one** narrow user, not "test-prep students" in gene
 ### Primary persona — "the working-adult RP candidate"
 
 - **Who:** A 30–55-year-old working professional embedded in a governance setting — association staff, an HOA/union/church board officer, or an attorney who advises boards.
-- **Prior knowledge:** **High.** The candidate has *already passed* the NAP membership (RONRIB) exam, so they know the basics and need *application and reflection*, not more worked examples (Insight 3).
+- **Prior knowledge:** **Medium.** The candidate has *already passed* the NAP membership (RONRIB) exam, so they know the basics but need *more specifics and application/reflection*, not more worked examples (Insight 3).
 - **Goal:** Pass **both** RPCE sections (≥80% each) within a quarterly window, while holding a full-time job — so they study in two places: at a desk in the evening and **on their phone between meetings**.
 - **Pain today:** Lecture/cohort prep is scheduled and passive; the official app is a flat quiz bank with occasional wrong answers; no tool tells them honestly whether they are ready or which domain is their weakest.
 - **Definition of success:** "I know my real weak spot today, I can practice Section II scenarios and get graded like an examiner would, and the app tells me — with a confidence range — when I'm actually ready, instead of guessing."
@@ -149,7 +149,7 @@ The MVP is sequenced to the spec's deadlines: **make the apps work → add AI �
 | Time | 3 hrs per section (7 hrs total, ≤1 hr break, upload ≤8 hrs) | Timed practice is a first-class feature |
 | Domains | **7 Performance Expectations** (Main motions; Subsidiary/Privileged; Incidental & bring-again; Org/Conduct of meetings; Voting/Nominations/Elections; Professionalism/Teaching; Boards/Committees & Bylaws) | Coverage map + topic weights keyed to these 7 |
 | Corpus | RONR 12th ed. (closed, citable) + Joint Code of Professional Responsibility | AI must cite; grounds the leakage/eval design |
-| Candidate | Already passed RONRIB membership exam | High prior knowledge → reflection > worked examples |
+| Candidate | Already passed RONRIB membership exam | Medium prior knowledge → specifics + reflection > worked examples |
 | Cadence | Quarterly 7-day windows; RP renews every 2 years | Spaced retrieval extends usefulness past exam day |
 
 ---
