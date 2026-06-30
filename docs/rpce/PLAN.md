@@ -47,6 +47,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** add custom tables (`domains`, `card_topic`, `performance_items`, `attempts`, `coverage`, `readiness_snapshots`, `ai_outputs`) in the collection DB so they sync; seed the seven Performance-Expectation domains with exam weights; build/import the RPCE deck and tag each card to a domain.
 - **Proof:** coverage map over all seven domains rendered on the dashboard.
+- **Status:** **[done]** — implemented sync-safe via native **tags** (`rpce::domain::N`) + **collection config** weights instead of custom tables (Anki sync would not carry custom tables). `anki.rpce` module: 7 domains, `topic_weights`, `coverage`, `build_starter_deck`; 4 tests pass and feed the M1 queue.
 
 ### M3 — Memory score + Honest Readiness Panel (abstain) · spec §4, §9 Step 1, PRD §7.4, §8
 
