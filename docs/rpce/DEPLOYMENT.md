@@ -75,13 +75,24 @@ just run-optimized
 For live web-UI iteration (macOS/Linux), run `just web-watch` in a second
 terminal.
 
-### 2b. Load the RPCE deck **[RPCE]**
+### 2b. Use the RPCE features in the app **[works now]**
 
-1. Launch the desktop app (§2a).
-2. Import the RPCE deck (`File ▸ Import`) if it isn't bundled, or open the profile that already contains it.
-3. The seven Performance-Expectation domains and card→domain tags load with the deck; the dashboard (three scores + coverage map) reads from there.
+The desktop app adds an **RPCE menu** (left of Help) with two actions:
 
-> Tip: use a throwaway profile for testing — start with `just run -- -p test` so you don't touch your real collection.
+1. **RPCE ▸ Build starter deck** — seeds a deck with cards tagged to all seven
+   Performance-Expectation domains (`rpce::domain::N`). Placeholder content so you
+   have something to review; replace with RONR-grounded cards over time.
+2. **RPCE ▸ Readiness dashboard…** — shows the three scores (memory, performance,
+   readiness per section) each with a range, the coverage map across the seven
+   domains, the best next topic, and the **abstain** state with what data is
+   still missing (until the give-up thresholds are met).
+
+Try it: *Build starter deck*, study a few cards, then open the dashboard — it
+stays in **abstain** until there are enough graded reviews, ≥50% coverage, and
+(for Section II) graded scenarios.
+
+> Tip: use a throwaway profile for testing — start with `.\run.bat -- -p test`
+> (or `just run -- -p test`) so you don't touch your real collection.
 
 ### 2c. Build a clean-machine installer **[works now]**
 
@@ -175,14 +186,22 @@ confirm all 20 land once with none lost or doubled (spec §7b).
 
 ---
 
-## 5. Optional AI layer
+## 5. AI Examiner layer
 
-**[plan]** The AI Examiner (Section II grading + debrief) is **optional**; both
-apps must still score with it off.
+The AI Examiner (Section II grading + debrief) is **optional**; both apps must
+still score with it off.
 
-- **Enable:** provide your LLM provider API key via the environment/local config the AI service reads (e.g. an `.env` entry or an exported `*_API_KEY`). Never commit the key.
-- **Grounding:** retrieval runs over `data/roberts_rules_of_order_12th_edition.md`; every AI reply cites that text or abstains.
-- **Disable (AI-off):** unset the key (or toggle AI off in settings). The app falls back to rubric self-scoring and still produces all three scores.
+- **AI-off baseline (works now):** `anki.rpce.examiner.BaselineExaminer` grades
+  answers offline by keyword overlap and grounds feedback in the RONR corpus via
+  `retrieve(...)`, citing a passage or **abstaining** when none is found. This is
+  both the AI-off fallback and the baseline an LLM must beat (spec §7f). The
+  eval harness (`evaluate`) and leakage scanner (`find_leaks`) also run offline.
+- **LLM grader [plan]:** an LLM-backed grader implements the same `Examiner`
+  interface. Provide the provider API key via env/local config (never commit it);
+  with no key, the app uses the baseline above.
+- **Grounding:** retrieval runs over `data/roberts_rules_of_order_12th_edition.md`
+  (regenerate per §1); every reply cites that text or abstains. Candidates are
+  **not** required to cite — grading is on accuracy.
 
 ---
 
@@ -195,6 +214,19 @@ just test-py        # Python tests (incl. the Python-calling engine test)
 just test-ts        # TypeScript/Svelte tests
 just lint           # clippy + mypy + ruff + eslint + svelte + tsc
 ```
+
+The RPCE Rust + Python tests directly (no `just` needed):
+
+```bash
+cargo test -p anki points_at_stake          # 6 Rust unit tests for the queue
+# Python (PowerShell): point at the built package and run the rpce tests
+$env:PYTHONPATH="out\pylib"; $env:ANKI_TEST_MODE="1"
+out\pyenv\Scripts\python -m pytest -p no:cacheprovider pylib\tests\test_points_at_stake.py pylib\tests\test_rpce*.py -q
+```
+
+These cover the queue, content model, three scores + abstain rule, Transfer
+Ladder, AI examiner/baseline/eval/leakage, calibration metrics, and the
+study-feature experiment (40 tests total with the Rust ones).
 
 **[works now]** Performance targets (spec §10) are reported by a one-command
 benchmark:
@@ -211,14 +243,18 @@ points-at-stake queue, flagging any result over its spec target.
 
 ## 7. Quick test checklist
 
-- [ ] `just run` launches the desktop app **[works now]**
-- [ ] RPCE deck loads; dashboard shows three scores + coverage map **[RPCE]**
+- [ ] `just run` / `.\run.bat` launches the desktop app **[works now]**
+- [ ] **RPCE ▸ Build starter deck** seeds all seven domains **[works now]**
+- [ ] **RPCE ▸ Readiness dashboard…** shows three scores + coverage map and **abstains** until thresholds are met **[works now]**
+- [ ] `cargo ndk -t arm64-v8a build -p anki --lib --features rustls` cross-compiles the engine for Android **[works now]**
+- [ ] `just bench` reports p50/p95/worst under spec targets **[works now]**
+- [ ] RPCE Rust + Python tests pass **[works now]**
 - [ ] `tools/build-installer` produces an installer that runs on a clean VM **[works now]**
-- [ ] Phone build runs a review on the shared engine **[plan]**
+- [ ] AI-off baseline examiner grades + cites/abstains offline **[works now]**
+- [ ] Phone app shell runs a review on the shared engine **[plan]**
 - [ ] A card reviewed on the phone appears on desktop after sync **[plan]**
 - [ ] Offline-then-sync works; same-card conflict resolves per the documented rule **[plan]**
-- [ ] AI Examiner grades a Section II answer with a RONR citation; **AI-off still scores** **[plan]**
-- [ ] `just check` is green **[works now]**
+- [ ] LLM-backed examiner grades with an API key (AI-off still scores) **[plan]**
 
 ---
 
