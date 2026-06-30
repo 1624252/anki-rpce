@@ -777,6 +777,11 @@ def _run(argv: list[str] | None = None, exec: bool = True) -> AnkiApp | None:
     # load the main window
     import aqt.main
 
+    # RPCE: register the study-app menu before the window initializes.
+    import aqt.rpce
+
+    aqt.rpce.setup()
+
     mw = aqt.main.AnkiQt(app, pm, backend, opts, args)
     if exec:
         print("Starting main loop...")

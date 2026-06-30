@@ -179,6 +179,20 @@ def _logistic_pass_probability(performance: float) -> float:
     return 1.0 / (1.0 + math.exp(-k * (performance - 0.8)))
 
 
+def readiness_summary(col: Collection, rule: GiveUpRule | None = None) -> dict:
+    """All dashboard data in one call: the three scores plus both sections'
+    readiness and per-domain coverage. Used by the desktop dashboard."""
+    from . import coverage as _coverage
+
+    return {
+        "memory": memory_score(col),
+        "performance": performance_score(col),
+        "section_I": readiness(col, "I", rule),
+        "section_II": readiness(col, "II", rule),
+        "coverage": _coverage(col),
+    }
+
+
 def readiness(
     col: Collection, section: str, rule: GiveUpRule | None = None
 ) -> ReadinessSnapshot:

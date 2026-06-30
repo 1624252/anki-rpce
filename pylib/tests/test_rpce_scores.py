@@ -60,6 +60,22 @@ def test_memory_score_reflects_review_history():
     assert 0.6 <= mem.point <= 0.72
 
 
+def test_readiness_summary_bundles_all_dashboard_data():
+    col = getEmptyCol()
+    summary = scores.readiness_summary(col)
+    assert set(summary) == {
+        "memory",
+        "performance",
+        "section_I",
+        "section_II",
+        "coverage",
+    }
+    # Fresh collection abstains everywhere and lists all seven domains.
+    assert summary["section_I"].abstained is True
+    assert summary["section_II"].abstained is True
+    assert len(summary["coverage"]) == 7
+
+
 def test_best_next_topic_follows_weight_times_gap():
     col = getEmptyCol()
     rpce.build_starter_deck(col, cards_per_domain=1)
