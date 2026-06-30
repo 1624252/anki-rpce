@@ -206,7 +206,7 @@ No AI ships before the apps review the same deck on a shared engine.
 - **Inputs.** Candidate free-text answer + the scenario's `gold_answer`/rubric + the relevant Performance Expectation(s) + retrieved RONR passages.
 - **Grading criterion.** Answers are scored on the **accuracy of the ruling and the soundness of the reasoning** against the rubric — **not** on whether the candidate quotes RONR. Candidates do not need to cite sections or memorize section numbers.
 - **Outputs.** A 0–5 rubric score, targeted debrief, an RONR reference for the correct ruling **supplied by the AI** (so the candidate can verify), and probing follow-up questions — **no new factual lecture** (the candidate is presumed to know the basics).
-- **Grounding & safety.** Retrieval over the RONR markdown corpus; every AI output carries a `source_citation` (§11) for *traceability of the AI's own feedback* (spec §6 requirement), independent of the candidate's answer. If retrieval finds no supporting passage, the Examiner abstains rather than inventing (anti-NAPMobile rule).
+- **Grounding & safety.** Retrieval runs **specifically over the transcribed *Robert's Rules of Order Newly Revised, 12th ed.* text** in `data/roberts_rules_of_order_12th_edition.md` (produced by `convert_ronr.py`) — not the model's parametric memory. Every AI output carries a `source_citation` (§11) pointing to that text (e.g. `RONR (12th ed.) 10:11`) for *traceability of the AI's own feedback* (spec §6 requirement), independent of the candidate's answer. **Citations are required of the AI** and are a feature: the candidate can click through to verify. If retrieval finds no supporting passage in the 12th-ed. text, the Examiner abstains rather than inventing (anti-NAPMobile rule).
 - **AI-off fallback.** With AI disabled, Section II falls back to self-scoring against the shown rubric; the app still produces all three scores (spec §6, §11).
 
 ### 7.4 Honest Readiness Panel (honesty rule)
@@ -245,9 +245,9 @@ domains, and ≥10 graded Section II scenarios. The app abstains below this line
 
 **AI safety (spec §6, §7e, §7f).**
 
-- **Source-traced:** every AI output names an RONR / PE / Joint-Code source or abstains.
-- **Gold set:** ≥50 Q&A pairs with known-correct answers; pre-set pass cutoff; report correct / wrong / "correct-but-bad-teaching" counts; block failing cards.
-- **Baseline:** keyword or vector search over RONR, shown side-by-side; the AI must beat it.
+- **Source-traced:** every AI output names a source in the transcribed RONR 12th-ed. text (`data/roberts_rules_of_order_12th_edition.md`) — or a PE / Joint-Code section — or it abstains.
+- **Gold set:** ≥50 Q&A pairs with known-correct answers, drawn from the **official RPCE sample questions** in `data/RPCE-Sample-Questions-v4-100625.md` (their answer keys already cite RONR 12th-ed. paragraphs, e.g. `RONR (12th ed.) 10:11`); pre-set pass cutoff; report correct / wrong / "correct-but-bad-teaching" counts; block failing cards.
+- **Baseline:** keyword or vector search over the same RONR 12th-ed. text, shown side-by-side; the AI must beat it.
 - **Leakage scanner:** flags any test/gold item (or near-copy) that slipped into prompts/training; a violation zeroes that score (spec §11).
 
 **Study-feature experiment (spec §8) — the Transfer Ladder.**
@@ -298,7 +298,7 @@ flowchart TB
     syncsrv["Anki sync server (self-hosted)"]
   end
 
-  corpus["RONR markdown corpus<br/>(read-only bundled asset)"]
+  corpus["RONR 12th-ed. text + RPCE samples<br/>(data/, read-only bundled asset)"]
   eval["Gold set / held-out<br/>(repo only, never synced)"]
 
   pylib --> proto
@@ -341,9 +341,9 @@ flowchart TB
 | **Mobile** | AnkiDroid (reuses shared Rust core via FFI) | **Kotlin** | AGPL, open source, already runs the shared engine; MVP = Android first (iOS via Rust C-FFI is future). |
 | **Local storage** | SQLite (`collection.anki2`) + our custom RPCE tables (§11b) | **SQL** | Anki's on-device store; our tables sync for free by living in the same DB. |
 | **Sync** | Self-hosted Anki sync server (HTTP) | **Rust** | Reuses Anki's sync; documented higher-`usn` / last-writer conflict rule (spec §7b). |
-| **AI service** | LLM API behind a thin grading/debrief service + **retrieval (RAG)** over the RONR corpus | **Python** | Examiner grading needs citation grounding; isolated so the app runs fully **AI-off**. |
-| **AI baseline** | Keyword + vector search over RONR markdown | **Python** | The simpler method the AI must beat side-by-side (spec §7f). |
-| **Corpus pipeline** | `convert_ronr.py` / `convert_rpce.py` via `pymupdf` → Markdown + rubric images | **Python** | Produces the closed, citable corpus; source PDFs stay out of VCS. |
+| **AI service** | LLM API behind a thin grading/debrief service + **retrieval (RAG)** over the RONR 12th-ed. text (`data/roberts_rules_of_order_12th_edition.md`) | **Python** | Examiner grading is grounded in the actual transcribed 12th-ed. text, not model memory; isolated so the app runs fully **AI-off**. |
+| **AI baseline** | Keyword + vector search over the same RONR 12th-ed. markdown | **Python** | The simpler method the AI must beat side-by-side (spec §7f). |
+| **Corpus pipeline** | `convert_ronr.py` (→ `roberts_rules_of_order_12th_edition.md`) / `convert_rpce.py` (→ `RPCE-Sample-Questions-v4-100625.md`) via `pymupdf` | **Python** | Produces the closed, citable corpus + sample-question gold set in `data/`; source PDFs stay out of VCS. |
 | **Build / tasks** | `just` recipes wrapping Anki's Ninja-based build (`build/`) | **just / Python / Rust** | Single entry point (`just run`, `just check`, `just bench`); no direct `./ninja`. |
 | **Packaging** | Briefcase installers (`qt/installer`) + signed Android APK | — | See §14 deployment. |
 | **Tooling / CI** | `cargo clippy` + `cargo test`; `ruff` + `mypy` + `pytest`; `svelte-check` + `tsc`; Anki's `./ninja format`/`fix`; Playwright e2e | Rust / Python / TS | Lint + types + tests per language, wired into CI; deterministic eval harness with a fixed seed. |
@@ -352,7 +352,7 @@ flowchart TB
 
 - **One engine, two apps.** The Points-at-Stake Queue lives in `rslib` so it ships unchanged to desktop *and* phone — rewriting the scheduler in JS/Swift is explicitly disallowed (spec §3, §7a).
 - **AI is optional and isolated.** The LLM endpoint/key is read from local config/env at runtime, never compiled in; with AI off both apps still compute all three scores (spec §6, §11).
-- **Citation-grounded AI.** Every AI output is retrieved-and-cited against the RONR markdown corpus or it abstains; a keyword/vector baseline is kept for the required side-by-side.
+- **Citation-grounded AI.** Every AI output is retrieved-and-cited specifically against the transcribed RONR 12th-ed. text (`data/roberts_rules_of_order_12th_edition.md`) or it abstains; a keyword/vector baseline over the same text is kept for the required side-by-side.
 - **Reproducible evals.** Held-out eval harness runs with a deterministic seed so anyone can re-run and get the same numbers (spec §6, §11); the leakage scanner keeps gold/held-out items out of prompts/training.
 - **Versions.** We track Anki's upstream pins (Rust toolchain, Python, Node) from the fork rather than introducing divergent versions; new Rust deps go in the workspace root with `dep.workspace = true`.
 
