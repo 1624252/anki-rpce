@@ -91,7 +91,15 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 .modal .icon{font-size:42px;line-height:1}
 .modal h3{margin:12px 0 6px;font-size:20px;font-weight:800;color:var(--ink)}
 .modal p{color:var(--ink2);font-size:15px;line-height:1.5;margin:0 0 20px}
+/* Reference tables */
+.ref-h{font-size:18px;font-weight:800;color:var(--ink);margin:22px 0 10px}
+.ref-table{width:100%;border-collapse:collapse;font-size:14px}
+.ref-table th,.ref-table td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.ref-table th{color:var(--ink2);text-transform:uppercase;font-size:12px;letter-spacing:.5px}
+.ref-table td.rank{font-weight:800;color:var(--accent1);width:34px}
+.ref-cls{font-size:12px;color:var(--ink2)}
 </style>
+<style id="rpce-css"></style>
 </head>
 <body>
 <div class="wrap">
@@ -112,6 +120,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <button class="btn ghost" onclick="openScores()">Readiness</button>
+    <button class="btn ghost" onclick="openReference()">Reference tables</button>
     <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
     <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
     <p class="muted" id="home-msg"></p>
@@ -121,9 +130,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <div id="review" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="rev-count"></span></div>
     <div id="card" class="card"></div>
-    <div id="mcq-opts" class="mcq-opts hidden"></div>
-    <div id="mcq-ref"></div>
-    <button id="show-btn" class="btn" onclick="showAnswer()">Show answer</button>
+    <button id="show-btn" class="btn hidden" onclick="showAnswer()">Show answer</button>
     <div id="rate" class="rate hidden">
       <button class="again" onclick="rate(0)">Again</button>
       <button class="hard" onclick="rate(1)">Hard</button>
@@ -191,6 +198,12 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     </div>
   </div>
 
+  <!-- REFERENCE TABLES -->
+  <div id="reference" class="hidden">
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Reference</span></div>
+    <div id="ref-body"></div>
+  </div>
+
   <!-- ACCOUNT / SYNC MESSAGE POPUP -->
   <div id="popup" class="overlay hidden" onclick="if(event.target===this)closePopup()">
     <div class="modal" role="alertdialog" aria-modal="true">
@@ -203,11 +216,12 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 
 </div>
 
+<script src="rpce_render.js"></script>
 <script>
 function j(s){ try { return JSON.parse(s); } catch(e){ return {ok:false,error:String(e)}; } }
 function el(id){ return document.getElementById(id); }
 function show(id){
-  ['home','review','scores','section2','simulate','sync'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
+  ['home','review','scores','section2','simulate','sync','reference'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
 }
 function pct(x){ return (x==null) ? '—' : Math.round(x*100)+'%'; }
 
@@ -218,67 +232,74 @@ function refreshCounts(){
 }
 function initHome(){
   try { el('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
+  if (window.RPCE_CSS) el('rpce-css').textContent = RPCE_CSS;  // shared renderer styles
   if (new URLSearchParams(location.search).get('status')==='error')
     el('home-msg').textContent = 'Engine failed to open the collection.';
   refreshCounts();
 }
 function goHome(){ show('home'); refreshCounts(); }
 
-/* ---- review loop ---- */
-var current=null, mcqState=null;
+/* ---- review loop (shared interactive renderer) ---- */
+var current=null;
 function startStudy(){ show('review'); loadCard(); }
 function resetReview(){
-  el('rate').classList.add('hidden'); el('show-btn').classList.remove('hidden');
+  el('rate').classList.add('hidden'); el('show-btn').classList.add('hidden');
   el('done').classList.add('hidden'); el('card').classList.remove('hidden');
-  el('mcq-opts').classList.add('hidden'); el('mcq-opts').innerHTML='';
-  el('mcq-ref').innerHTML=''; mcqState=null;
+  el('card').innerHTML='';
 }
 function loadCard(){
   resetReview();
   var r=j(Engine.nextCard());
   if(!r.ok){ el('card').textContent=r.error||'error'; return; }
-  if(!r.hasCard){ el('card').classList.add('hidden'); el('show-btn').classList.add('hidden');
+  if(!r.hasCard){ el('card').classList.add('hidden');
     el('done').classList.remove('hidden'); el('rev-count').textContent=''; return; }
-  current=r; el('card').innerHTML=r.question;
-  // Interactive multiple-choice: if the card carries an MCQ payload, let the
-  // user pick an option and see how they did before the rating buttons.
-  var data=el('card').querySelector('.mcq-data');
-  if(data) setupMcq(data);
+  current=r;
+  var payload=extractPayload(r.question);
+  if(payload && window.RPCE){
+    // Renderer gates completion: rating buttons appear once the user has
+    // answered (MCQ/order) or revealed every cloze blank ("Reveal all" too).
+    RPCE.render(payload, el('card'), {onComplete:function(){ el('rate').classList.remove('hidden'); }});
+  } else {                                   // no-JS fallback
+    el('card').innerHTML=r.question; el('show-btn').classList.remove('hidden');
+  }
   var c=j(Engine.deckCounts());
   if(c.ok) el('rev-count').textContent=c.new+' new · '+c.learning+' lrn · '+c.review+' due';
 }
-/* cloze cards: reveal the answer, then the four rating buttons */
+/* the notetype template embeds the base64 payload in a hidden #rpce-payload div */
+function extractPayload(html){
+  try {
+    var d=document.createElement('div'); d.innerHTML=html;
+    var p=d.querySelector('#rpce-payload'); if(!p) return null;
+    return JSON.parse(decodeURIComponent(escape(atob(p.getAttribute('data-p')))));
+  } catch(e){ return null; }
+}
 function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
   el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
-/* MCQ cards: build tappable options from the embedded payload */
-function setupMcq(dataEl){
-  var p; try { p=JSON.parse(atob(dataEl.dataset.p)); } catch(e){ return; }
-  var fb=el('card').querySelector('.mcq-fallback'); if(fb) fb.remove();
-  dataEl.remove();
-  el('show-btn').classList.add('hidden');
-  mcqState={idx:p.idx, cite:p.cite, quote:p.quote, answered:false};
-  var box=el('mcq-opts'); box.innerHTML=''; box.classList.remove('hidden');
-  p.opts.forEach(function(opt,i){
-    var b=document.createElement('button');
-    b.innerHTML='<span class="k">'+'ABCD'[i]+'</span>'+opt;
-    b.onclick=function(){ pickMcq(i); };
-    box.appendChild(b);
-  });
-}
-function pickMcq(i){
-  if(!mcqState || mcqState.answered) return; mcqState.answered=true;
-  var btns=el('mcq-opts').querySelectorAll('button');
-  btns.forEach(function(b,j){
-    b.disabled=true;
-    if(j===mcqState.idx){ b.classList.add('correct'); b.innerHTML+='<span class="mark">✓</span>'; }
-    else if(j===i){ b.classList.add('wrong'); b.innerHTML+='<span class="mark">✗</span>'; }
-  });
-  // Show the relevant section + verbatim quote (only place a section appears),
-  // then reveal the four rating buttons.
-  el('mcq-ref').innerHTML=refBlock({section:mcqState.cite, quote:mcqState.quote});
-  el('rate').classList.remove('hidden');
-}
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
+
+/* ---- reference tables (order of precedence, motion characteristics) ---- */
+function openReference(){
+  show('reference');
+  var ref; try { ref=JSON.parse(Engine.reference()); } catch(e){ ref=null; }
+  var host=el('ref-body'); host.innerHTML='';
+  if(!ref){ host.textContent='Reference data unavailable.'; return; }
+  host.appendChild(refHead('Order of precedence (highest → lowest)'));
+  host.appendChild(refTable(['#','Motion','Class'],
+    ref.precedence.map(function(r){ return ['<span style="font-weight:800;color:var(--accent1)">'+r.rank+'</span>', r.name, '<span class="ref-cls">'+r['class']+'</span>']; })));
+  host.appendChild(refHead('Motion characteristics'));
+  host.appendChild(refTable(['Motion','2nd','Debate','Amend','Vote'],
+    ref.characteristics.map(function(r){ return [r.name, r.second, r.debatable, r.amendable, r.vote]; })));
+}
+function refHead(t){ var d=document.createElement('div'); d.className='ref-h'; d.textContent=t; return d; }
+function refTable(headers, rows){
+  var t=document.createElement('table'); t.className='ref-table';
+  var tr=document.createElement('tr');
+  headers.forEach(function(h){ var th=document.createElement('th'); th.textContent=h; tr.appendChild(th); });
+  t.appendChild(tr);
+  rows.forEach(function(cells){ var r=document.createElement('tr');
+    r.innerHTML=cells.map(function(c){ return '<td>'+c+'</td>'; }).join(''); t.appendChild(r); });
+  return t;
+}
 
 /* ---- readiness ---- */
 /* Learning-phase nudge (flashcards -> simulation); mirrors progression.py. */

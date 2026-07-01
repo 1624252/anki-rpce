@@ -108,6 +108,11 @@ class MainActivity : AppCompatActivity() {
         fun simulations(): String =
             assets.open("simulations.json").bufferedReader().use { it.readText() }
 
+        /** Reference tables (order of precedence, motion characteristics). */
+        @JavascriptInterface
+        fun reference(): String =
+            assets.open("reference.json").bufferedReader().use { it.readText() }
+
         @JavascriptInterface
         fun syncLogin(user: String, pass: String, endpoint: String): String =
             NativeBridge.syncLogin(user, pass, endpoint)

@@ -466,6 +466,56 @@ def _show_scenarios() -> None:
     ScenarioDialog(mw).exec()
 
 
+def _reference_html(ref: dict) -> str:
+    """Render the order-of-precedence and motion-characteristics tables."""
+    prec = "".join(
+        f"<tr><td class='rank'>{r['rank']}</td><td>{r['name']}</td>"
+        f"<td class='cls'>{r['class']}</td></tr>"
+        for r in ref["precedence"]
+    )
+    chars = "".join(
+        f"<tr><td>{r['name']}</td><td>{r['second']}</td><td>{r['debatable']}</td>"
+        f"<td>{r['amendable']}</td><td>{r['vote']}</td></tr>"
+        for r in ref["characteristics"]
+    )
+    return (
+        "<style>body{font-family:sans-serif;color:#0a1f44}h3{color:#1b3faa}"
+        "table{border-collapse:collapse;width:100%;font-size:14px;margin-bottom:8px}"
+        "th,td{border-bottom:1px solid #caddf7;padding:7px 9px;text-align:left}"
+        "th{color:#35548c;text-transform:uppercase;font-size:12px}"
+        ".rank{font-weight:800;color:#1d4ed8}.cls{color:#35548c;font-size:12px}</style>"
+        "<h3>Order of precedence (highest → lowest)</h3>"
+        "<table><tr><th>#</th><th>Motion</th><th>Class</th></tr>" + prec + "</table>"
+        "<h3>Motion characteristics</h3>"
+        "<table><tr><th>Motion</th><th>2nd</th><th>Debate</th><th>Amend</th>"
+        "<th>Vote</th></tr>" + chars + "</table>"
+    )
+
+
+class ReferenceDialog(QDialog):
+    """Reference tab: RONR order of precedence + motion characteristics tables."""
+
+    def __init__(self, mw) -> None:
+        super().__init__(mw)
+        from anki.rpce import knowledge
+
+        self.setWindowTitle("RPCE — Reference tables")
+        self.resize(760, 720)
+        self.setStyleSheet(_DIALOG_QSS)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 22, 22, 22)
+        view = QTextBrowser()
+        view.setHtml(_reference_html(knowledge.reference_tables()))
+        layout.addWidget(view)
+
+
+def _show_reference() -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    ReferenceDialog(mw).exec()
+
+
 class SimulationDialog(QDialog):
     """Simulation mode: a scripted meeting plays out turn by turn — members and
     the chair speak, and at decision points the candidate responds *as the
@@ -649,7 +699,9 @@ def _rpce_starter_apkg() -> str | None:
     candidates = [
         os.environ.get("RPCE_STARTER_APKG", ""),
         # dev run: CWD is the repo root (run.bat), where the phone asset lives.
-        os.path.join("mobile", "app", "app", "src", "main", "assets", "rpce_starter.apkg"),
+        os.path.join(
+            "mobile", "app", "app", "src", "main", "assets", "rpce_starter.apkg"
+        ),
     ]
     try:
         import anki.rpce as _r
@@ -690,7 +742,7 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
-    from anki.rpce import TRANSFER_NOTETYPE
+    from anki.rpce import QUESTION_NOTETYPE
 
     if mw.col.decks.by_name("RPCE") is None:
         _build_or_import_rpce_deck(mw)
@@ -703,19 +755,20 @@ def _on_profile_open() -> None:
     # cloze/mcq notes, earlier placeholders), and (re)build if concept cards are
     # missing. Safe because the RPCE deck is generated for the candidate.
     try:
-        stale = mw.col.find_notes(f'deck:RPCE -note:"{TRANSFER_NOTETYPE}"')
+        # Drop notes from an older notetype/model so the deck is rebuilt cleanly.
+        stale = mw.col.find_notes(f'deck:RPCE -note:"{QUESTION_NOTETYPE}"')
         if stale:
             mw.col.remove_notes(stale)
         # One-time re-seed: if the shared 1000-question deck is available but this
-        # profile only has the older curated set, replace it so the desktop uses
+        # profile only has the older/curated set, replace it so the desktop uses
         # the same questions as the phone (same GUIDs → clean sync).
-        has_generated = bool(mw.col.find_cards("tag:rpce::fmt::mcq"))
+        has_generated = bool(mw.col.find_cards("tag:rpce::fmt::order"))
         if _rpce_starter_apkg() and not has_generated:
             notes = mw.col.find_notes("deck:RPCE")
             if notes:
                 mw.col.remove_notes(notes)
             _build_or_import_rpce_deck(mw)
-        elif not mw.col.find_cards(f'note:"{TRANSFER_NOTETYPE}"'):
+        elif not mw.col.find_cards(f'note:"{QUESTION_NOTETYPE}"'):
             _build_or_import_rpce_deck(mw)
         deck = mw.col.decks.by_name("RPCE")
         if deck is not None:
@@ -725,44 +778,25 @@ def _on_profile_open() -> None:
 
 
 def _on_answer_card(reviewer, card, ease) -> None:
-    """Tally each review by the Transfer-Ladder format rung that was shown."""
+    """Tally each review by its format tag (drives the M9 study experiment)."""
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     try:
         from anki.rpce import transfer_ladder
 
-        if _is_transfer_card(card):
-            # reps was incremented by answering; the shown rung used reps-before.
-            rung = transfer_ladder.rung_for_reps(max(0, card.reps - 1))
-            transfer_ladder.record_rung(mw.col, rung)
-        else:
-            transfer_ladder.record_review(mw.col, card.note().tags)
+        transfer_ladder.record_review(mw.col, card.note().tags)
     except Exception as exc:  # never break reviewing over the tally
         print(f"RPCE format-tally error: {exc}")
 
 
-def _is_transfer_card(card) -> bool:
-    from anki.rpce import TRANSFER_NOTETYPE
+def _is_rpce_card(card) -> bool:
+    from anki.rpce import QUESTION_NOTETYPE
 
     try:
-        return card.note_type()["name"] == TRANSFER_NOTETYPE
+        return card.note_type()["name"] == QUESTION_NOTETYPE
     except Exception:
         return False
-
-
-_MCQ_CSS = (
-    "<style>"
-    "#rpce-opts{display:flex;flex-direction:column;gap:10px;max-width:640px;margin:18px auto 0}"
-    ".rpce-opt{text-align:left;font-size:18px;line-height:1.4;padding:13px 16px;border-radius:12px;"
-    "border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font-family:inherit}"
-    ".rpce-opt:hover{border-color:#1d4ed8;background:#e8f0ff}"
-    ".rpce-opt.ok{background:#dcfce7;border-color:#15803d;color:#14532d;font-weight:700}"
-    ".rpce-opt.no{background:#fee2e2;border-color:#be123c;color:#7f1d1d;font-weight:700}"
-    ".rpce-opt:disabled{cursor:default}"
-    ".rpce-fb{margin-top:16px;font-size:17px;font-weight:700;min-height:22px}"
-    "</style>"
-)
 
 
 def _ref_block(section: str, quote: str) -> str:
@@ -783,83 +817,37 @@ def _ref_block(section: str, quote: str) -> str:
     )
 
 
-def _mcq_html(note, label: str, answer_side: bool) -> str:
-    """Interactive multiple choice: clickable options with immediate correct/
-    incorrect feedback (not a flip-to-reveal flashcard)."""
-    from anki.rpce import MCQ_OPTION_SEP
+def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
+    """Return interactive card HTML driven by the shared renderer. The reviewer
+    webview runs the script — the same renderer the phone uses, so both behave
+    identically. ``reveal`` renders the answered state (used on the answer side,
+    which keeps the question on screen with the answer shown + citation)."""
+    from anki.rpce import render_js
 
-    stem = note["MCQQ"]
-    options = [o for o in note["MCQOptions"].split(MCQ_OPTION_SEP) if o]
-    try:
-        correct = int(note["MCQIdx"] or 0)
-    except ValueError:
-        correct = 0
-    letters = "ABCDEFGH"
-    buttons = "".join(
-        f"<button class='rpce-opt' data-i='{i}' onclick='rpcePick({i})'>"
-        f"{letters[i]}) {opt}</button>"
-        for i, opt in enumerate(options)
-    )
-    stem_html = f"<div style='font-size:20px;line-height:1.5'>{stem}</div>"
-    opts_html = (
-        f"<div id='rpce-opts'>{buttons}</div><div id='rpce-fb' class='rpce-fb'></div>"
-    )
-    script = (
-        "<script>function rpcePick(i){var o=document.querySelectorAll('.rpce-opt');"
-        f"var c={correct};o.forEach(function(b,j){{b.disabled=true;"
-        "if(j===c)b.classList.add('ok');else if(j===i)b.classList.add('no');});"
-        "document.getElementById('rpce-fb').innerHTML=(i===c)"
-        "?\"<span style='color:#15803d'>\\u2713 Correct</span>\""
-        ":\"<span style='color:#be123c'>\\u2717 Not quite \\u2014 the correct answer is highlighted.</span>\";}"
+    return (
+        "<style>" + render_js.RENDER_CSS + "</style>"
+        "<div id='rpce-host'></div>"
+        "<script>"
+        + render_js.RENDER_JS
+        + "(function(){try{var p=JSON.parse(decodeURIComponent(escape(atob('"
+        + payload_b64
+        + "'))));window.RPCE.render(p,document.getElementById('rpce-host'),{reveal:"
+        + ("true" if reveal else "false")
+        + "});}catch(e){document.getElementById('rpce-host').textContent=''+e;}})();"
         "</script>"
     )
-    if answer_side:
-        # Reveal the correct option automatically on the answer side.
-        script += "<script>rpcePick(" + str(correct) + ");</script>"
-    return _MCQ_CSS + label + stem_html + opts_html + script
 
 
 def _on_card_will_show(text: str, card, kind: str) -> str:
-    """Render an RPCE card. Concept notes that carry both formats rotate each
-    repetition (Transfer Ladder, spec §7.1); single-format generated questions
-    render as their one format. MCQ is interactive multiple choice; cloze fills
-    the blank in place on the answer side. Non-RPCE cards are untouched."""
+    """Render an RPCE card interactively (tappable MCQ, per-blank cloze reveal,
+    tap-to-order precedence). The answer side re-renders fully revealed so the
+    question stays on screen with the answer + citation. Non-RPCE cards are
+    untouched."""
     try:
-        if not _is_transfer_card(card):
+        if not _is_rpce_card(card):
             return text
-        from anki.rpce import transfer_ladder
-
         note = card.note()
-        has_mcq = bool(note["MCQOptions"])
-        # A genuine cloze prompt (not the phone's MCQ payload smuggled in ClozeQ).
-        has_cloze = bool(note["ClozeQ"]) and "mcq-data" not in note["ClozeQ"]
-        if has_mcq and has_cloze:
-            rung = transfer_ladder.rung_for_reps(card.reps)
-            label = (
-                "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
-                f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
-            )
-        else:
-            rung = "mcq" if has_mcq else "cloze"
-            label = ""
-        ref = _ref_block(note["Citation"], note["Quote"])
-        if rung == "mcq":
-            html = _mcq_html(note, label, answer_side="Answer" in kind)
-            if "Answer" in kind:
-                html += ref
-            return html
-        # Cloze: the question shows the blanked sentence; the answer shows the
-        # same sentence with the blank filled in place (ClozeA), not a separate
-        # reveal below it.
-        if "Question" in kind:
-            return label + f"<div style='font-size:20px;line-height:1.5'>{note['ClozeQ']}</div>"
-        if "Answer" in kind:
-            return (
-                label
-                + f"<div style='font-size:20px;line-height:1.5'>{note['ClozeA']}</div>"
-                + ref
-            )
-        return text
+        return _rpce_render_html(note["Payload"], reveal="Answer" in kind)
     except Exception as exc:  # never break reviewing over rendering
         print(f"RPCE format-render error: {exc}")
         return text
@@ -999,6 +987,15 @@ def _on_toolbar_links(links, toolbar) -> None:
             _show_simulation,
             tip="Run a meeting as the parliamentarian",
             id="rpce_simulate",
+        )
+    )
+    links.append(
+        toolbar.create_link(
+            "rpce_reference",
+            "Reference",
+            _show_reference,
+            tip="Order of precedence & motion characteristics",
+            id="rpce_reference",
         )
     )
     links.append(
