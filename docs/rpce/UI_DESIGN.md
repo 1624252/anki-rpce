@@ -62,6 +62,10 @@ dialogs, so every surface is consistent.
   hint pointing at the tabs.
 - **Dashboard window:** same score-card grid + a coverage table with per-domain
   bars; larger, scrollable.
+- **Study (reviewer):** flashcards inherit the navy theme via CSS injected into
+  the reviewer webview (`webview_will_set_content`): navy background, white card
+  text, sky-blue links/cloze, navy answer bar. The Again/Good/Easy ease colors
+  are left intact (color is a needed difficulty signal there).
 - **Section II dialog:** navy surface, 17px prompt/answer text, blue
   "Grade" button, readable feedback block.
 - **Toolbar tabs:** 16px, blue hover pill, deep-navy bar.

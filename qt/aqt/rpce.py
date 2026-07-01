@@ -80,6 +80,26 @@ _APP_QSS = (
     "QPushButton:disabled{background:#23407a;color:#9ec3f0}"
 )
 
+# Injected into the reviewer (study) webview so flashcards share the Deep Blue
+# theme of the practice screen: navy background, white text, sky-blue links/cloze.
+_REVIEWER_CSS = (
+    "<style>"
+    "html,body{background:"
+    "radial-gradient(1200px 760px at 12% -12%,rgba(29,78,216,.30),rgba(5,12,28,0) 60%),"
+    "linear-gradient(160deg,#050c1c 0%,#0a1a3a 55%,#050c1c 100%) !important;"
+    "color:#f5f9ff !important}"
+    ".card{background:transparent !important;background-color:transparent !important;"
+    "color:#f5f9ff !important}"
+    "hr{border:none;border-top:1px solid #1e3f77 !important}"
+    "a{color:#7dd3fc !important}"
+    ".cloze,.cloze b{color:#60a5fa !important;font-weight:700}"
+    "</style>"
+)
+
+# Navy background for the reviewer's answer-button bar so the whole study screen
+# is one theme.
+_REVIEWER_BOTTOM_CSS = "<style>body,#innertable{background:#0a1a3a !important}</style>"
+
 # One cohesive "Deep Blue" theme (dark navy + white, blue->sky accents),
 # driven by CSS design tokens so the home banner and dashboard stay consistent.
 # See docs/rpce/UI_DESIGN.md.
@@ -528,6 +548,19 @@ def _on_style_init(style: str) -> str:
     return style + _APP_QSS
 
 
+def _on_webview_content(web_content, context) -> None:
+    """Theme the study/reviewer webviews to match the navy practice screen."""
+    try:
+        from aqt.reviewer import Reviewer, ReviewerBottomBar
+
+        if isinstance(context, Reviewer):
+            web_content.head += _REVIEWER_CSS
+        elif isinstance(context, ReviewerBottomBar):
+            web_content.head += _REVIEWER_BOTTOM_CSS
+    except Exception as exc:  # never break reviewing over theming
+        print(f"RPCE reviewer-theme error: {exc}")
+
+
 def _on_profile_open() -> None:
     """Brand the window and make sure the RPCE deck exists and is selected."""
     mw = aqt.mw
@@ -690,6 +723,7 @@ def _on_toolbar_links(links, toolbar) -> None:
 def setup() -> None:
     """Register all RPCE desktop integration hooks."""
     gui_hooks.style_did_init.append(_on_style_init)
+    gui_hooks.webview_will_set_content.append(_on_webview_content)
     gui_hooks.main_window_did_init.append(_add_menu)
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
