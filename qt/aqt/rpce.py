@@ -264,6 +264,36 @@ def _chip(text: str) -> str:
     return f"<span class='rpce-chip'>{text}</span>"
 
 
+def _examiner_badge() -> str:
+    """Show which examiner graded: the built-in offline keyword matcher (no AI
+    key wired) or an online AI examiner. Mirrors the phone."""
+    return (
+        "<div style='margin-top:8px;color:#b45309;font-weight:700'>"
+        "🔌 Offline examiner (keyword match). Connect an online AI examiner for "
+        "richer feedback.</div>"
+    )
+
+
+def _sync_status_html() -> str:
+    """A visible AnkiWeb sign-in/sync indicator for the desktop banner."""
+    signed_in = False
+    try:
+        signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
+    except Exception:
+        pass
+    if signed_in:
+        return (
+            "<span style='display:inline-block;padding:8px 14px;border-radius:999px;"
+            "background:#e7f6ec;color:#15803d;font-weight:700'>🟢 Signed in to AnkiWeb — "
+            "use the <b>Sync</b> button (top-right) to sync now</span>"
+        )
+    return (
+        "<span style='display:inline-block;padding:8px 14px;border-radius:999px;"
+        "background:#fef3c7;color:#b45309;font-weight:700'>⚠️ Not signed in to AnkiWeb — "
+        "click <b>Sync</b> (top-right) to log in and sync with your phone</span>"
+    )
+
+
 def _banner_html(col) -> str:
     from anki.rpce import scores
 
@@ -350,6 +380,7 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
+  <div style="margin-top:10px">{_sync_status_html()}</div>
   <div style="margin-top:16px">
     <a href="#" onclick="pycmd('rpce:reference');return false;"
        style="display:inline-block;padding:11px 20px;border-radius:12px;font-weight:700;
@@ -390,7 +421,7 @@ def _show_dashboard() -> None:
 
 class ScenarioDialog(QDialog):
     """Section II performance practice: read a scenario, write a ruling, and get
-    examiner-style feedback graded for accuracy (no citation required)."""
+    examiner-style feedback graded for accuracy."""
 
     def __init__(self, mw) -> None:
         super().__init__(mw)
@@ -415,7 +446,7 @@ class ScenarioDialog(QDialog):
         self._prompt = QTextBrowser()
         self._prompt.setMinimumHeight(90)
         layout.addWidget(self._prompt)
-        layout.addWidget(QLabel("Your ruling & reasoning (no RONR citation required):"))
+        layout.addWidget(QLabel("Your ruling & reasoning:"))
         self._answer = QTextEdit()
         layout.addWidget(self._answer)
         self._grade_btn = QPushButton("Grade my answer")
@@ -455,8 +486,9 @@ class ScenarioDialog(QDialog):
         verdict = "pass" if result.passed else "keep practicing"
         self._result.setHtml(
             f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
-            f"<b>Feedback:</b> {result.feedback}<br><br>"
-            f"<b>Model ruling:</b> {s.gold_answer}</div>"
+            f"<b>Feedback:</b> {result.feedback}</div>"
+            + _examiner_badge()
+            + f"<div style='margin-top:8px'><b>Model ruling:</b> {s.gold_answer}</div>"
             + _ref_block(s.ref.section, s.ref.quote)
         )
 
@@ -1016,6 +1048,15 @@ def _on_toolbar_links(links, toolbar) -> None:
     links.append(_TOOLBAR_CSS)
     links.append(
         toolbar.create_link(
+            "rpce_dashboard",
+            "Dashboard",
+            _show_dashboard,
+            tip="Readiness dashboard (home)",
+            id="rpce_dashboard",
+        )
+    )
+    links.append(
+        toolbar.create_link(
             "rpce_study",
             "Study",
             _tab_study,
@@ -1039,15 +1080,6 @@ def _on_toolbar_links(links, toolbar) -> None:
             _show_simulation,
             tip="Run a meeting as the parliamentarian",
             id="rpce_simulate",
-        )
-    )
-    links.append(
-        toolbar.create_link(
-            "rpce_dashboard",
-            "Dashboard",
-            _show_dashboard,
-            tip="Readiness dashboard",
-            id="rpce_dashboard",
         )
     )
     if sync_link is not None:

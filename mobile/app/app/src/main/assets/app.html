@@ -21,11 +21,16 @@ html,body{margin:0;min-height:100%;
   font-size:var(--fs-body);-webkit-text-size-adjust:100%;}
 .wrap{padding:52px 18px 40px;max-width:640px;margin:0 auto}
 /* Persistent sync/login status bar */
-#syncbar{position:fixed;top:0;left:0;right:0;z-index:40;padding:9px 14px;font-size:13px;
-  font-weight:700;text-align:center;cursor:pointer;border-bottom:1px solid var(--border)}
+#syncbar{position:fixed;top:0;left:0;right:0;z-index:40;padding:7px 12px;font-size:13px;
+  font-weight:700;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px}
+#syncbar-txt{cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #syncbar.ok{background:#e7f6ec;color:#15803d}
 #syncbar.warn{background:#fef3c7;color:#b45309}
 #syncbar.off{background:#fde8e8;color:#be123c}
+.sb-btns{display:flex;gap:6px;flex-shrink:0}
+.sb-btn{border:1px solid currentColor;background:rgba(255,255,255,.6);color:inherit;
+  border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
 .logo{width:72px;height:72px;border-radius:20px;display:block;object-fit:contain;
   box-shadow:0 10px 26px rgba(29,78,216,.28)}
@@ -115,7 +120,13 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 </head>
 <body>
 <!-- Persistent sync/login status bar (always visible on every screen). -->
-<div id="syncbar" onclick="onSyncBarTap()">…</div>
+<div id="syncbar">
+  <span id="syncbar-txt" onclick="onSyncBarTap()">…</span>
+  <span class="sb-btns">
+    <button id="sb-login" class="sb-btn" onclick="show('sync')">Log in</button>
+    <button id="sb-sync" class="sb-btn" onclick="syncNow()">Sync</button>
+  </span>
+</div>
 <div class="wrap">
 
   <!-- HOME -->
@@ -130,12 +141,11 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
       <div class="count learn"><div class="n" id="c-learn">–</div><div class="l">Learning</div></div>
       <div class="count due"><div class="n" id="c-due">–</div><div class="l">To review</div></div>
     </div>
+    <button class="btn" onclick="openScores()">📊 Dashboard — readiness</button>
     <button class="btn" onclick="startStudy()">Study flashcards</button>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
-    <button class="btn ghost" onclick="openScores()">Readiness</button>
     <button class="btn ghost" onclick="openReference()">📋 Reference tables</button>
-    <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
     <div style="text-align:center;margin-top:16px"><span class="chip" id="engine">engine…</span></div>
     <p class="muted" id="home-msg"></p>
   </div>
@@ -160,7 +170,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 
   <!-- READINESS -->
   <div id="scores" class="hidden">
-    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Readiness</span></div>
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Dashboard</span></div>
     <div class="chip" id="phase" style="display:block;margin:0 0 12px"></div>
     <div class="grid2">
       <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span><div class="srange" id="r-mem"></div><div class="sreason" id="e-mem"></div></div>
@@ -178,7 +188,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <div id="section2" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="s2-domain"></span></div>
     <div class="card" id="s2-prompt" style="font-size:17px"></div>
-    <textarea id="s2-answer" placeholder="Your ruling & reasoning (no RONR citation required)…"></textarea>
+    <textarea id="s2-answer" placeholder="Your ruling & reasoning…"></textarea>
     <button class="btn" onclick="gradeS2()">Grade my answer</button>
     <div class="feedback hidden" id="s2-feedback"></div>
     <button class="btn ghost" onclick="nextS2()" style="margin-top:12px">Next scenario ›</button>
@@ -388,6 +398,13 @@ function inter(a,b){ var n=0; a.forEach(function(x){ if(b.has(x)) n++; }); retur
 function refBlock(r){ if(!r||!r.section) return '';
   return '<div class="rpce-ref"><div class="rpce-cite">RONR (12th ed.) §'+r.section+
     '</div><div class="rpce-quote">\u201c'+r.quote+'\u201d</div></div>'; }
+/* Which examiner graded this. No AI key is wired, so it's the offline
+   keyword-match examiner; if an online AI examiner is configured it says so. */
+function examinerMode(){ try{ if(window.Engine && Engine.examinerMode) return Engine.examinerMode(); }catch(e){} return 'offline'; }
+function examinerBadge(){
+  return examinerMode()==='ai'
+    ? '<div style="margin-top:8px;color:var(--ready);font-weight:700">🤖 Online AI examiner — graded for accuracy with detailed feedback.</div>'
+    : '<div style="margin-top:8px;color:var(--warn);font-weight:700">🔌 Offline examiner (keyword match). Connect online for AI feedback.</div>'; }
 function openSection2(){
   if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }
   sIdx=0; show('section2'); loadS2();
@@ -406,7 +423,7 @@ function gradeS2(){
   var fb=el('s2-feedback'); fb.classList.remove('hidden');
   fb.innerHTML='<b>Score:</b> '+score.toFixed(1)+'/5 ('+(passed?'pass':'keep practicing')+')<br>'+
     '<b>Feedback:</b> Your answer '+(passed?'matches':'misses key points from')+' the model ruling. '+
-    'Debrief: compare your ruling to the model below. <i>(Placeholder examiner — AI grading is not enabled yet.)</i>'+
+    'Debrief: compare your ruling to the model below.'+ examinerBadge() +
     '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">'+
     '<b>Model ruling:</b> '+s.gold + refBlock(s.ref);
 }
@@ -443,7 +460,7 @@ function simRespond(){
   simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
     "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
     "your answer "+(passed?'matches':'misses key points from')+" the model ruling.<br>"+
-    "<b>Model ruling:</b> "+simPending.gold+"</p>" + refBlock(simPending.ref));
+    "<b>Model ruling:</b> "+simPending.gold+"</p>" + examinerBadge() + refBlock(simPending.ref));
   el('sim-answer').value=''; playSim();
 }
 function nextSim(){ simIdx=(simIdx+1)%SIMS.length; loadSim(); }
@@ -494,22 +511,21 @@ function relTime(ts){ if(!ts) return 'never';
   if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+'m ago';
   if(s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; }
 function updateNetStatus(){
-  var bar=el('syncbar'); if(!bar) return;
+  var bar=el('syncbar'), txt=el('syncbar-txt'); if(!bar||!txt) return;
   var on=online(), linked=!!auth.hkey;
-  if(!on){
-    bar.className='off';
-    bar.innerHTML='🔴 Offline — your work is saved on this device and will sync when you’re back online';
-  } else if(!linked){
-    bar.className='warn';
-    bar.innerHTML='⚠️ Not signed in — tap to sign in &amp; sync with desktop';
-  } else {
-    bar.className='ok';
-    bar.innerHTML='🟢 Signed in · synced '+relTime(auth.lastSync)+' — tap to sync now';
-  }
+  if(!on){ bar.className='off'; txt.textContent='🔴 Offline — saved on this device, will sync when back online'; }
+  else if(!linked){ bar.className='warn'; txt.textContent='⚠️ Not signed in'; }
+  else { bar.className='ok'; txt.textContent='🟢 Signed in · synced '+relTime(auth.lastSync); }
+  var lg=el('sb-login'), sy=el('sb-sync');
+  if(lg) lg.style.display = linked ? 'none' : '';   // hide Log in once signed in
+  if(sy) sy.disabled = !on;                          // can't sync while offline
 }
-function onSyncBarTap(){
-  if(!auth.hkey){ show('sync'); }           // not signed in → open the sync screen
-  else if(online()){ autoSync(); }          // signed in + online → sync now
+function onSyncBarTap(){ if(!auth.hkey) show('sync'); else if(online()) syncNow(); }
+function syncNow(){
+  if(!auth.hkey){ show('sync'); return; }            // need to log in first
+  if(!online()){ popup('Offline','You’re offline. Your work is saved and will sync when you reconnect.','🔴'); return; }
+  var txt=el('syncbar-txt'); if(txt) txt.textContent='🔄 Syncing…';
+  autoSync();
 }
 /* Auto-sync after each review / on returning home, when online and signed in.
    Anki unions the revlog, so reviews from phone + desktop ADD (none lost). */
