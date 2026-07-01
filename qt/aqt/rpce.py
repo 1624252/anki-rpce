@@ -436,6 +436,13 @@ def _show_dashboard() -> None:
             f"<p class='rpce-sub'>Couldn't build the dashboard: {exc}</p></div>"
         )
 
+    # Close any previously-open dashboard so reopening doesn't stack windows.
+    prev = getattr(mw, "_rpce_dashboard", None)
+    if prev is not None:
+        try:
+            prev.close()
+        except Exception:
+            pass
     dialog = QDialog(mw)
     dialog.setWindowTitle("RPCE readiness")
     dialog.resize(900, 760)
