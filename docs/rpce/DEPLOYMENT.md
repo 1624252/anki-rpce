@@ -42,6 +42,21 @@ source) and `data/RPCE-Sample-Questions-v4-100625.md` (gold-set source), plus
 rendered images under `data/images/`. The source PDFs are copyrighted and stay
 local (see `data/README.md`).
 
+Then generate the RONR-grounded content (all deterministic and reproducible):
+
+```bash
+# 1000 concept-grouped, RONR-cited practice questions -> docs/rpce/rpce_practice_questions.md
+python pylib/tools/rpce_generate_questions.py
+# Bundle the phone's Section II + Simulation JSON (mirrors the Python data)
+PYTHONPATH=out/pylib python pylib/tools/rpce_export_assets.py mobile/app/app/src/main/assets
+# Bundle the phone's starter deck (RPCE Concept notetype, FSRS on, citations)
+PYTHONPATH=out/pylib python pylib/tools/rpce_export_starter.py mobile/app/app/src/main/assets/rpce_starter.apkg
+```
+
+Every generated answer carries an exact `RONR (12th ed.) X:Y` citation and a
+**verbatim quote** from that section (checked against the corpus by
+`test_rpce_refs`); nothing is fabricated (spec §7).
+
 ---
 
 ## 2. Desktop
@@ -113,8 +128,11 @@ spec's "runs on a clean machine" proof.
 
 ## 3. Phone (Android first)
 
-The phone companion is built on **AnkiDroid**, reusing the **same Rust core** via
-the protobuf/FFI boundary (no scheduler rewrite — spec §3). iOS (Rust C-FFI +
+The phone companion **runs Anki's own Rust backend on the device** (spec §3's
+"run Anki's Rust backend on the device" option — no scheduler rewrite). A
+`speedrun_jni` crate links the shared engine and a Kotlin `MainActivity` drives
+it from a themed WebView (`assets/app.html`) via a JSON bridge. The same engine
+that powers the desktop schedules reviews on the phone. iOS (Rust C-FFI +
 TestFlight) is future and out of MVP scope.
 
 ### 3a. Toolchain
@@ -141,11 +159,11 @@ cargo ndk -t arm64-v8a build -p anki --lib --features rustls   # exit 0
 > Use the `rustls` feature on Android (not `native-tls`/OpenSSL). The output lands
 > in `target/aarch64-linux-android/`.
 
-### 3c. JNI bridge + app scaffold
+### 3c. JNI bridge + native lib
 
-A `speedrun_jni` crate (`mobile/jni`) links the shared engine and exposes JNI
-entry points; a minimal Android Studio app (`mobile/app`) loads it. Build the
-native lib straight into the app and verify:
+The `speedrun_jni` crate (`mobile/jni`) links the shared engine and exposes JSON
+entry points (open collection, next/answer card, deck counts, the three scores,
+record scenario, and sync). Build the native lib straight into the app:
 
 ```bash
 cargo ndk -t arm64-v8a -o mobile/app/app/src/main/jniLibs build -p speedrun_jni --release
@@ -154,47 +172,56 @@ cargo ndk -t arm64-v8a -o mobile/app/app/src/main/jniLibs build -p speedrun_jni 
 See **[`../../mobile/README.md`](../../mobile/README.md)** for the full phone
 build/run guide.
 
-### 3d. Full review/sync UI _(planned)_
+### 3d. Build & run the app
 
-The remaining phone work is the review/sync surface over this engine (reuse
-AnkiDroid's review screens), then:
+The companion UI is implemented (`mobile/app`, `assets/app.html`) and mirrors the
+desktop's Blue-on-White theme and logo. It has the **review loop**, the **three
+scores** (each with a range + the main reasons + the give-up rule), **Section II**
+scenario practice, and **Simulation** mode — all on the shared engine, verified on
+an emulator.
 
-1. Open `mobile/app/` in Android Studio and sync Gradle.
-2. Select an emulator or connected device and **Run**, or build a debug APK (`./gradlew assembleDebug`).
-3. Load the RPCE deck and run a review on the shared engine; show the three scores with ranges and the give-up rule (spec §6 Friday).
+1. Ensure the assets are bundled (§1): `rpce_starter.apkg`, `scenarios.json`,
+   `simulations.json`, plus the native lib from §3c.
+2. Open `mobile/app/` in Android Studio and sync Gradle (or use `./gradlew`).
+3. Select an emulator or connected device and **Run**, or build a debug APK:
+   `./gradlew assembleDebug` → `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 
-### 3e. Signed APK for sideload testing _(planned)_
+On first launch the app imports the bundled RPCE deck and starts a real review
+session; open **Readiness** for the three scores.
+
+### 3e. Signed APK for sideload testing
 
 ```bash
 ./gradlew assembleRelease     # then sign with your keystore (apksigner)
-```
-
-Install on a clean device:
-
-```bash
 adb install -r app-release.apk
 ```
 
 This signed APK is the deliverable you sideload to test on a real device.
 
-> **AI-off / offline:** with no network or no AI key, the phone degrades AI
-> cleanly to off and still runs reviews and shows a score (spec §7g).
+> **AI-off / offline:** the Section II / Simulation grader is an **offline
+> placeholder** (keyword overlap) — no network or AI key is needed; the phone
+> runs reviews and shows a score fully offline (spec §7g).
 
 ---
 
-## 4. Sync between desktop & phone _(planned)_
+## 4. Sync between desktop & phone
 
-Speedrun uses a **self-hosted Anki sync server** so reviews flow both
-ways.
+Reviews flow both ways over Anki's sync protocol. Two options:
 
-1. Start a sync server (run locally for testing). Anki ships a built-in server; see **[`../syncserver/`](../syncserver)** / the Docker setup under `../docker/` for a containerized option.
-2. In **both** apps, set the sync endpoint to your server's URL and log in with the same account.
-3. Review cards on each device, then sync.
+- **AnkiWeb account (default):** in the phone's **Sync** screen, enter your
+  AnkiWeb email + password and tap **Sign in & sync**; sync the desktop the usual
+  way. Leave the endpoint blank to use AnkiWeb.
+- **Self-hosted server:** run Anki's built-in sync server (see
+  **[`../syncserver/`](../syncserver)** or the Docker setup under `../docker/`),
+  then point both apps at its URL.
+
+A reproducible round-trip test is scripted in
+`pylib/tools/rpce_sync_test.py` (device A + device B against a local server).
 
 **Conflict rule (documented):** if the _same card_ is reviewed offline on both
-devices, the merge resolves by higher-`usn` / last-writer. Test it: review 10
-cards offline on the phone and 10 different cards on desktop, reconnect, and
-confirm all 20 land once with none lost or doubled (spec §7b).
+devices, the merge resolves by Anki's higher-`usn` / last-writer rule. Verified:
+review 10 cards offline on one side and 10 different cards on the other,
+reconnect, and all 20 land once with none lost or doubled (spec §7b).
 
 ---
 
@@ -211,9 +238,15 @@ still score with it off.
 - **LLM grader _(planned)_:** an LLM-backed grader implements the same `Examiner`
   interface. Provide the provider API key via env/local config (never commit it);
   with no key, the app uses the baseline above.
+- **In-app grader:** the desktop and phone Section II / Simulation screens use an
+  **offline placeholder** grader (keyword overlap) — no API calls yet — while
+  still showing the model ruling with its RONR citation + verbatim quote.
 - **Grounding:** retrieval runs over `data/roberts_rules_of_order_12th_edition.md`
   (regenerate per §1); every reply cites that text or abstains. Candidates are
   **not** required to cite — grading is on accuracy.
+- **Gold-set eval:** `just rpce-eval` scores the examiner against the official
+  RPCE sample questions (accuracy + false-pass rate vs. a preset cutoff) and runs
+  the leakage scan; a failing card is blocked (spec §7e/§7f).
 
 ---
 
@@ -236,9 +269,12 @@ $env:PYTHONPATH="out\pylib"; $env:ANKI_TEST_MODE="1"
 out\pyenv\Scripts\python -m pytest -p no:cacheprovider pylib\tests\test_points_at_stake.py pylib\tests\test_rpce*.py -q
 ```
 
-These cover the queue, content model, three scores + abstain rule, Transfer
-Ladder, AI examiner/baseline/eval/leakage, calibration metrics, and the
-study-feature experiment (40 tests total with the Rust ones).
+These cover the queue, content model (one FSRS-scheduled card per concept),
+the three scores + ranges + **per-score explanations** + abstain rule, the
+readiness audit trail, Transfer-Ladder format rotation, RONR citation/verbatim
+quotes in every mode, Simulation mode, the AI examiner/baseline/eval/leakage,
+FSRS calibration metrics, and the study-feature experiment (70+ Python RPCE
+tests plus the Rust queue tests).
 
 Performance targets (spec §10) are reported by a one-command benchmark:
 
@@ -261,9 +297,12 @@ points-at-stake queue, flagging any result over its spec target.
 - [ ] `cargo ndk -t arm64-v8a build -p anki --lib --features rustls` cross-compiles the engine for Android
 - [ ] `just bench` reports p50/p95/worst under spec targets
 - [ ] RPCE Rust + Python tests pass
+- [ ] Every answer (Study, Section II, Simulate) shows a RONR citation + verbatim quote
+- [ ] `just rpce-eval` runs the gold-set eval + leakage scan
 - [ ] `tools/build-installer` produces an installer that runs on a clean VM
 - [ ] AI-off baseline examiner grades + cites/abstains offline
-- [ ] _(planned)_ Phone app shell runs a review on the shared engine
-- [ ] _(planned)_ A card reviewed on the phone appears on desktop after sync
-- [ ] _(planned)_ Offline-then-sync works; same-card conflict resolves per the documented rule
+- [ ] Phone app runs a review + shows the three scores on the shared engine
+- [ ] Phone Section II + Simulation grade responses offline
+- [ ] A card reviewed on the phone appears on desktop after sync (and the reverse)
+- [ ] Offline-then-sync works; same-card conflict resolves per the documented rule
 - [ ] _(planned)_ LLM-backed examiner grades with an API key (AI-off still scores)
