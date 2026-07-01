@@ -10,6 +10,7 @@ target
 /.bazel
 /windows.bazelrc
 /out
+/dist
 node_modules
 .n2_db
 .ninja_log

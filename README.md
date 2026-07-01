@@ -8,18 +8,25 @@ you must clear 80% on each.
 
 ## Install
 
-Run the pre-built installer for your OS — it's fully self-contained (Python, Qt,
-and the engine are bundled), so **nothing is downloaded during install** and no
-dev tools are needed. On Windows it installs per-user, so there's no admin
-prompt.
+Download the pre-built installer for your OS from the
+[**latest release**](https://github.com/1624252/anki-rpce/releases/latest) — no
+build step needed. It's fully self-contained (Python, Qt, and the engine are
+bundled), so **nothing is downloaded during install** and no dev tools are
+needed.
 
-| Desktop | Installer      | To install                                |
-|---------|----------------|-------------------------------------------|
-| Windows | `.msi`         | double-click it                           |
-| macOS   | `.dmg`         | open it, drag the app to Applications     |
-| Linux   | `.zip`         | unzip, run the launcher inside            |
+| Desktop | Release asset                 | To install                            |
+|---------|-------------------------------|---------------------------------------|
+| Windows | `anki-26.05-win-x64.msi`      | double-click it (installs per-user, no admin prompt) |
+| macOS   | `.dmg`                        | open it, drag to Applications         |
+| Linux   | `.zip`                        | unzip, run the launcher inside        |
 
 Then start **Speedrun for the RPCE**; it builds the RPCE deck on first launch.
+
+> Direct link (Windows): <https://github.com/1624252/anki-rpce/releases/latest/download/anki-26.05-win-x64.msi>
+>
+> The Windows `.msi` is published. The `.dmg`/`.zip` can't be produced on
+> Windows (Briefcase packages for the host OS), so build those on a Mac / Linux
+> box and attach them to the release — see below.
 
 ## Uninstall
 
