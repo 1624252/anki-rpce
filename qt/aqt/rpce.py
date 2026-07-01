@@ -604,6 +604,18 @@ def _on_deck_browser_content(deck_browser, content) -> None:
         print(f"RPCE home error: {exc}")
 
 
+def _on_deck_browser_did_render(deck_browser) -> None:
+    """The deck browser re-shows its bottom bar (Get Shared / Create Deck /
+    Import File) as the last render step — hide it again here so it stays gone."""
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        mw.bottomWeb.hide()
+    except Exception as exc:
+        print(f"RPCE bottom-bar error: {exc}")
+
+
 def _on_state_change(new_state, old_state) -> None:
     """Hide Anki's bottom bar on the home and deck-overview screens (Options /
     Custom Study / Description aren't part of the RPCE flow); keep it for the
@@ -729,6 +741,7 @@ def setup() -> None:
     gui_hooks.main_window_did_init.append(_add_menu)
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
+    gui_hooks.deck_browser_did_render.append(_on_deck_browser_did_render)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
     gui_hooks.state_did_change.append(_on_state_change)
