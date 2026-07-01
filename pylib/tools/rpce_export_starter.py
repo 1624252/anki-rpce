@@ -21,6 +21,8 @@ corpus under `data/`):
 
 from __future__ import annotations
 
+import base64
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -51,17 +53,36 @@ def _br(text: str) -> str:
 def _fields_for(q: gen.Question) -> dict[str, str]:
     """Render one generated question into RPCE Concept notetype fields.
 
-    MCQ formats (quote→section, stated-in) fill the interactive MCQ fields;
-    cloze recall fills the cloze fields. The default card template shows
+    The applied multiple-choice format fills the interactive MCQ fields; cloze
+    recall fills the cloze fields. The default card template shows
     ``ClozeQ``/``ClozeA``, so both formats populate those too and render on the
-    phone without the desktop's format-rotation hook.
+    phone without the desktop's format-rotation hook. For MCQ, ``ClozeQ`` also
+    carries a base64 payload the phone reads to render tappable options.
     """
-    if q.options:  # quote_id / stated_in — multiple choice
+    if q.options:  # applied multiple-choice
         idx = "ABCD".index(q.answer)
-        opts_html = "<br>".join(f"{L}) {o}" for L, o in zip("ABCD", q.options))
-        answer = f"Correct: {q.answer}) {q.options[idx]}"
+        # Machine-readable payload so the phone can render tappable options and
+        # score the pick; a plain-text list is kept as a no-JS fallback.
+        payload = base64.b64encode(
+            json.dumps(
+                {
+                    "opts": list(q.options),
+                    "idx": idx,
+                    "cite": q.citation,
+                    "quote": q.quote,
+                }
+            ).encode()
+        ).decode()
+        fallback = "<br>".join(f"{L}) {o}" for L, o in zip("ABCD", q.options))
+        answer = (
+            f'Correct: {q.answer}) <span class="cloze-reveal">{q.options[idx]}</span>'
+        )
         return {
-            "ClozeQ": _br(q.stem) + "<br><br>" + opts_html,
+            "ClozeQ": (
+                _br(q.stem)
+                + f'<div class="mcq-fallback">{fallback}</div>'
+                + f'<div class="mcq-data" data-p="{payload}" style="display:none"></div>'
+            ),
             "ClozeA": answer,
             "MCQQ": _br(q.stem),
             "MCQA": answer,
@@ -69,10 +90,10 @@ def _fields_for(q: gen.Question) -> dict[str, str]:
             "MCQIdx": str(idx),
             "rung": "mcq",
         }
-    # cloze recall — fill the blank with the emphasised term
+    # cloze recall — fill the blank with the emphasised term (highlighted)
     return {
         "ClozeQ": _br(q.stem),
-        "ClozeA": f"<b>{q.answer}</b>",
+        "ClozeA": f'<span class="cloze-reveal">{q.answer}</span>',
         "MCQQ": "",
         "MCQA": "",
         "MCQOptions": "",

@@ -26,6 +26,10 @@ if TYPE_CHECKING:
 #: Format rungs in ascending order of transfer demand.
 RUNGS: tuple[str, ...] = ("cloze", "mcq", "scenario", "advising")
 
+#: Color for the revealed cloze term on the answer side (shared by the desktop
+#: notetype CSS and the phone card CSS so the filled-in blank stands out).
+CLOZE_REVEAL_COLOR = "#15803d"
+
 #: Rungs with per-concept flashcard content today (cloze recall + applied MCQ).
 #: The single concept card rotates through these each repetition so the same
 #: problem never shows in the same shape twice in a row (scenario/advising are

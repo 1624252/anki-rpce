@@ -11,11 +11,13 @@ from that section — nothing is fabricated (spec §7: AI output must trace to a
 named source). The generator is deterministic (fixed seed) so it is reproducible.
 
 Question types (varied, per the sample set in
-``data/RPCE-Sample-Questions-v4-100625.md``):
+``data/RPCE-Sample-Questions-v4-100625.md``). Both test the rule's content;
+neither names a RONR section in the stem or options — the section appears only
+in the answer, alongside the relevant verbatim quote:
 
 - **cloze**    — recall a key (emphasised) term blanked out of a real sentence.
-- **quote_id** — multiple choice: which section does this verbatim quote come from?
-- **stated_in**— multiple choice: which statement appears in a given section?
+- **term_mcq** — applied multiple choice: pick the term that fills the blank,
+  among plausible distractor terms drawn from other concepts.
 
 Each item is tagged with a **Concept ID** and a **format**. Every format of one
 concept shares its Concept ID, so the spaced-repetition scheduler treats them as
@@ -96,18 +98,6 @@ def clean(text: str) -> str:
     return text
 
 
-def first_sentence(text: str, limit: int = 320) -> str:
-    """A focused, substantive quote: the first sentence of reasonable length,
-    skipping short run-in headings like "The Board."."""
-    parts = [s.strip() for s in re.split(r"(?<=[.;:])\s+(?=[A-Z(\u201c])", text)]
-    chosen = next((s for s in parts if len(s) >= 60), None)
-    if chosen is None:
-        chosen = max(parts, key=len) if parts else text.strip()
-    if len(chosen) > limit:
-        chosen = chosen[:limit].rsplit(" ", 1)[0] + "\u2026"
-    return chosen.strip()
-
-
 @dataclass
 class Para:
     citation: str  # e.g. "10:11"
@@ -143,11 +133,21 @@ def parse_corpus() -> list[Para]:
     return paras
 
 
+# A RONR section reference (e.g. "10:5", "§23", "Section 4"). Questions and their
+# options must NOT mention sections — that belongs only in the answer citation.
+_SECTION_RE = re.compile(r"\b\d+:\d+\b|§|\bRONR\b|\bsections?\s+\d+", re.I)
+
+
+def mentions_section(*texts: str) -> bool:
+    """True if any text names a RONR section (disallowed in stems/options)."""
+    return any(_SECTION_RE.search(t) for t in texts if t)
+
+
 @dataclass
 class Question:
     domain: int
     kind: str  # human-readable format label
-    fmt: str  # machine format key: cloze | quote_id | stated_in
+    fmt: str  # machine format key: cloze | term_mcq
     concept_id: str  # e.g. "C0007" — shared by every format of one concept
     stem: str
     options: list[str]  # empty for non-MCQ
@@ -164,6 +164,9 @@ def make_cloze(p: Para, concept_id: str, rng: random.Random) -> Question | None:
     if not sentence:
         return None
     blanked = sentence.replace(term, "_____", 1)
+    # Never quiz on a sentence that itself names a section.
+    if mentions_section(blanked):
+        return None
     return Question(
         p.domain,
         "Cloze recall",
@@ -177,65 +180,69 @@ def make_cloze(p: Para, concept_id: str, rng: random.Random) -> Question | None:
     )
 
 
-def make_quote_id(
-    p: Para, concept_id: str, pool: list[Para], rng: random.Random
-) -> Question:
-    quote = first_sentence(p.text)
-    others = rng.sample([q for q in pool if q.citation != p.citation], 3)
-    options = [p.citation] + [o.citation for o in others]
+def make_term_mcq(
+    p: Para, concept_id: str, term_pool: list[str], rng: random.Random
+) -> Question | None:
+    """Applied multiple-choice on the concept's key term.
+
+    The stem is the concept sentence with its key term blanked; the options are
+    that term plus three plausible distractor terms drawn from other concepts.
+    This tests understanding of the *rule itself* — never which section a
+    passage came from (that kind of section-recall question is intentionally
+    excluded; the citation is shown only in the answer debrief).
+    """
+    if not p.emphases:
+        return None
+    term = rng.choice(p.emphases)
+    sentence = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if term in s), None)
+    if not sentence:
+        return None
+    blanked = sentence.replace(term, "_____", 1)
+    # Skip sentences/terms that name a section (must stay out of stems & options).
+    if mentions_section(blanked, term):
+        return None
+    pool = [
+        t for t in term_pool if t.lower() != term.lower() and not mentions_section(t)
+    ]
+    if len(pool) < 3:
+        return None
+    options = [term, *rng.sample(pool, 3)]
     rng.shuffle(options)
-    letter = "ABCD"[options.index(p.citation)]
+    letter = "ABCD"[options.index(term)]
     return Question(
         p.domain,
-        "Quote → section (MCQ)",
-        "quote_id",
+        "Applied multiple-choice",
+        "term_mcq",
         concept_id,
-        f'From which section of RONR (12th ed.) is the following?\n\n   "{quote}"',
+        f"Fill in the blank: {blanked}",
         options,
         letter,
         p.citation,
-        quote,
-    )
-
-
-def make_stated_in(
-    p: Para, concept_id: str, pool: list[Para], rng: random.Random
-) -> Question:
-    correct = first_sentence(p.text)
-    others = rng.sample([q for q in pool if q.citation != p.citation], 3)
-    options = [correct] + [first_sentence(o.text) for o in others]
-    rng.shuffle(options)
-    letter = "ABCD"[options.index(correct)]
-    return Question(
-        p.domain,
-        "Stated in section (MCQ)",
-        "stated_in",
-        concept_id,
-        f"Which of the following statements appears in RONR (12th ed.) {p.citation}?",
-        options,
-        letter,
-        p.citation,
-        correct,
+        sentence.strip(),
     )
 
 
 # The formats each concept is taught in (Transfer Ladder / SPOV 1: same concept,
 # different shapes). Every format of one concept shares its Concept ID so the
 # spaced-repetition scheduler treats them as ONE problem on ONE FSRS schedule.
-FORMATS = ("cloze", "quote_id", "stated_in")
+# Both formats test the rule's content; the RONR section is never named in a
+# stem or option — it appears only in the answer's citation/quote.
+FORMATS = ("cloze", "term_mcq")
 
 
 def build(count: int) -> list[Question]:
     """Generate ``count`` questions **grouped by concept**.
 
-    A *concept* is one source paragraph. For each concept we emit up to three
-    format variants (cloze / quote→section / stated-in-section), all tagged with
+    A *concept* is one source paragraph. For each concept we emit up to two
+    format variants (cloze recall + applied multiple-choice), both tagged with
     the same ``concept_id``. Downstream, items sharing a Concept ID are scheduled
     as a single problem whose *format rotates* each repetition — never the same
     shape twice in a row (spec §7.1 / SPOV 1). Deterministic (fixed seed).
     """
     rng = random.Random(SEED)
     paras = parse_corpus()
+    # Distractor pool for the applied MCQ: every emphasised term in the corpus.
+    term_pool = sorted({t for p in paras for t in p.emphases})
     rng.shuffle(paras)
     questions: list[Question] = []
     concept_n = 0
@@ -249,10 +256,8 @@ def build(count: int) -> list[Question]:
                 break
             if fmt == "cloze":
                 q = make_cloze(p, concept_id, rng)
-            elif fmt == "quote_id":
-                q = make_quote_id(p, concept_id, paras, rng)
-            else:
-                q = make_stated_in(p, concept_id, paras, rng)
+            else:  # term_mcq
+                q = make_term_mcq(p, concept_id, term_pool, rng)
             if q is not None:
                 questions.append(q)
     return questions[:count]

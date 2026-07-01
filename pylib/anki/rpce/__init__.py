@@ -138,6 +138,8 @@ def _transfer_notetype(col: Collection):
     problem never appears in the same shape twice in a row while repeating on a
     single schedule — exactly as the algorithm repeats one problem.
     """
+    from . import transfer_ladder
+
     mm = col.models
     existing = mm.by_name(TRANSFER_NOTETYPE)
     if existing is not None:
@@ -173,6 +175,8 @@ def _transfer_notetype(col: Collection):
     )
     m["css"] = (
         ".card{font-size:18px;color:#0a1f44}"
+        # Revealed cloze blank — a distinct color so the answer stands out.
+        f".cloze-reveal{{color:{transfer_ladder.CLOZE_REVEAL_COLOR};font-weight:700}}"
         ".rpce-ref{margin-top:18px;padding:14px 16px;border-left:4px solid #2f6fed;"
         "background:#eef4ff;border-radius:10px;text-align:left}"
         ".rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}"

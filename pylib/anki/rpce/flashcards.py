@@ -151,8 +151,9 @@ def all_flashcards() -> tuple[Flashcard, ...]:
 
 
 def cloze_answer(card: Flashcard) -> str:
-    """The cloze sentence with all deletions revealed."""
-    return _CLOZE_RE.sub(r"\1", card.cloze)
+    """The cloze sentence with all deletions revealed, each highlighted so the
+    filled-in blank stands out from the surrounding text (`.cloze-reveal`)."""
+    return _CLOZE_RE.sub(r'<span class="cloze-reveal">\1</span>', card.cloze)
 
 
 def cloze_question(card: Flashcard) -> str:

@@ -40,6 +40,17 @@ html,body{margin:0;min-height:100%;
 .card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:24px 20px;
   min-height:150px;font-size:19px;line-height:1.5;color:var(--ink)}
 .card .cloze,.card b{color:var(--mid)}
+/* Revealed cloze blank — a distinct (green) color so the answer stands out. */
+.card .cloze-reveal{color:var(--ready);font-weight:700}
+/* Interactive multiple-choice options */
+.mcq-fallback{display:none}
+.mcq-opts{display:grid;gap:10px;margin-top:16px}
+.mcq-opts button{display:block;width:100%;text-align:left;border:1px solid var(--border);
+  background:var(--surface2);color:var(--ink);border-radius:14px;padding:14px 16px;font-size:16px;font-weight:600}
+.mcq-opts button .k{font-weight:800;color:var(--ink2);margin-right:8px}
+.mcq-opts button.correct{background:rgba(21,128,61,.14);border-color:var(--ready);color:var(--ready)}
+.mcq-opts button.wrong{background:rgba(159,18,57,.12);border-color:#9f1239;color:#9f1239}
+.mcq-opts button .mark{float:right;font-weight:800}
 .card hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .rate{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
 .rate button{border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;color:#fff}
@@ -110,6 +121,8 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <div id="review" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="rev-count"></span></div>
     <div id="card" class="card"></div>
+    <div id="mcq-opts" class="mcq-opts hidden"></div>
+    <div id="mcq-ref"></div>
     <button id="show-btn" class="btn" onclick="showAnswer()">Show answer</button>
     <div id="rate" class="rate hidden">
       <button class="again" onclick="rate(0)">Again</button>
@@ -212,21 +225,59 @@ function initHome(){
 function goHome(){ show('home'); refreshCounts(); }
 
 /* ---- review loop ---- */
-var current=null;
+var current=null, mcqState=null;
 function startStudy(){ show('review'); loadCard(); }
-function loadCard(){
+function resetReview(){
   el('rate').classList.add('hidden'); el('show-btn').classList.remove('hidden');
   el('done').classList.add('hidden'); el('card').classList.remove('hidden');
+  el('mcq-opts').classList.add('hidden'); el('mcq-opts').innerHTML='';
+  el('mcq-ref').innerHTML=''; mcqState=null;
+}
+function loadCard(){
+  resetReview();
   var r=j(Engine.nextCard());
   if(!r.ok){ el('card').textContent=r.error||'error'; return; }
   if(!r.hasCard){ el('card').classList.add('hidden'); el('show-btn').classList.add('hidden');
     el('done').classList.remove('hidden'); el('rev-count').textContent=''; return; }
   current=r; el('card').innerHTML=r.question;
+  // Interactive multiple-choice: if the card carries an MCQ payload, let the
+  // user pick an option and see how they did before the rating buttons.
+  var data=el('card').querySelector('.mcq-data');
+  if(data) setupMcq(data);
   var c=j(Engine.deckCounts());
   if(c.ok) el('rev-count').textContent=c.new+' new · '+c.learning+' lrn · '+c.review+' due';
 }
+/* cloze cards: reveal the answer, then the four rating buttons */
 function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
   el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
+/* MCQ cards: build tappable options from the embedded payload */
+function setupMcq(dataEl){
+  var p; try { p=JSON.parse(atob(dataEl.dataset.p)); } catch(e){ return; }
+  var fb=el('card').querySelector('.mcq-fallback'); if(fb) fb.remove();
+  dataEl.remove();
+  el('show-btn').classList.add('hidden');
+  mcqState={idx:p.idx, cite:p.cite, quote:p.quote, answered:false};
+  var box=el('mcq-opts'); box.innerHTML=''; box.classList.remove('hidden');
+  p.opts.forEach(function(opt,i){
+    var b=document.createElement('button');
+    b.innerHTML='<span class="k">'+'ABCD'[i]+'</span>'+opt;
+    b.onclick=function(){ pickMcq(i); };
+    box.appendChild(b);
+  });
+}
+function pickMcq(i){
+  if(!mcqState || mcqState.answered) return; mcqState.answered=true;
+  var btns=el('mcq-opts').querySelectorAll('button');
+  btns.forEach(function(b,j){
+    b.disabled=true;
+    if(j===mcqState.idx){ b.classList.add('correct'); b.innerHTML+='<span class="mark">✓</span>'; }
+    else if(j===i){ b.classList.add('wrong'); b.innerHTML+='<span class="mark">✗</span>'; }
+  });
+  // Show the relevant section + verbatim quote (only place a section appears),
+  // then reveal the four rating buttons.
+  el('mcq-ref').innerHTML=refBlock({section:mcqState.cite, quote:mcqState.quote});
+  el('rate').classList.remove('hidden');
+}
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
 
 /* ---- readiness ---- */
