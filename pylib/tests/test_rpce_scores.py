@@ -27,6 +27,28 @@ def test_readiness_snapshots_audit_trail_and_last_updated():
     assert len(scores.readiness_snapshots(col)) == 4
 
 
+def test_memory_score_uses_fsrs_or_falls_back():
+    col = getEmptyCol()
+    _build_and_study(col, 5)
+    mem = scores.memory_score(col)
+    # Whether FSRS is on (real retrievability) or off (heuristic fallback), the
+    # memory score is a valid probability with a range.
+    assert mem.point is not None and 0.0 <= mem.point <= 1.0
+    assert mem.low is not None and mem.high is not None
+
+
+def test_memory_calibration_none_or_well_formed():
+    col = getEmptyCol()
+    _build_and_study(col, 5)
+    cal = scores.memory_calibration(col)
+    # None when FSRS predictions aren't available; otherwise valid metrics.
+    if cal is not None:
+        assert cal["n"] >= 1
+        assert 0.0 <= cal["brier"] <= 1.0
+        assert cal["log_loss"] >= 0.0
+        assert 0.0 <= cal["ece"] <= 1.0
+
+
 def test_readiness_snapshots_are_capped():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
@@ -83,8 +105,9 @@ def test_memory_score_reflects_review_history():
 
     mem = scores.memory_score(col)
     assert mem.point is not None
-    # One Good answer => recall estimate (1-0+1)/(1+2) ≈ 0.667 per card.
-    assert 0.6 <= mem.point <= 0.72
+    # Recently passed cards recall well — high whether via real FSRS
+    # retrievability (FSRS on) or the reps/lapses heuristic fallback.
+    assert 0.6 <= mem.point <= 1.0
 
 
 def test_readiness_summary_bundles_all_dashboard_data():

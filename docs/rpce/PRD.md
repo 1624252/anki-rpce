@@ -541,8 +541,9 @@ pending; **Planned** = designed, not built.
 | AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
 | Learning-phase progression, timed practice | **Done** | `progression.py`, `timed.py` |
-| Calibration (Brier/log-loss) + paraphrase gap (§8, §9) | **Partial** | `metrics.py` functions done; not wired to real FSRS/held-out data |
-| Memory = FSRS-calibrated retrievability (§8) | **Partial** | current score is a heuristic recall estimate |
+| Memory = FSRS-calibrated retrievability (§8) | **Done** | `scores.py` uses real FSRS retrievability (FSRS enabled on the deck), heuristic fallback when absent |
+| Memory calibration Brier/log-loss/ECE (§9 Step 1) | **Done** | `scores.memory_calibration` (FSRS retrievability vs. outcome); shown on the dashboard |
+| Paraphrase gap wired to real reworded data (§7d) | **Partial** | `metrics.paraphrase_gap` done; not yet fed live reworded-question results |
 | 3-build study experiment (§9) | **Partial** | `experiment.py` harness done; three real builds not run |
 | Gold-set eval from `data/` (§9) | **Partial** | harness done; real gold set not wired |
 | Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Done** | `scores.py` (synced config ring buffer); recorded on dashboard open + after study; shown in banner + dashboard |

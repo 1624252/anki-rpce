@@ -87,12 +87,33 @@ def _recall_estimate(reps: int, lapses: int) -> float:
     return (reps - lapses + 1) / (reps + 2)
 
 
+def _fsrs_retrievability(col: Collection, cid: int) -> float | None:
+    """The card's true FSRS retrievability (probability of recall now), or None
+    when FSRS is disabled / the card has no memory state yet."""
+    try:
+        stats = col._backend.card_stats(cid)
+        if stats.HasField("fsrs_retrievability"):
+            r = float(stats.fsrs_retrievability)
+            if 0.0 < r <= 1.0:
+                return r
+    except Exception:
+        pass
+    return None
+
+
+def _card_recall(col: Collection, cid: int, card) -> float:
+    """Per-card recall probability: real FSRS retrievability when available,
+    otherwise the transparent reps/lapses heuristic (spec §8 upgrade path)."""
+    r = _fsrs_retrievability(col, cid)
+    return r if r is not None else _recall_estimate(card.reps, card.lapses)
+
+
 def _reviewed_recalls(col: Collection) -> list[float]:
     recalls: list[float] = []
     for cid in col.find_cards("is:review OR is:due"):
         card = col.get_card(cid)
         if card.reps > 0:
-            recalls.append(_recall_estimate(card.reps, card.lapses))
+            recalls.append(_card_recall(col, cid, card))
     return recalls
 
 
@@ -131,7 +152,7 @@ def memory_score(col: Collection) -> ScoreRange:
 
 def _domain_recall(col: Collection, code: int) -> float | None:
     recalls = [
-        _recall_estimate(c.reps, c.lapses)
+        _card_recall(col, cid, c)
         for cid in col.find_cards(f"tag:{domain_tag(code)}")
         if (c := col.get_card(cid)).reps > 0
     ]
@@ -295,3 +316,41 @@ def last_updated(col: Collection) -> int | None:
     """Epoch seconds of the most recent readiness computation, or None."""
     ts = col.get_config(LAST_UPDATED_KEY, None)
     return int(ts) if ts else None
+
+
+def _last_review_passed(col: Collection, cid: int) -> int | None:
+    """1 if the card's most recent review was a pass (ease ≥ 2), 0 if a lapse
+    (ease == 1), or None if it has never been reviewed."""
+    row = col.db.first(
+        "select ease from revlog where cid = ? order by id desc limit 1", cid
+    )
+    if not row or row[0] is None:
+        return None
+    return 1 if int(row[0]) != 1 else 0
+
+
+def memory_calibration(col: Collection) -> dict | None:
+    """Calibrate the FSRS memory model on this collection (spec §9 Step 1):
+    compare each card's predicted retrievability against whether its most recent
+    review was actually a pass, and report Brier score, log loss, and Expected
+    Calibration Error. Returns None when FSRS predictions aren't available (so
+    the caller can fall back to reporting the heuristic memory score only).
+    """
+    from . import metrics
+
+    predictions: list[float] = []
+    outcomes: list[int] = []
+    for cid in col.find_cards("is:review OR is:due"):
+        r = _fsrs_retrievability(col, cid)
+        outcome = _last_review_passed(col, cid)
+        if r is not None and outcome is not None:
+            predictions.append(r)
+            outcomes.append(outcome)
+    if not predictions:
+        return None
+    return {
+        "n": len(predictions),
+        "brier": metrics.brier_score(predictions, outcomes),
+        "log_loss": metrics.log_loss(predictions, outcomes),
+        "ece": metrics.expected_calibration_error(predictions, outcomes),
+    }

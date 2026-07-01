@@ -306,6 +306,15 @@ def _readiness_html(col) -> str:
     s = scores.readiness_summary(col)
     mem, perf = s["memory"], s["performance"]
     sec1, sec2 = s["section_I"], s["section_II"]
+    cal = scores.memory_calibration(col)
+    cal_html = (
+        f"<p class='rpce-sub'><b style='color:var(--ink)'>Memory calibration:</b> "
+        f"Brier {cal['brier']:.3f} · log-loss {cal['log_loss']:.3f} "
+        f"(FSRS retrievability vs. outcome, n={cal['n']})</p>"
+        if cal
+        else "<p class='rpce-sub'>Memory calibration: enable FSRS and review more "
+        "to measure how accurate the memory model is.</p>"
+    )
 
     def secval(snap) -> str:
         return (
@@ -368,6 +377,7 @@ def _readiness_html(col) -> str:
   <div class="rpce-grid">{cards}</div>
   <div style="text-align:center;margin-top:26px">
     <p class="rpce-sub"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
+    {cal_html}
     {next_topic}
   </div>
   <div class="rpce-h1" style="font-size:var(--fs-h2);margin:34px 0 12px">Coverage map

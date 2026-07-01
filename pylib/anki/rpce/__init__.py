@@ -180,6 +180,9 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
 
     deck_id = col.decks.id(name)
     assert deck_id is not None
+    # Enable FSRS so the memory score uses real retrievability (spec §8), not
+    # only the reps/lapses heuristic fallback.
+    col.set_config("fsrs", True)
     model = _transfer_notetype(col)
 
     for card in flashcards.all_flashcards():
