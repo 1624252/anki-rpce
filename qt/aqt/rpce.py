@@ -30,7 +30,6 @@ from aqt.qt import (
     qconnect,
 )
 from aqt.utils import tooltip
-from aqt.webview import AnkiWebView
 
 
 def _load_corpus() -> str:
@@ -310,96 +309,6 @@ def _banner_html(col) -> str:
     practice <b>Section II</b>, run a <b>Simulation</b> or a <b>Timed</b> session.</div>
   <div class="rpce-foot" style="margin-top:6px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
-"""
-
-
-def _readiness_html(col) -> str:
-    from anki.rpce import scores
-
-    s = scores.readiness_summary(col)
-    mem, perf = s["memory"], s["performance"]
-    sec1, sec2 = s["section_I"], s["section_II"]
-    cal = scores.memory_calibration(col)
-    cal_html = (
-        f"<p class='rpce-sub'><b style='color:var(--ink)'>Memory calibration:</b> "
-        f"Brier {cal['brier']:.3f} · log-loss {cal['log_loss']:.3f} "
-        f"(FSRS retrievability vs. outcome, n={cal['n']})</p>"
-        if cal
-        else "<p class='rpce-sub'>Memory calibration: enable FSRS and review more "
-        "to measure how accurate the memory model is.</p>"
-    )
-
-    def secval(snap) -> str:
-        return (
-            "Abstaining"
-            if snap.abstained
-            else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
-        )
-
-    cards = "".join(
-        [
-            _score_card(
-                "Memory",
-                _fmt_range(mem.point, mem.low, mem.high),
-                mem.confidence,
-                mem.point,
-            ),
-            _score_card(
-                "Performance",
-                _fmt_range(perf.point, perf.low, perf.high),
-                perf.confidence,
-                perf.point,
-            ),
-            _score_card(
-                "Pass Section I",
-                secval(sec1),
-                sec1.confidence,
-                None if sec1.abstained else sec1.p_pass,
-            ),
-            _score_card(
-                "Pass Section II",
-                secval(sec2),
-                sec2.confidence,
-                None if sec2.abstained else sec2.p_pass,
-            ),
-        ]
-    )
-
-    def cov_bar(weight: float) -> str:
-        return f"<div class='rpce-colbar'><i style='width:{min(100, weight * 200):.0f}%'></i></div>"
-
-    cov_rows = "".join(
-        "<tr>"
-        f"<td>{c.code}. {c.name}</td>"
-        f"<td style='text-align:center'>{c.cards}</td>"
-        f"<td>{cov_bar(c.weight)}</td></tr>"
-        for c in s["coverage"]
-    )
-    next_topic = (
-        f"<p class='rpce-sub'>🎯 <b style='color:var(--ink)'>Best next topic:</b> {sec1.best_next_topic}</p>"
-        if sec1.best_next_topic
-        else ""
-    )
-    return f"""{_theme_style()}
-<div class="rpce-root" style="max-width:900px;margin:0 auto;padding:20px 12px">
-  <div style="text-align:center">
-    <div class="rpce-h1">RPCE readiness</div>
-    <div class="rpce-sub" style="margin-top:8px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
-    <div class="rpce-foot" style="margin-top:8px">Last updated: <b>{_updated_str(col)}</b></div>
-  </div>
-  <div class="rpce-grid">{cards}</div>
-  <div style="text-align:center;margin-top:26px">
-    <p class="rpce-sub"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
-    {cal_html}
-    {next_topic}
-  </div>
-  <div class="rpce-h1" style="font-size:var(--fs-h2);margin:34px 0 12px">Coverage map
-    <small>· 7 Performance-Expectation domains</small></div>
-  <table class="rpce-tbl">
-    <tr><th>Domain</th><th style="text-align:center">Cards</th><th>Exam weight</th></tr>
-    {cov_rows}
-  </table>
-</div>
 """
 
 
