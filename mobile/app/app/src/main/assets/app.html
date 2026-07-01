@@ -119,6 +119,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <!-- READINESS -->
   <div id="scores" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Readiness</span></div>
+    <div class="chip" id="phase" style="display:block;margin:0 0 12px"></div>
     <div class="grid2">
       <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span><div class="srange" id="r-mem"></div><div class="sreason" id="e-mem"></div></div>
       <div class="scard"><div class="lab">Performance</div><div class="val" id="s-perf">–</div><span class="pill" id="p-perf"></span><div class="srange" id="r-perf"></div><div class="sreason" id="e-perf"></div></div>
@@ -208,6 +209,14 @@ function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
 
 /* ---- readiness ---- */
+/* Learning-phase nudge (flashcards -> simulation); mirrors progression.py. */
+function phaseNudge(reviews, cov, scen){
+  if(reviews<50 || cov<0.5)
+    return '📈 Foundations — build recall with flashcards (cloze + MCQ) across all domains.';
+  if(scen<5)
+    return '📈 Application — keep flashcards going and begin Section II scenarios with debriefs.';
+  return '📈 Mastery — lead with Section II / Simulation; use flashcards to plug weak spots.';
+}
 /* Every score shows point, range, confidence, and the main reasons (spec §4). */
 function setScore(ids, sc, abstained){
   var point = (sc.point!=null) ? sc.point : sc.pPass;
@@ -222,6 +231,7 @@ function openScores(){
   show('scores');
   var s=j(Engine.scores());
   if(!s.ok){ el('abstain-note').textContent=s.error||'error'; return; }
+  el('phase').textContent = phaseNudge(s.reviews, s.coveragePct, s.scenarios);
   setScore({v:'s-mem',p:'p-mem',r:'r-mem',e:'e-mem'}, s.memory, s.memory.point==null);
   setScore({v:'s-perf',p:'p-perf',r:'r-perf',e:'e-perf'}, s.performance, s.performance.point==null);
   setScore({v:'s-1',p:'p-1',r:'r-1',e:'e-1'}, s.sectionI, s.sectionI.abstained);

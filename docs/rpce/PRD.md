@@ -185,9 +185,10 @@ No AI ships before the apps review the same deck on a shared engine.
 
 **Goal.** Defeat false mastery by never letting a concept be practiced in the same format twice in a row.
 
-- **Concept grouping.** Items that test the same idea share a `paraphrase_group` (see §11). A "concept" is one row in the RP blueprint at PE granularity.
-- **Format ladder (escalating).** `cloze recall → applied MCQ → free-text scenario → advising prompt`. As a concept's mastery rises, the scheduler prefers a _higher rung_ than last time; on a lapse it can drop a rung (scaffolding fade, Insight 3).
-- **Scheduling hook.** Rung selection is layered on top of FSRS due-ordering — FSRS decides _when_ a concept is due; the Transfer Ladder decides _which format_ surfaces. FSRS intervals stay valid.
+- **Group by exact concept → one schedule.** Every format of a concept lives in a single note/card, so the concept has **one FSRS schedule**. Anki's existing spaced-repetition algorithm decides _when_ the concept returns; the Transfer Ladder decides _which format_ surfaces. FSRS intervals stay valid.
+- **Four options after every problem.** No matter the format shown, answering uses Anki's four **Again / Hard / Good / Easy** buttons and the standard FSRS formula updates the one schedule.
+- **Never the same format twice in a row.** When a concept comes back, its format differs from last time. The scheduled deck rotates `cloze recall ⇄ applied MCQ` (`rung_for_reps` alternates by repetition); the broader ladder (`cloze → applied MCQ → free-text scenario → advising prompt`) escalates transfer demand as mastery rises and drops a rung on a lapse (scaffolding fade, Insight 3).
+- **Format fits the question / learning style.** Different formats suit different concepts and learners. For example, an **order-of-precedence** item is fine as multiple choice _once the learner has recalled the full precedence chart first_ — so recall (cloze) precedes the applied MCQ.
 - **Measurement.** The recall-vs-reworded gap (paraphrase test, spec §7d) is the success metric; a near-zero gap would mean the performance model just mirrors memory.
 
 ### 7.2 Dual-Mode Hybrid Engine (SPOV 2)
@@ -196,7 +197,8 @@ No AI ships before the apps review the same deck on a shared engine.
 
 - **Section I mode — spaced retrieval.** One card per **concept** (its own FSRS schedule); each concept resurfaces in a **different format** each repetition (interactive multiple choice ⇄ cloze recall — the Transfer Ladder, §7.1). After every review, regardless of format, the four Again/Hard/Good/Easy buttons drive FSRS, so the same problem repeats exactly as the algorithm schedules it.
 - **Section II mode — scenario + simulation, with debrief.** Two sub-modes: single free-text **scenario** prompts, and **Simulation mode** — a scripted **meeting** that plays out turn by turn (members and the chair speak) where the candidate responds **as the parliamentarian** at each decision point. Every response is graded for accuracy by the AI Examiner (§7.3) with an immediate debrief — the _debrief_ is the active ingredient (Insight 4).
-- **Scaffolding fade (Insight 3).** Early on, scenarios offer worked-example structure (model ruling + RONR reference shown _after_ the attempt); as mastery rises, support fades to reflection-only prompts ("justify your ruling"). The candidate is never asked to supply citations.
+- **Start with flashcards, then transition to simulation.** A phased progression (`progression.py`) derives the learner's stage from their own history and nudges the right activity, surfaced on both apps: **Foundations** (drill flashcards until recall + coverage are established) → **Application** (keep flashcards, begin Section II scenarios with debriefs) → **Mastery** (lead with simulation; use flashcards to plug weak spots).
+- **Scaffolding fade (Insight 3).** Early on, scenarios offer worked-example structure (model ruling + RONR citation + verbatim quote shown _after_ the attempt); as mastery rises, support fades to reflection-only prompts ("justify your ruling"). The candidate is never asked to supply citations.
 - **Shared substrate.** Both modes write `attempts` (§11) into the same collection DB, so memory/performance/readiness draw from one history and sync across devices.
 
 ### 7.3 AI Examiner (SPOV 3)
@@ -207,6 +209,7 @@ No AI ships before the apps review the same deck on a shared engine.
 - **Grading criterion.** Answers are scored on the **accuracy of the ruling and the soundness of the reasoning** against the rubric — **not** on whether the candidate quotes RONR. Candidates do not need to cite sections or memorize section numbers.
 - **Outputs.** A 0–5 rubric score, targeted debrief, an RONR reference for the correct ruling **supplied by the AI** (so the candidate can verify), and probing follow-up questions — **no new factual lecture** (the candidate is presumed to know the basics).
 - **Grounding & safety.** Retrieval runs **specifically over the transcribed _Robert's Rules of Order Newly Revised, 12th ed._ text** in `data/roberts_rules_of_order_12th_edition.md` (produced by `convert_ronr.py`) — not the model's parametric memory. Every AI output carries a `source_citation` (§11) pointing to that text (e.g. `RONR (12th ed.) 10:11`) for _traceability of the AI's own feedback_ (spec §6 requirement), independent of the candidate's answer. **Citations are required of the AI** and are a feature: the candidate can click through to verify. If retrieval finds no supporting passage in the 12th-ed. text, the Examiner abstains rather than inventing (anti-NAPMobile rule).
+- **Current status — placeholder grader.** The desktop and phone Section II / Simulation screens currently grade with an **offline placeholder** (keyword-overlap against the model ruling) — **no AI API calls yet** — while always showing the model ruling with its RONR citation + verbatim quote. The `Examiner` interface is ready for an LLM-backed grader to drop in without UI changes.
 - **AI-off fallback.** With AI disabled, Section II falls back to self-scoring against the shown rubric; the app still produces all three scores (spec §6, §11).
 
 ### 7.4 Honest Readiness Panel (honesty rule)
@@ -541,7 +544,7 @@ pending; **Planned** = designed, not built.
 | Interactive multiple choice (clickable + instant feedback) (§7.1) | **Done** | desktop reviewer MCQ rung |
 | AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
-| Learning-phase progression | **Done** | `progression.py` |
+| Learning-phase progression (flashcards → simulation) | **Done** | `progression.py`; nudge shown on the desktop home banner and the phone Readiness view (Foundations → Application → Mastery) |
 | Timed practice (3-hour pacing) | **Removed from UI** | `timed.py` backend + tests remain; the desktop Timed tab/menu/banner chip were removed |
 | Memory = FSRS-calibrated retrievability (§8) | **Done** | `scores.py` uses real FSRS retrievability (FSRS enabled on the deck), heuristic fallback when absent |
 | Memory calibration Brier/log-loss/ECE (§9 Step 1) | **Done** | `scores.memory_calibration` (FSRS retrievability vs. outcome); shown on the dashboard |
