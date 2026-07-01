@@ -25,14 +25,13 @@ from aqt.qt import (
     QDialog,
     QIcon,
     QLabel,
-    QMenu,
     QPushButton,
     QTextBrowser,
     QTextEdit,
     QVBoxLayout,
     qconnect,
 )
-from aqt.utils import aqt_data_folder, tooltip
+from aqt.utils import aqt_data_folder
 
 
 def _icon_path(filename: str) -> str:
@@ -353,17 +352,6 @@ def _banner_html(col) -> str:
 """
 
 
-def _build_deck() -> None:
-    mw = aqt.mw
-    if mw is None or mw.col is None:
-        return
-    from anki.rpce import build_starter_deck
-
-    build_starter_deck(mw.col)
-    mw.reset()
-    tooltip("Built the RPCE starter deck (7 domains).")
-
-
 def _updated_str(col) -> str:
     """Human-readable 'last updated' time for the readiness panel (spec §7.4)."""
     import time
@@ -603,22 +591,15 @@ def _show_simulation() -> None:
     SimulationDialog(mw).exec()
 
 
-def _add_menu() -> None:
+def _brand_main_window() -> None:
+    """Brand the window (title + logo icon). All RPCE actions live on the top
+    toolbar tabs (Study / Section II / Simulate / Dashboard), so there is no
+    separate RPCE dropdown menu."""
     mw = aqt.mw
     if mw is None:
         return
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
-    menu = QMenu("&RPCE", mw)
-    mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
-    build_action = menu.addAction("Build starter deck")
-    qconnect(build_action.triggered, _build_deck)
-    scenario_action = menu.addAction("Section II scenario practice…")
-    qconnect(scenario_action.triggered, _show_scenarios)
-    sim_action = menu.addAction("Meeting simulation…")
-    qconnect(sim_action.triggered, _show_simulation)
-    dash_action = menu.addAction("Readiness dashboard…")
-    qconnect(dash_action.triggered, _show_dashboard)
 
 
 def _apply_light_theme() -> None:
@@ -988,7 +969,7 @@ def setup() -> None:
     _remove_deck_browser_bottom_bar()
     gui_hooks.style_did_init.append(_on_style_init)
     gui_hooks.webview_will_set_content.append(_on_webview_content)
-    gui_hooks.main_window_did_init.append(_add_menu)
+    gui_hooks.main_window_did_init.append(_brand_main_window)
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
     gui_hooks.deck_browser_did_render.append(_on_deck_browser_did_render)

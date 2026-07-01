@@ -53,7 +53,7 @@ Each milestone lists its spec/PRD anchor, the work, and the proof artifact.
 
 - **Work:** calibrated memory score from FSRS/`revlog`; Svelte dashboard showing three score slots each with a range, evidence, coverage %, "how sure", last-updated; **abstain** below the give-up line.
 - **Proof:** calibration chart + Brier/log-loss on held-out reviews; abstain state visible until thresholds met.
-- **Status:** **[mostly done]** — scoring + honesty logic in `anki.rpce.scores`; **desktop dashboard wired** via an RPCE menu (`qt/aqt/rpce.py`): "Build starter deck" + "Readiness dashboard…" showing the three scores with ranges, coverage map, best-next-topic, and abstain state. 5 tests pass; app launches with the menu. Remaining: FSRS-calibrated memory (the M8 metrics are ready to receive real predictions).
+- **Status:** **[done]** — scoring + honesty logic in `anki.rpce.scores`; the **home banner is the dashboard** (`qt/aqt/rpce.py`), reached from the **Dashboard** toolbar tab (no dropdown menu). It shows the three scores each with a range **and the main reasons behind it**, coverage map, best-next-topic, and abstain state; the deck auto-builds on first open. FSRS-calibrated memory + Brier/log-loss are wired.
 
 ### M4 — Transfer Ladder (study feature) · SPOV 1, PRD §7.1
 

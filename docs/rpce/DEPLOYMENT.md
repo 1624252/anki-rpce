@@ -70,19 +70,26 @@ terminal.
 
 ### 2b. Use the RPCE features in the app
 
-The desktop app adds an **RPCE menu** (left of Help) with two actions:
+Everything is on the **top toolbar tabs** — there is no separate RPCE menu.
+The RPCE deck is **built automatically** the first time you open the app (seeded
+with cards tagged to all seven Performance-Expectation domains, `rpce::domain::N`).
 
-1. **RPCE ▸ Build starter deck** — seeds a deck with cards tagged to all seven
-   Performance-Expectation domains (`rpce::domain::N`). Placeholder content so you
-   have something to review; replace with RONR-grounded cards over time.
-2. **RPCE ▸ Readiness dashboard…** — shows the three scores (memory, performance,
-   readiness per section) each with a range, the coverage map across the seven
-   domains, the best next topic, and the **abstain** state with what data is
-   still missing (until the give-up thresholds are met).
+- **Study** — review the concept flashcards. Each concept is one FSRS-scheduled
+  card whose format rotates (cloze ↔ interactive MCQ) each repetition; every
+  answer shows a RONR (12th ed.) citation + verbatim quote.
+- **Section II** — free-text performance scenarios graded with examiner-style
+  feedback (offline placeholder examiner).
+- **Simulate** — a scripted meeting you run as the parliamentarian; each response
+  is graded with a debrief.
+- **Dashboard** — the home banner itself: the three scores (memory, performance,
+  readiness per section) each with a range **and the main reasons behind it**,
+  the coverage map across the seven domains, the best next topic, and the
+  **abstain** state with what data is still missing (until the give-up
+  thresholds are met).
 
-Try it: *Build starter deck*, study a few cards, then open the dashboard — it
-stays in **abstain** until there are enough graded reviews, ≥50% coverage, and
-(for Section II) graded scenarios.
+Try it: study a few cards, then look at the home banner — it stays in
+**abstain** until there are enough graded reviews, ≥50% coverage, and (for
+Section II) graded scenarios.
 
 > Tip: use a throwaway profile for testing — start with `.\run.bat -- -p test`
 > (or `just run -- -p test`) so you don't touch your real collection.
@@ -248,8 +255,9 @@ points-at-stake queue, flagging any result over its spec target.
 ## 7. Quick test checklist
 
 - [ ] `just run` / `.\run.bat` launches the desktop app
-- [ ] **RPCE ▸ Build starter deck** seeds all seven domains
-- [ ] **RPCE ▸ Readiness dashboard…** shows three scores + coverage map and **abstains** until thresholds are met
+- [ ] The RPCE deck is auto-built on first open (all seven domains seeded)
+- [ ] Toolbar tabs work: **Study**, **Section II**, **Simulate**, **Dashboard**
+- [ ] The home banner shows three scores + ranges + reasons + coverage map and **abstains** until thresholds are met
 - [ ] `cargo ndk -t arm64-v8a build -p anki --lib --features rustls` cross-compiles the engine for Android
 - [ ] `just bench` reports p50/p95/worst under spec targets
 - [ ] RPCE Rust + Python tests pass
