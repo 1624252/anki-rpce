@@ -619,6 +619,16 @@ def _on_deck_browser_content(deck_browser, content) -> None:
         print(f"RPCE home error: {exc}")
 
 
+def _on_overview_bottom(link_handler, links):
+    """Empty the deck-overview bottom bar (Options / Custom Study / Description) —
+    not part of the RPCE flow. Returns the handler unchanged (filter hook)."""
+    try:
+        links.clear()
+    except Exception as exc:
+        print(f"RPCE overview-bottom error: {exc}")
+    return link_handler
+
+
 def _on_deck_browser_did_render(deck_browser) -> None:
     """The deck browser re-shows its bottom bar (Get Shared / Create Deck /
     Import File) as the last render step — hide it again here so it stays gone."""
@@ -757,6 +767,7 @@ def setup() -> None:
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
     gui_hooks.deck_browser_did_render.append(_on_deck_browser_did_render)
+    gui_hooks.overview_will_render_bottom.append(_on_overview_bottom)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
     gui_hooks.state_did_change.append(_on_state_change)
