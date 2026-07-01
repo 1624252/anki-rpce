@@ -595,6 +595,15 @@ def _show_reference() -> None:
     ReferenceDialog(mw).exec()
 
 
+def _trigger_sync() -> None:
+    """Start AnkiWeb sync (also prompts login the first time), from the toolbar
+    status indicator — mirrors the phone's Sync button."""
+    try:
+        aqt.mw.on_sync_button_clicked()
+    except Exception as exc:
+        print(f"RPCE sync error: {exc}")
+
+
 def _on_webview_message(handled, message: str, context):
     """Open the Reference dialog from the dashboard banner link (keeps it off the
     top toolbar). Returns a filter result tuple."""
@@ -1037,6 +1046,11 @@ _TOOLBAR_CSS = (
     "box-shadow:0 4px 14px rgba(29,78,216,.30) !important}"
     ".hitem:hover{background:linear-gradient(135deg,#2563eb,#60a5fa) !important;"
     "color:#fff !important;border-color:#1d4ed8 !important}"
+    # Sync-status indicator: amber when not signed in, green when signed in.
+    "#rpce_sync_out{background:#fef3c7 !important;color:#b45309 !important;"
+    "border-color:#f0c674 !important;box-shadow:none !important}"
+    "#rpce_sync_in{background:#e7f6ec !important;color:#15803d !important;"
+    "border-color:#9fd8b3 !important;box-shadow:none !important}"
     "</style>"
 )
 
@@ -1080,6 +1094,21 @@ def _on_toolbar_links(links, toolbar) -> None:
             _show_simulation,
             tip="Run a meeting as the parliamentarian",
             id="rpce_simulate",
+        )
+    )
+    # Sync status indicator (top-right, next to Sync) — mirrors the phone.
+    signed_in = False
+    try:
+        signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
+    except Exception:
+        pass
+    links.append(
+        toolbar.create_link(
+            "rpce_sync_status",
+            "🟢 Synced" if signed_in else "⚠️ Not signed in",
+            _trigger_sync,
+            tip="AnkiWeb sync — click to sign in and sync with your phone",
+            id="rpce_sync_in" if signed_in else "rpce_sync_out",
         )
     )
     if sync_link is not None:
