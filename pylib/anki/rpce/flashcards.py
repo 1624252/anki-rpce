@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from . import refs
+
 _CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
 
 
@@ -28,6 +30,8 @@ class Flashcard:
     mcq_question: str
     mcq_options: tuple[str, ...]
     mcq_answer_index: int
+    #: RONR (12th ed.) citation + verbatim quote backing this concept.
+    ref: refs.Ref
 
 
 FLASHCARDS: tuple[Flashcard, ...] = (
@@ -43,6 +47,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "Unanimous consent",
         ),
         0,
+        refs.MAJORITY,
     ),
     Flashcard(
         2,
@@ -51,6 +56,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
         "What vote does the motion for the Previous Question require?",
         ("A majority", "Two-thirds", "Unanimous consent", "One-third"),
         1,
+        refs.PREVIOUS_QUESTION,
     ),
     # Order-of-precedence example (Spiky idea): MCQ is appropriate once the
     # learner has practised the full precedence chart in recall form first.
@@ -61,6 +67,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
         "Which of these privileged/subsidiary motions takes precedence (is decided first)?",
         ("Lay on the Table", "Postpone Indefinitely", "Adjourn", "Amend"),
         2,
+        refs.PRECEDENCE,
     ),
     Flashcard(
         3,
@@ -74,6 +81,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "Postponed to the next meeting",
         ),
         1,
+        refs.POINT_OF_ORDER,
     ),
     Flashcard(
         4,
@@ -87,6 +95,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "Unanimous attendance",
         ),
         0,
+        refs.QUORUM,
     ),
     Flashcard(
         5,
@@ -100,6 +109,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "The most nominations",
         ),
         1,
+        refs.PLURALITY,
     ),
     Flashcard(
         6,
@@ -113,6 +123,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "To chair the meeting",
         ),
         1,
+        refs.PARLIAMENTARIAN,
     ),
     Flashcard(
         7,
@@ -126,6 +137,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
             "Board approval only",
         ),
         1,
+        refs.BYLAWS_AMENDMENT,
     ),
 )
 

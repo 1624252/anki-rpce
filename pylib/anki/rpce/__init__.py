@@ -121,7 +121,8 @@ def coverage_pct(col: Collection) -> float:
 
 #: Name of the notetype that carries every format of one concept in one note.
 #: (Versioned: bumping the name triggers a clean deck rebuild on profile open.)
-TRANSFER_NOTETYPE = "RPCE Concept"
+#: v2 adds the RONR (12th ed.) Citation + Quote shown with every answer.
+TRANSFER_NOTETYPE = "RPCE Concept 2"
 
 #: Delimiter separating the individual MCQ options within the MCQOptions field.
 MCQ_OPTION_SEP = "||"
@@ -144,6 +145,8 @@ def _transfer_notetype(col: Collection):
     m = mm.new(TRANSFER_NOTETYPE)
     # MCQQ = stem; MCQA = correct-answer text; MCQOptions = the options joined by
     # MCQ_OPTION_SEP; MCQIdx = index of the correct option (for interactive MCQ).
+    # Citation/Quote = the RONR (12th ed.) section and verbatim excerpt shown
+    # with every answer (project accuracy rule; spec §6/§9).
     for field in (
         "Concept",
         "Domain",
@@ -153,13 +156,28 @@ def _transfer_notetype(col: Collection):
         "MCQA",
         "MCQOptions",
         "MCQIdx",
+        "Citation",
+        "Quote",
     ):
         mm.add_field(m, mm.new_field(field))
     tmpl = mm.new_template("Concept")
     # Default rendering (used where the desktop format-rotation hook is absent,
-    # e.g. the phone): the cloze recall prompt.
+    # e.g. the phone): the cloze recall prompt. Every answer carries the RONR
+    # citation + verbatim quote.
     tmpl["qfmt"] = "{{ClozeQ}}"
-    tmpl["afmt"] = "{{FrontSide}}<hr id=answer>{{ClozeA}}"
+    tmpl["afmt"] = (
+        "{{FrontSide}}<hr id=answer>{{ClozeA}}"
+        "{{#Citation}}<div class=rpce-ref>"
+        "<div class=rpce-cite>RONR (12th ed.) {{Citation}}</div>"
+        "<div class=rpce-quote>&ldquo;{{Quote}}&rdquo;</div></div>{{/Citation}}"
+    )
+    m["css"] = (
+        ".card{font-size:18px;color:#0a1f44}"
+        ".rpce-ref{margin-top:18px;padding:14px 16px;border-left:4px solid #2f6fed;"
+        "background:#eef4ff;border-radius:10px;text-align:left}"
+        ".rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}"
+        ".rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}"
+    )
     mm.add_template(m, tmpl)
     mm.add(m)
     return mm.by_name(TRANSFER_NOTETYPE)
@@ -195,6 +213,8 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
         note["MCQA"] = flashcards.mcq_back(card)
         note["MCQOptions"] = MCQ_OPTION_SEP.join(card.mcq_options)
         note["MCQIdx"] = str(card.mcq_answer_index)
+        note["Citation"] = card.ref.section
+        note["Quote"] = card.ref.quote
         note.tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
         col.add_note(note, deck_id)
 

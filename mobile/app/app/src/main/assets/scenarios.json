@@ -2,36 +2,64 @@
   {
     "domain": 1,
     "prompt": "A member says 'I move that we donate $500 to the scholarship fund.' No one has said anything else yet. As chair, what do you do before debate?",
-    "gold": "A main motion requires a second before it can be considered. The chair calls for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote."
+    "gold": "A main motion requires a second before it can be considered. The chair calls for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote.",
+    "ref": {
+      "section": "44:1",
+      "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
+    }
   },
   {
     "domain": 2,
     "prompt": "Debate has gone on for a long time and a member moves the Previous Question to end debate and vote now. How do you handle it?",
-    "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending question."
+    "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending question.",
+    "ref": {
+      "section": "16:1",
+      "quote": "The Previous Question is the motion used to bring the assembly to an immediate vote on one or more pending questions; its adoption does this with certain exceptions."
+    }
   },
   {
     "domain": 3,
     "prompt": "While a motion is pending, a member believes the chair has violated the rules and says 'Point of Order.' What is the correct handling?",
-    "gold": "A Point of Order is an incidental motion: it needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal."
+    "gold": "A Point of Order is an incidental motion: it needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal.",
+    "ref": {
+      "section": "23:1",
+      "quote": "When a member thinks that the rules of the assembly are being violated, he can make a Point of Order (or \"raise a question of order,\" as it is sometimes expressed), thereby calling upon the chair for a ruling and an enforcement of the regular rules."
+    }
   },
   {
     "domain": 4,
     "prompt": "A meeting is scheduled to begin but only a few members are present. A member wants to start adopting motions. What must you confirm first?",
-    "gold": "Business cannot be transacted without a quorum present. The chair must confirm a quorum (as defined by the bylaws) before the assembly takes any substantive action."
+    "gold": "Business cannot be transacted without a quorum present. The chair must confirm a quorum (as defined by the bylaws) before the assembly takes any substantive action.",
+    "ref": {
+      "section": "40:1",
+      "quote": "A quorum in an assembly is the number of members … who must be present in order that business can be validly transacted."
+    }
   },
   {
     "domain": 5,
     "prompt": "An election for president is held with three candidates and the bylaws are silent on the threshold. One candidate gets the most votes but not half. Is that candidate elected?",
-    "gold": "No. Unless the bylaws provide otherwise, election requires a majority (more than half) of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority."
+    "gold": "No. Unless the bylaws provide otherwise, election requires a majority (more than half) of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority.",
+    "ref": {
+      "section": "44:11",
+      "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
+    }
   },
   {
     "domain": 6,
     "prompt": "During a contentious meeting, the chair asks the parliamentarian to tell the assembly which side is right. How should the parliamentarian respond?",
-    "gold": "The parliamentarian advises impartially and privately; they do not rule or take sides. The chair, not the parliamentarian, makes rulings. The parliamentarian should give neutral procedural advice to the chair."
+    "gold": "The parliamentarian advises impartially and privately; they do not rule or take sides. The chair, not the parliamentarian, makes rulings. The parliamentarian should give neutral procedural advice to the chair.",
+    "ref": {
+      "section": "47:46",
+      "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
+    }
   },
   {
     "domain": 7,
     "prompt": "A member wants to amend the organization's bylaws at the next meeting. What conditions generally must be met to adopt the amendment?",
-    "gold": "Amending bylaws generally requires previous notice and a two-thirds vote (or whatever the bylaws themselves specify). Both the notice requirement and the higher voting threshold must be satisfied."
+    "gold": "Amending bylaws generally requires previous notice and a two-thirds vote (or whatever the bylaws themselves specify). Both the notice requirement and the higher voting threshold must be satisfied.",
+    "ref": {
+      "section": "56:67",
+      "quote": "These bylaws may be amended at any regular meeting of the Society by a two-thirds vote, provided that the amendment has been submitted in writing at the previous regular meeting."
+    }
   }
 ]

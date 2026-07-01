@@ -39,6 +39,17 @@ def test_concept_is_one_card_with_multiple_formats():
     assert note["MCQQ"] and note["MCQA"], "applied MCQ form present"
 
 
+def test_every_concept_card_carries_ronr_citation_and_quote():
+    import re
+
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
+    for cid in col.find_cards("deck:RPCE"):
+        note = col.get_card(cid).note()
+        assert re.fullmatch(r"\d+:\d+", note["Citation"]), note["Citation"]
+        assert len(note["Quote"].strip()) > 20, note["Citation"]
+
+
 def test_topic_weights_round_trip_through_config():
     col = getEmptyCol()
     # Override two domains; the rest keep their defaults.

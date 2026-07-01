@@ -533,6 +533,7 @@ pending; **Planned** = designed, not built.
 | Points-at-Stake Queue (§7.5) | **Done** | `rslib/.../points_at_stake.rs` + proto RPC; 6 Rust + 2 Py tests |
 | Content model: 7 domains, coverage (§11) | **Done** | `anki.rpce` via tags + config (not custom tables) |
 | Multi-format flashcards: cloze + MCQ (§7.1) | **Done** | `flashcards.py`; one `RPCE Transfer` note carries both forms |
+| Every answer carries RONR (12th ed.) citation + verbatim quote (§7.3, accuracy rule) | **Done** | `refs.py` single source (quotes checked verbatim against the corpus by `test_rpce_refs`); shown on flashcard answers (desktop hook + notetype `afmt`), Section II debrief, and every Simulation ruling — desktop **and** phone |
 | Same concept = one problem, one schedule (§7.1) | **Done** | one card per concept; format rotates per repetition (`rung_for_reps`) so the same problem repeats on a single FSRS schedule, never the same shape twice in a row |
 | Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `card_will_show` rotation + `reviewer_did_answer_card` tally |
 | Dual-mode: Section I flashcards + Section II scenarios (§7.2) | **Done** | deck + `scenarios.py` + practice dialog |

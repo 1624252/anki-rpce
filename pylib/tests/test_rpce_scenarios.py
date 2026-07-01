@@ -20,6 +20,14 @@ def test_scenarios_have_prompt_and_gold_answer():
         assert s.gold_answer.strip()
 
 
+def test_every_scenario_cites_ronr_with_a_quote():
+    import re
+
+    for s in scenarios.all_scenarios():
+        assert re.fullmatch(r"\d+:\d+", s.ref.section), s.ref.section
+        assert len(s.ref.quote.strip()) > 20, s.ref.section
+
+
 def test_baseline_examiner_grades_a_scenario_answer():
     s = scenarios.scenarios_for(2)[0]  # Previous Question -> two-thirds vote
     ex = examiner.BaselineExaminer(pass_score=2.0)

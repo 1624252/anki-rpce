@@ -10,14 +10,16 @@ performance/debrief workflow can be exercised offline. These are clearly
 (`data/RPCE-Sample-Questions-v4-100625.md`) and SME-authored items, and any
 AI-generated additions must pass the gold-set checker first.
 
-Gold answers state the correct *ruling/reasoning* (what the examiner grades on);
-RONR citations are added by the examiner from the corpus, not required of the
-candidate.
+Gold answers state the correct *ruling/reasoning* (what the examiner grades on)
+and every model answer carries an exact RONR (12th ed.) section citation plus a
+verbatim quote from that section (`ref`); the candidate is not required to cite.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from . import refs
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,8 @@ class Scenario:
     prompt: str
     #: The model ruling/reasoning the answer is graded against (accuracy).
     gold_answer: str
+    #: RONR (12th ed.) citation + verbatim quote shown with the model answer.
+    ref: refs.Ref
 
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -36,6 +40,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "A main motion requires a second before it can be considered. The chair "
         "calls for a second; if seconded, the chair states the question and opens "
         "it to debate. A main motion is adopted by a majority vote.",
+        refs.MAJORITY,
     ),
     Scenario(
         2,
@@ -44,6 +49,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "The Previous Question needs a second, is not debatable, and requires a "
         "two-thirds vote to adopt. If it passes, debate ends immediately and the "
         "assembly votes on the pending question.",
+        refs.PREVIOUS_QUESTION,
     ),
     Scenario(
         3,
@@ -52,6 +58,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "A Point of Order is an incidental motion: it needs no second, is not "
         "debatable, and is raised at the time of the breach. The chair rules on "
         "the point; the chair's ruling may be challenged by an Appeal.",
+        refs.POINT_OF_ORDER,
     ),
     Scenario(
         4,
@@ -60,6 +67,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "Business cannot be transacted without a quorum present. The chair must "
         "confirm a quorum (as defined by the bylaws) before the assembly takes "
         "any substantive action.",
+        refs.QUORUM,
     ),
     Scenario(
         5,
@@ -69,6 +77,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "No. Unless the bylaws provide otherwise, election requires a majority "
         "(more than half) of the votes cast. A plurality does not elect; balloting "
         "continues until a candidate has a majority.",
+        refs.PLURALITY,
     ),
     Scenario(
         6,
@@ -77,6 +86,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "The parliamentarian advises impartially and privately; they do not rule "
         "or take sides. The chair, not the parliamentarian, makes rulings. The "
         "parliamentarian should give neutral procedural advice to the chair.",
+        refs.PARLIAMENTARIAN,
     ),
     Scenario(
         7,
@@ -85,6 +95,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         "Amending bylaws generally requires previous notice and a two-thirds vote "
         "(or whatever the bylaws themselves specify). Both the notice requirement "
         "and the higher voting threshold must be satisfied.",
+        refs.BYLAWS_AMENDMENT,
     ),
 )
 

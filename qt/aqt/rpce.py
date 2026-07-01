@@ -417,13 +417,11 @@ class ScenarioDialog(QDialog):
         )
         scores.record_scenario(self._mw.col)
         verdict = "pass" if result.passed else "keep practicing"
-        citation = (
-            f"<br><b>RONR reference:</b> {result.citation}" if result.citation else ""
-        )
         self._result.setHtml(
             f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
-            f"<b>Feedback:</b> {result.feedback}{citation}<br><br>"
+            f"<b>Feedback:</b> {result.feedback}<br><br>"
             f"<b>Model ruling:</b> {s.gold_answer}</div>"
+            + _ref_block(s.ref.section, s.ref.quote)
         )
 
     def _next(self) -> None:
@@ -543,11 +541,13 @@ class SimulationDialog(QDialog):
         )
         scores.record_scenario(self._mw.col)
         verdict = "pass" if result.passed else "keep practicing"
+        ref = self._pending.ref
+        ref_html = _ref_block(ref.section, ref.quote) if ref else ""
         self._append(
             f"<p><b>You (parliamentarian):</b> {answer}</p>"
             f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
             f"({verdict}) — {result.feedback}<br>"
-            f"<b>Model ruling:</b> {self._pending.gold}</p>"
+            f"<b>Model ruling:</b> {self._pending.gold}</p>" + ref_html
         )
         self._answer.clear()
         self._play()
@@ -714,6 +714,24 @@ _MCQ_CSS = (
 )
 
 
+def _ref_block(section: str, quote: str) -> str:
+    """Render the RONR (12th ed.) citation + verbatim quote shown with an answer.
+
+    Used by every mode (flashcard reviewer, Section II, Simulation) so each mode
+    answers with an exact section citation and a relevant quote (accuracy rule).
+    """
+    if not section:
+        return ""
+    return (
+        "<div style='margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;"
+        "background:#eef4ff;border-radius:10px;text-align:left'>"
+        "<div style='font-weight:700;color:#1b3faa;font-size:15px'>"
+        f"RONR (12th ed.) {section}</div>"
+        "<div style='margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px'>"
+        f"&ldquo;{quote}&rdquo;</div></div>"
+    )
+
+
 def _mcq_html(note, label: str, answer_side: bool) -> str:
     """Interactive multiple choice: clickable options with immediate correct/
     incorrect feedback (not a flip-to-reveal flashcard)."""
@@ -766,8 +784,12 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
             "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
             f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
         )
+        ref = _ref_block(note["Citation"], note["Quote"])
         if rung == "mcq":
-            return _mcq_html(note, label, answer_side="Answer" in kind)
+            html = _mcq_html(note, label, answer_side="Answer" in kind)
+            if "Answer" in kind:
+                html += ref
+            return html
         body = f"<div style='font-size:20px;line-height:1.5'>{note['ClozeQ']}</div>"
         if "Question" in kind:
             return label + body
@@ -777,6 +799,7 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
                 + body
                 + "<hr id=answer>"
                 + f"<div style='font-size:20px;line-height:1.5;color:#15803d'>{note['ClozeA']}</div>"
+                + ref
             )
         return text
     except Exception as exc:  # never break reviewing over rendering

@@ -67,6 +67,10 @@ textarea{width:100%;min-height:120px;background:var(--track);color:var(--ink);bo
 input{width:100%;background:var(--track);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:16px;margin-top:10px}
 label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 .feedback{background:var(--track);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;font-size:16px;line-height:1.5}
+/* RONR citation + verbatim quote shown with every answer (matches notetype css) */
+.rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid var(--accent1);background:rgba(47,111,237,.10);border-radius:10px;text-align:left}
+.rpce-cite{font-weight:700;color:var(--accent2);font-size:15px}
+.rpce-quote{margin-top:6px;font-style:italic;color:var(--ink);font-size:16px}
 </style>
 </head>
 <body>
@@ -228,6 +232,10 @@ var STOP=new Set(('the and for with not are was its has had about here from this
   'must have which when what who how why where a an in of to is it on or no be by as at').split(' '));
 function toks(t){ var s=new Set(); (t.toLowerCase().match(/[a-z0-9]+/g)||[]).forEach(function(w){ if(w.length>=3&&!STOP.has(w)) s.add(w); }); return s; }
 function inter(a,b){ var n=0; a.forEach(function(x){ if(b.has(x)) n++; }); return n; }
+/* RONR (12th ed.) citation + verbatim quote block shown with every model answer */
+function refBlock(r){ if(!r||!r.section) return '';
+  return '<div class="rpce-ref"><div class="rpce-cite">RONR (12th ed.) '+r.section+
+    '</div><div class="rpce-quote">\u201c'+r.quote+'\u201d</div></div>'; }
 function openSection2(){
   if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }
   sIdx=0; show('section2'); loadS2();
@@ -248,7 +256,7 @@ function gradeS2(){
     '<b>Feedback:</b> Your answer '+(passed?'matches':'misses key points from')+' the model ruling. '+
     'Debrief: compare your ruling to the model below. <i>(Placeholder examiner — AI grading is not enabled yet.)</i>'+
     '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">'+
-    '<b>Model ruling:</b> '+s.gold;
+    '<b>Model ruling:</b> '+s.gold + refBlock(s.ref);
 }
 function nextS2(){ sIdx=(sIdx+1)%SCEN.length; loadS2(); }
 
@@ -283,7 +291,7 @@ function simRespond(){
   simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
     "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
     "your answer "+(passed?'matches':'misses key points from')+" the model ruling.<br>"+
-    "<b>Model ruling:</b> "+simPending.gold+"</p>");
+    "<b>Model ruling:</b> "+simPending.gold+"</p>" + refBlock(simPending.ref));
   el('sim-answer').value=''; playSim();
 }
 function nextSim(){ simIdx=(simIdx+1)%SIMS.length; loadSim(); }

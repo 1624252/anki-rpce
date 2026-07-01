@@ -31,6 +31,16 @@ def test_response_turns_carry_prompt_and_gold():
             assert turn.prompt and turn.gold
 
 
+def test_response_turns_cite_ronr_with_a_quote():
+    import re
+
+    for sim in simulations.all_simulations():
+        for turn in simulations.response_turns(sim):
+            assert turn.ref is not None, turn.prompt
+            assert re.fullmatch(r"\d+:\d+", turn.ref.section), turn.ref.section
+            assert len(turn.ref.quote.strip()) > 20
+
+
 def test_narration_turns_are_not_graded():
     sim = simulations.simulation_by_id(1)
     narration = [t for t in sim.turns if not t.needs_response]

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from . import refs
+
 
 @dataclass(frozen=True)
 class SimTurn:
@@ -29,6 +31,8 @@ class SimTurn:
     line: str
     prompt: str | None = None
     gold: str | None = None
+    #: RONR (12th ed.) citation + verbatim quote shown with the model ruling.
+    ref: refs.Ref | None = None
 
     @property
     def needs_response(self) -> bool:
@@ -64,6 +68,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 gold="A main motion requires a second before it is considered. The chair "
                 "should call for a second; if seconded, the chair states the question and "
                 "opens it to debate. A main motion is adopted by a majority vote.",
+                ref=refs.MAJORITY,
             ),
             SimTurn("Member (Chen)", "Second!"),
             SimTurn(
@@ -78,6 +83,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 gold="The Previous Question needs a second, is not debatable, and requires a "
                 "two-thirds vote to adopt. If it passes, debate ends immediately and the "
                 "assembly votes on the pending motion.",
+                ref=refs.PREVIOUS_QUESTION,
             ),
         ),
     ),
@@ -95,6 +101,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 gold="Business cannot be transacted without a quorum present. The chair must "
                 "confirm that a quorum, as defined by the bylaws, is present before the "
                 "assembly takes any substantive action.",
+                ref=refs.QUORUM,
             ),
             SimTurn(
                 "Chair",
@@ -107,6 +114,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 gold="A Point of Order needs no second, is not debatable, and is raised at the "
                 "time of the breach. The chair rules on the point; the chair's ruling may be "
                 "challenged by an Appeal.",
+                ref=refs.POINT_OF_ORDER,
             ),
         ),
     ),
@@ -128,6 +136,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 gold="No. Unless the bylaws provide otherwise, election requires a majority — "
                 "more than half of the votes cast. A plurality does not elect; balloting "
                 "continues until a candidate has a majority.",
+                ref=refs.PLURALITY,
             ),
         ),
     ),
