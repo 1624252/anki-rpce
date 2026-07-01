@@ -5,7 +5,7 @@
 |                   |                                                                                                                                        |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **Owner**         | Project owner                                                                                                                          |
-| **Status**        | Draft v2 (detailed MVP definition)                                                                                                     |
+| **Status**        | Draft v3 — MVP implemented on desktop + Android; AI scaffolded but off (see §16 Implementation Status)                                  |
 | **Exam (locked)** | RPCE — NAP Registered Parliamentarian Credentialing Exam                                                                               |
 | **License**       | AGPL-3.0-or-later, with credit to Anki (Ankitects). Some upstream parts are BSD-3-Clause.                                              |
 | **Source corpus** | _Robert's Rules of Order Newly Revised, 12th ed._ (RONR) + NAP RP Performance Expectations + Joint Code of Professional Responsibility |
@@ -104,7 +104,7 @@ We deliberately start with **one** narrow user, not "test-prep students" in gene
 - As **the candidate**, I want the app to **refuse to show a readiness score until it has enough data** so that **I trust it when it finally does.**
 - As **the candidate**, I want a **coverage map of all seven Performance Expectation domains** so that **I can see which high-weight domain I've barely touched.**
 - As **the candidate**, I want to **review on my phone offline, then sync to my desktop** so that **I can study between meetings and pick up where I left off at my desk.**
-- As **the candidate**, I want **timed practice that mirrors the 3-hour limit** so that **I build pacing, not just untimed knowledge.**
+- As **the candidate**, I want **timed practice that mirrors the 3-hour limit** so that **I build pacing, not just untimed knowledge.** _(Backend `timed.py` present; the desktop UI is deferred — see §16.)_
 
 ### 5b. Stories we are NOT focused on (out of scope for MVP)
 
@@ -192,7 +192,7 @@ No AI ships before the apps review the same deck on a shared engine.
 
 ### 7.6 Question Types & Reference Tab
 
-**Goal.** Vary how a fact is tested — and only test what the screen makes answerable. Each question is one note (`RPCE Q` notetype) of a **Kind** with a JSON **Payload** that the *same* renderer draws on desktop and phone (single source, `anki.rpce.render_js`). The section is cited **only in the answer**, never in a stem or option.
+**Goal.** Vary how a fact is tested — and only test what the screen makes answerable. Each question is one note (`RPCE Q 1` notetype) of a **Kind** with a JSON **Payload** that the *same* renderer draws on desktop and phone (single source, `anki.rpce.render_js`). The section is cited **only in the answer**, never in a stem or option.
 
 - **Cloze** — fill key term(s) blanked from a real RONR sentence. Multiple blanks are supported; **each blank is tappable to reveal** individually (with a hint), and a **Reveal all** control reveals the rest. Rating is gated until every blank is revealed.
 - **Applied MCQ** — pick the term/answer; **tappable on both desktop and phone**, marks right/wrong, keeps the stem on screen with the answer.
@@ -265,7 +265,7 @@ domains, and ≥10 graded Section II scenarios. The app abstains below this line
 **AI safety (spec §6, §7e, §7f).**
 
 - **Source-traced:** every AI output names a source in the transcribed RONR 12th-ed. text (`data/roberts_rules_of_order_12th_edition.md`) — or a PE / Joint-Code section — or it abstains.
-- **Gold set:** ≥50 Q&A pairs with known-correct answers, drawn from the **official RPCE sample questions** in `data/RPCE-Sample-Questions-v4-100625.md` (their answer keys already cite RONR 12th-ed. paragraphs, e.g. `RONR (12th ed.) 10:11`); pre-set pass cutoff; report correct / wrong / "correct-but-bad-teaching" counts; block failing cards.
+- **Gold set:** known-correct Q&A pairs drawn from the **official RPCE sample questions** in `data/RPCE-Sample-Questions-v4-100625.md` (their answer keys already cite RONR 12th-ed. paragraphs, e.g. `RONR (12th ed.) 10:11`); pre-set pass cutoff; report correct / wrong / "correct-but-bad-teaching" counts; block failing cards. _Currently **36** items parse cleanly across all 7 domains; reaching the spec's target of ≥50 needs more sample items._
 - **Baseline:** keyword or vector search over the same RONR 12th-ed. text, shown side-by-side; the AI must beat it.
 - **Leakage scanner:** flags any test/gold item (or near-copy) that slipped into prompts/training; a violation zeroes that score (spec §11).
 
@@ -289,7 +289,7 @@ flowchart TB
   subgraph Shared["Shared engine (one codebase)"]
     rust["rslib — Rust core<br/>FSRS + Points-at-Stake Queue"]
     proto["protobuf boundary<br/>(new queue message)"]
-    db[("SQLite collection.anki2<br/>+ custom RPCE tables")]
+    db[("SQLite collection.anki2<br/>+ RPCE tags / config")]
     rust --- proto
     rust --- db
   end
@@ -302,7 +302,7 @@ flowchart TB
   end
 
   subgraph Mobile["Phone companion (Android)"]
-    droid["AnkiDroid (Kotlin)<br/>reuses shared Rust core"]
+    droid["Kotlin + WebView app<br/>speedrun_jni → shared Rust core"]
   end
 
   subgraph AI["AI layer (optional, desktop)"]
@@ -340,7 +340,7 @@ flowchart TB
 
 - The **Rust change ships once** and runs on both desktop and phone because it sits below the protobuf boundary.
 - **Reviews from either device** flow through the sync server into the same collection; the documented conflict rule (higher-`usn` / last-writer) resolves same-card-offline edits (spec §7b).
-- **AI is desktop-only and optional**; with it off, both apps still compute all three scores.
+- **The LLM examiner is optional** (scaffolded, gated behind an API key, not wired into either app yet); both apps grade Section II with an **offline placeholder** and still compute all three scores.
 - **Gold/held-out data lives in the repo, never synced into prompts/training** — enforced by the leakage scanner.
 
 ---
@@ -357,8 +357,8 @@ flowchart TB
 | **Cross-language API**      | Protocol Buffers (`proto/`) → generated Rust/Python/TS bindings; `pylib/rsbridge` (PyO3)                                                        | **Protobuf / Rust / Python** | One typed contract drives all clients; a new message exposes the queue to Python (spec §7a).                                                                |
 | **Desktop shell**           | Anki `aqt` (PyQt6/Qt WebEngine)                                                                                                                 | **Python**                   | Reuses Anki's proven desktop host; embeds web dashboards.                                                                                                   |
 | **Desktop UI / dashboards** | RPCE home banner + readiness dashboard rendered as **HTML/CSS** in Anki's web stack (deck-browser injection + an `AnkiWebView` window); RPCE tabs replace the deck toolbar | **Python / HTML / CSS**      | Ships today without a separate build step; Svelte/TS pages remain an option for richer future dashboards.                                                   |
-| **Mobile**                  | AnkiDroid (reuses shared Rust core via FFI)                                                                                                     | **Kotlin**                   | AGPL, open source, already runs the shared engine; MVP = Android first (iOS via Rust C-FFI is future).                                                      |
-| **Local storage**           | SQLite (`collection.anki2`) + our custom RPCE tables (§11b)                                                                                     | **SQL**                      | Anki's on-device store; our tables sync for free by living in the same DB.                                                                                  |
+| **Mobile**                  | Custom Kotlin + WebView app (`mobile/app`) with a `speedrun_jni` **JNI** bridge to the shared Rust core                                          | **Kotlin / Rust**            | Runs the shared engine on-device (spec §3's "run Anki's Rust backend on the device" option — **not** an AnkiDroid fork); MVP = Android first (iOS via Rust C-FFI is future). |
+| **Local storage**           | SQLite (`collection.anki2`); RPCE state as native **tags + config** (custom tables in §11b are planned)                                         | **SQL**                      | Anki's on-device store; tags + config sync natively (arbitrary custom tables would not), so RPCE data crosses devices for free.                              |
 | **Sync**                    | Self-hosted Anki sync server (HTTP)                                                                                                             | **Rust**                     | Reuses Anki's sync; documented higher-`usn` / last-writer conflict rule (spec §7b).                                                                         |
 | **AI service**              | LLM API behind a thin grading/debrief service + **retrieval (RAG)** over the RONR 12th-ed. text (`data/roberts_rules_of_order_12th_edition.md`) | **Python**                   | Examiner grading is grounded in the actual transcribed 12th-ed. text, not model memory; isolated so the app runs fully **AI-off**.                          |
 | **AI baseline**             | Keyword + vector search over the same RONR 12th-ed. markdown                                                                                    | **Python**                   | The simpler method the AI must beat side-by-side (spec §7f).                                                                                                |
@@ -469,7 +469,7 @@ ai_outputs                              -- traceability for every AI generation/
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Sections  | Section I (100 MCQ, auto-scored) + Section II (written performance)                                                                                                                                         | Two engine modes, scored independently                            |
 | Pass bar  | **80% on _each_ section**                                                                                                                                                                                   | Readiness = two pass-probabilities, not one                       |
-| Time      | 3 hrs per section (7 hrs total, ≤1 hr break, upload ≤8 hrs)                                                                                                                                                 | Timed practice is a first-class feature                           |
+| Time      | 3 hrs per section (7 hrs total, ≤1 hr break, upload ≤8 hrs)                                                                                                                                                 | Timed pacing matters (backend `timed.py`; UI deferred)            |
 | Domains   | **7 Performance Expectations** (Main motions; Subsidiary/Privileged; Incidental & bring-again; Org/Conduct of meetings; Voting/Nominations/Elections; Professionalism/Teaching; Boards/Committees & Bylaws) | Coverage map + topic weights keyed to these 7                     |
 | Corpus    | RONR 12th ed. (closed, citable) + Joint Code of Professional Responsibility                                                                                                                                 | AI must cite; grounds the leakage/eval design                     |
 | Candidate | Already passed RONRIB membership exam                                                                                                                                                                       | Medium prior knowledge → specifics + reflection > worked examples |
@@ -507,14 +507,14 @@ than inventing a new one. **Step-by-step build/run/test instructions live in
 
 ### 14b. Phone companion (Android first)
 
-- **Build → package:** built on **AnkiDroid** (Kotlin, AGPL) reusing the shared Rust core via the same protobuf boundary; produces a **signed APK** (the MVP deliverable; Play Store listing is optional/stretch).
+- **Build → package:** a **Kotlin + WebView app** (`mobile/app`) with a `speedrun_jni` **JNI** bridge to the shared Rust core (not an AnkiDroid fork). `scripts/run-mobile.sh` builds the native `.so` (via `cargo-ndk`) + a debug APK; `gradlew assembleRelease` + your keystore produce the **signed APK** (the MVP deliverable; Play Store listing is optional/stretch).
 - **Distribution:** signed APK for **sideload** install on a real device/emulator, or internal-track upload; **iOS via TestFlight is future** (iOS uses Anki's Rust C-FFI, out of MVP scope).
 - **Offline-first:** the deck and engine run fully offline; reviews sync to desktop when a connection returns (§14c). AI features degrade cleanly to off when offline/rate-limited and the app keeps scoring (spec §7g).
 - **Acceptance:** a recording of the signed APK installing and running a review on a clean device/emulator, and a reviewed card syncing to desktop (spec §6 proof).
 
 ### 14c. Sync & data deployment
 
-- **Sync server:** a **self-hosted Anki sync server** (HTTP) is part of the deployment; either run locally for the demo or on a small instance. Devices point at it via config.
+- **Sync server:** both apps sync over Anki's protocol — **AnkiWeb by default**, or a **self-hosted Anki sync server** (HTTP) run locally for the demo or on a small instance. Devices point at the endpoint via config; `just rpce-sync-test` spins up a temporary local server for the reproducible round-trip proof.
 - **Conflict rule (documented):** same-card-offline edits resolve by higher-`usn` / last-writer; this rule is stated in the repo and demonstrated (spec §7b).
 - **No secrets in artifacts or VCS:** API keys, sync credentials, and any personal data stay in local config/secret stores — never in installers, the repo, or the synced collection. The leakage scanner additionally keeps gold/held-out data out of anything shipped to the model.
 
