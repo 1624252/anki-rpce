@@ -17,10 +17,16 @@ Question types (varied, per the sample set in
 - **quote_id** — multiple choice: which section does this verbatim quote come from?
 - **stated_in**— multiple choice: which statement appears in a given section?
 
+Each item is tagged with a **Concept ID** and a **format**. Every format of one
+concept shares its Concept ID, so the spaced-repetition scheduler treats them as
+a single problem on one FSRS schedule and rotates the format each repetition
+(spec §7.1 / SPOV 1 — the Transfer Ladder). The format tag is how answers of the
+same type are tracked.
+
 Usage (from the repo root):
 
     python pylib/tools/rpce_generate_questions.py [count] [out.md]
-    # defaults: 1000  data/rpce_generated_questions.md
+    # defaults: 1000  docs/rpce/rpce_practice_questions.md
 """
 
 from __future__ import annotations
@@ -140,7 +146,9 @@ def parse_corpus() -> list[Para]:
 @dataclass
 class Question:
     domain: int
-    kind: str
+    kind: str  # human-readable format label
+    fmt: str  # machine format key: cloze | quote_id | stated_in
+    concept_id: str  # e.g. "C0007" — shared by every format of one concept
     stem: str
     options: list[str]  # empty for non-MCQ
     answer: str  # letter for MCQ, or the term/quote
@@ -148,7 +156,7 @@ class Question:
     quote: str
 
 
-def make_cloze(p: Para, rng: random.Random) -> Question | None:
+def make_cloze(p: Para, concept_id: str, rng: random.Random) -> Question | None:
     if not p.emphases:
         return None
     term = rng.choice(p.emphases)
@@ -159,6 +167,8 @@ def make_cloze(p: Para, rng: random.Random) -> Question | None:
     return Question(
         p.domain,
         "Cloze recall",
+        "cloze",
+        concept_id,
         f"Fill in the blank: {blanked}",
         [],
         term,
@@ -167,7 +177,9 @@ def make_cloze(p: Para, rng: random.Random) -> Question | None:
     )
 
 
-def make_quote_id(p: Para, pool: list[Para], rng: random.Random) -> Question:
+def make_quote_id(
+    p: Para, concept_id: str, pool: list[Para], rng: random.Random
+) -> Question:
     quote = first_sentence(p.text)
     others = rng.sample([q for q in pool if q.citation != p.citation], 3)
     options = [p.citation] + [o.citation for o in others]
@@ -176,6 +188,8 @@ def make_quote_id(p: Para, pool: list[Para], rng: random.Random) -> Question:
     return Question(
         p.domain,
         "Quote → section (MCQ)",
+        "quote_id",
+        concept_id,
         f'From which section of RONR (12th ed.) is the following?\n\n   "{quote}"',
         options,
         letter,
@@ -184,7 +198,9 @@ def make_quote_id(p: Para, pool: list[Para], rng: random.Random) -> Question:
     )
 
 
-def make_stated_in(p: Para, pool: list[Para], rng: random.Random) -> Question:
+def make_stated_in(
+    p: Para, concept_id: str, pool: list[Para], rng: random.Random
+) -> Question:
     correct = first_sentence(p.text)
     others = rng.sample([q for q in pool if q.citation != p.citation], 3)
     options = [correct] + [first_sentence(o.text) for o in others]
@@ -193,6 +209,8 @@ def make_stated_in(p: Para, pool: list[Para], rng: random.Random) -> Question:
     return Question(
         p.domain,
         "Stated in section (MCQ)",
+        "stated_in",
+        concept_id,
         f"Which of the following statements appears in RONR (12th ed.) {p.citation}?",
         options,
         letter,
@@ -201,39 +219,62 @@ def make_stated_in(p: Para, pool: list[Para], rng: random.Random) -> Question:
     )
 
 
+# The formats each concept is taught in (Transfer Ladder / SPOV 1: same concept,
+# different shapes). Every format of one concept shares its Concept ID so the
+# spaced-repetition scheduler treats them as ONE problem on ONE FSRS schedule.
+FORMATS = ("cloze", "quote_id", "stated_in")
+
+
 def build(count: int) -> list[Question]:
+    """Generate ``count`` questions **grouped by concept**.
+
+    A *concept* is one source paragraph. For each concept we emit up to three
+    format variants (cloze / quote→section / stated-in-section), all tagged with
+    the same ``concept_id``. Downstream, items sharing a Concept ID are scheduled
+    as a single problem whose *format rotates* each repetition — never the same
+    shape twice in a row (spec §7.1 / SPOV 1). Deterministic (fixed seed).
+    """
     rng = random.Random(SEED)
     paras = parse_corpus()
     rng.shuffle(paras)
     questions: list[Question] = []
-    i = 0
-    # Rotate through the three types for variety.
-    makers = ("cloze", "quote_id", "stated_in")
-    while len(questions) < count and i < len(paras) * 3:
-        p = paras[i % len(paras)]
-        kind = makers[i % 3]
-        q: Question | None
-        if kind == "cloze":
-            q = make_cloze(p, rng)
-        elif kind == "quote_id":
-            q = make_quote_id(p, paras, rng)
-        else:
-            q = make_stated_in(p, paras, rng)
-        if q is not None:
-            questions.append(q)
-        i += 1
+    concept_n = 0
+    for p in paras:
+        if len(questions) >= count:
+            break
+        concept_n += 1
+        concept_id = f"C{concept_n:04d}"
+        for fmt in FORMATS:
+            if len(questions) >= count:
+                break
+            if fmt == "cloze":
+                q = make_cloze(p, concept_id, rng)
+            elif fmt == "quote_id":
+                q = make_quote_id(p, concept_id, paras, rng)
+            else:
+                q = make_stated_in(p, concept_id, paras, rng)
+            if q is not None:
+                questions.append(q)
     return questions[:count]
 
 
 def render(questions: list[Question]) -> str:
+    concepts = {q.concept_id for q in questions}
     out: list[str] = [
         "# RPCE Practice Questions (generated, RONR 12th-ed.-grounded)",
         "",
-        f"{len(questions)} questions generated from the transcribed *Robert's Rules "
-        "of Order Newly Revised, 12th ed.* corpus. Every answer cites the exact "
-        "section and quotes it verbatim. Question types are varied (cloze recall, "
-        "quote→section, and stated-in-section), following the style of "
-        "[`RPCE-Sample-Questions-v4-100625.md`](./RPCE-Sample-Questions-v4-100625.md).",
+        f"{len(questions)} questions across {len(concepts)} concepts, generated from "
+        "the transcribed *Robert's Rules of Order Newly Revised, 12th ed.* corpus. "
+        "Every answer cites the exact section and quotes it verbatim (spec §7). "
+        "Question types are varied (cloze recall, quote→section, stated-in-section), "
+        "following [`RPCE-Sample-Questions-v4-100625.md`](./RPCE-Sample-Questions-v4-100625.md).",
+        "",
+        "**Spaced-repetition grouping.** Each item is tagged `[Concept Cxxxx · "
+        "format]`. Items that share a **Concept ID** are the *same concept in "
+        "different formats*: the app schedules them as **one problem on a single "
+        "FSRS schedule** and *rotates* the format each repetition — never the same "
+        "shape twice in a row (spec §7.1 / SPOV 1, the Transfer Ladder). The format "
+        "tag is how the scheduler tracks answers of the same type.",
         "",
         "> Reproduce with `python pylib/tools/rpce_generate_questions.py`.",
         "",
@@ -250,7 +291,7 @@ def render(questions: list[Question]) -> str:
         out.append("")
         answers: list[str] = []
         for n, q in enumerate(qs, 1):
-            out.append(f"**{n}.** _{q.kind}_ — {q.stem}")
+            out.append(f"**{n}.** `[{q.concept_id} · {q.fmt}]` _{q.kind}_ — {q.stem}")
             out.append("")
             if q.options:
                 for letter, opt in zip("ABCD", q.options):
@@ -258,17 +299,12 @@ def render(questions: list[Question]) -> str:
                 out.append("")
             anchor = "p-" + q.citation.split("(")[0].replace(":", "-")
             link = f"[{q.citation}](roberts_rules_of_order_12th_edition.md#{anchor})"
-            if q.options:
-                answers.append(
-                    f"{n}. Correct answer: **{q.answer}**. See RONR (12th ed.) "
-                    f'{link} — "{q.quote}"'
-                )
-            else:
-                answers.append(
-                    f"{n}. Answer: **{q.answer}**. See RONR (12th ed.) {link} — "
-                    f'"{q.quote}"'
-                )
-        out.append("**Answer Key**")
+            label = "Correct answer" if q.options else "Answer"
+            answers.append(
+                f"{n}. `[{q.concept_id} · {q.fmt}]` {label}: **{q.answer}**. "
+                f'See RONR (12th ed.) {link} — "{q.quote}"'
+            )
+        out.append("**Answer Key** (with Concept ID · format for SRS tracking)")
         out.append("")
         out.extend(answers)
         out.append("")
@@ -284,17 +320,19 @@ def main() -> None:
     except Exception:
         pass
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    # Default to the repo-tracked docs path (data/ is a gitignored nested repo).
     out_path = (
         Path(sys.argv[2])
         if len(sys.argv) > 2
-        else Path("data/rpce_generated_questions.md")
+        else Path("docs/rpce/rpce_practice_questions.md")
     )
     questions = build(count)
     out_path.write_text(render(questions), encoding="utf-8")
-    kinds = {}
+    kinds: dict[str, int] = {}
     for q in questions:
         kinds[q.kind] = kinds.get(q.kind, 0) + 1
-    print(f"wrote {len(questions)} questions to {out_path}")
+    concepts = len({q.concept_id for q in questions})
+    print(f"wrote {len(questions)} questions across {concepts} concepts to {out_path}")
     for k, v in sorted(kinds.items()):
         print(f"  {k}: {v}")
 
