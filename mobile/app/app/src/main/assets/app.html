@@ -93,11 +93,17 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 .modal p{color:var(--ink2);font-size:15px;line-height:1.5;margin:0 0 20px}
 /* Reference tables */
 .ref-h{font-size:18px;font-weight:800;color:var(--ink);margin:22px 0 10px}
-.ref-table{width:100%;border-collapse:collapse;font-size:14px}
-.ref-table th,.ref-table td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-.ref-table th{color:var(--ink2);text-transform:uppercase;font-size:12px;letter-spacing:.5px}
-.ref-table td.rank{font-weight:800;color:var(--accent1);width:34px}
-.ref-cls{font-size:12px;color:var(--ink2)}
+.ref-h span{font-weight:400;color:var(--ink2);font-size:14px}
+.ref-table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+.ref-table th,.ref-table td{text-align:left;padding:9px 10px;border-bottom:1px solid #e6eefb;vertical-align:middle}
+.ref-table th{color:var(--ink2);text-transform:uppercase;font-size:11px;letter-spacing:.5px;background:var(--surface2)}
+.ref-table tr:nth-child(even) td{background:#fbfdff}
+.ref-table td.rank{font-weight:800;color:var(--accent1);width:30px;text-align:center}
+.pillc{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.c-privileged{color:#6d28d9;background:#f3e8ff}.c-subsidiary{color:#1d4ed8;background:#e0ecff}
+.c-main{color:#0f766e;background:#ccfbf1}.c-incidental{color:#b45309;background:#fef3c7}
+.yes{color:#15803d;font-weight:700}.no{color:#94a3b8}
+.v-maj{color:#1d4ed8;font-weight:700}.v-two{color:#b45309;font-weight:700}.v-none{color:#64748b;font-weight:700}
 </style>
 <style id="rpce-css"></style>
 </head>
@@ -120,9 +126,11 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <button class="btn ghost" onclick="openScores()">Readiness</button>
-    <button class="btn ghost" onclick="openReference()">Reference tables</button>
     <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
     <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
+    <p class="muted" style="text-align:center;margin-top:14px">
+      <a onclick="openReference()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer">📋 Reference tables</a>
+    </p>
     <p class="muted" id="home-msg"></p>
   </div>
 
@@ -278,27 +286,38 @@ function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
 
 /* ---- reference tables (order of precedence, motion characteristics) ---- */
+function classPill(c){ return '<span class="pillc c-'+c+'">'+c+'</span>'; }
+function ynCell(v){ return v==='Yes' ? '<span class="yes">Yes</span>' : '<span class="no">No</span>'; }
+function voteCell(v){ var k=v.indexOf('Majority')>=0?'v-maj':v.indexOf('Two-thirds')>=0?'v-two':'v-none';
+  return '<span class="'+k+'">'+v+'</span>'; }
 function openReference(){
   show('reference');
   var ref; try { ref=JSON.parse(Engine.reference()); } catch(e){ ref=null; }
   var host=el('ref-body'); host.innerHTML='';
   if(!ref){ host.textContent='Reference data unavailable.'; return; }
-  host.appendChild(refHead('Order of precedence (highest → lowest)'));
+  host.appendChild(refHead('Order of precedence <span>(highest → lowest)</span>'));
   host.appendChild(refTable(['#','Motion','Class'],
-    ref.precedence.map(function(r){ return ['<span style="font-weight:800;color:var(--accent1)">'+r.rank+'</span>', r.name, '<span class="ref-cls">'+r['class']+'</span>']; })));
+    ref.precedence.map(function(r){ return ['<span class="rank">'+r.rank+'</span>',
+      '<b>'+r.name+'</b>', classPill(r['class'])]; }), [0]));
   host.appendChild(refHead('Motion characteristics'));
-  host.appendChild(refTable(['Motion','2nd','Debate','Amend','Vote'],
-    ref.characteristics.map(function(r){ return [r.name, r.second, r.debatable, r.amendable, r.vote]; })));
+  host.appendChild(refTable(['Motion','Class','2nd','Debate','Amend','Vote'],
+    ref.characteristics.map(function(r){ return ['<b>'+r.name+'</b>', classPill(r['class']),
+      ynCell(r.second), ynCell(r.debatable), ynCell(r.amendable), voteCell(r.vote)]; })));
+  var back=document.createElement('button'); back.className='btn ghost'; back.style.marginTop='22px';
+  back.textContent='‹ Back to home'; back.onclick=goHome; host.appendChild(back);
 }
-function refHead(t){ var d=document.createElement('div'); d.className='ref-h'; d.textContent=t; return d; }
-function refTable(headers, rows){
+function refHead(t){ var d=document.createElement('div'); d.className='ref-h'; d.innerHTML=t; return d; }
+function refTable(headers, rows, rankCols){
+  rankCols=rankCols||[];
+  var wrap=document.createElement('div'); wrap.style.overflowX='auto';  // wide tables scroll
   var t=document.createElement('table'); t.className='ref-table';
   var tr=document.createElement('tr');
   headers.forEach(function(h){ var th=document.createElement('th'); th.textContent=h; tr.appendChild(th); });
   t.appendChild(tr);
   rows.forEach(function(cells){ var r=document.createElement('tr');
-    r.innerHTML=cells.map(function(c){ return '<td>'+c+'</td>'; }).join(''); t.appendChild(r); });
-  return t;
+    r.innerHTML=cells.map(function(c,i){ return '<td'+(rankCols.indexOf(i)>=0?' class="rank"':'')+'>'+c+'</td>'; }).join('');
+    t.appendChild(r); });
+  wrap.appendChild(t); return wrap;
 }
 
 /* ---- readiness ---- */
@@ -344,7 +363,7 @@ function toks(t){ var s=new Set(); (t.toLowerCase().match(/[a-z0-9]+/g)||[]).for
 function inter(a,b){ var n=0; a.forEach(function(x){ if(b.has(x)) n++; }); return n; }
 /* RONR (12th ed.) citation + verbatim quote block shown with every model answer */
 function refBlock(r){ if(!r||!r.section) return '';
-  return '<div class="rpce-ref"><div class="rpce-cite">RONR (12th ed.) '+r.section+
+  return '<div class="rpce-ref"><div class="rpce-cite">RONR (12th ed.) §'+r.section+
     '</div><div class="rpce-quote">\u201c'+r.quote+'\u201d</div></div>'; }
 function openSection2(){
   if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }

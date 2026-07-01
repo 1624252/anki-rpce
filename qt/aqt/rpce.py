@@ -350,7 +350,13 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
-  <div class="rpce-foot" style="margin-top:6px">Readiness last updated: <b>{_updated_str(col)}</b></div>
+  <div style="margin-top:16px">
+    <a href="#" onclick="pycmd('rpce:reference');return false;"
+       style="display:inline-block;padding:11px 20px;border-radius:12px;font-weight:700;
+       text-decoration:none;color:#1d4ed8;background:#eef4ff;border:1px solid #caddf7">
+       📋 Reference tables — order of precedence &amp; motion characteristics</a>
+  </div>
+  <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
 
@@ -466,29 +472,67 @@ def _show_scenarios() -> None:
     ScenarioDialog(mw).exec()
 
 
+# Motion-class colors (fg, bg) for the reference pills — shared look with mobile.
+_CLASS_COLOR = {
+    "privileged": ("#6d28d9", "#f3e8ff"),
+    "subsidiary": ("#1d4ed8", "#e0ecff"),
+    "main": ("#0f766e", "#ccfbf1"),
+    "incidental": ("#b45309", "#fef3c7"),
+}
+
+
+def _class_pill(cls: str) -> str:
+    fg, bg = _CLASS_COLOR.get(cls, ("#35548c", "#eef4ff"))
+    return (
+        f"<span style='padding:2px 10px;border-radius:999px;font-size:12px;"
+        f"font-weight:700;color:{fg};background:{bg}'>{cls}</span>"
+    )
+
+
+def _yn_cell(v: str) -> str:
+    return (
+        "<span style='color:#15803d;font-weight:700'>Yes</span>"
+        if v == "Yes"
+        else "<span style='color:#94a3b8'>No</span>"
+    )
+
+
+def _vote_cell(v: str) -> str:
+    color = (
+        "#1d4ed8" if "Majority" in v else "#b45309" if "Two-thirds" in v else "#64748b"
+    )
+    return f"<span style='color:{color};font-weight:700'>{v}</span>"
+
+
 def _reference_html(ref: dict) -> str:
-    """Render the order-of-precedence and motion-characteristics tables."""
+    """Order-of-precedence + motion-characteristics tables, color-coded by class,
+    vote, and yes/no."""
     prec = "".join(
-        f"<tr><td class='rank'>{r['rank']}</td><td>{r['name']}</td>"
-        f"<td class='cls'>{r['class']}</td></tr>"
+        f"<tr><td class='rank'>{r['rank']}</td><td><b>{r['name']}</b></td>"
+        f"<td>{_class_pill(r['class'])}</td></tr>"
         for r in ref["precedence"]
     )
     chars = "".join(
-        f"<tr><td>{r['name']}</td><td>{r['second']}</td><td>{r['debatable']}</td>"
-        f"<td>{r['amendable']}</td><td>{r['vote']}</td></tr>"
+        f"<tr><td><b>{r['name']}</b></td><td>{_class_pill(r['class'])}</td>"
+        f"<td>{_yn_cell(r['second'])}</td><td>{_yn_cell(r['debatable'])}</td>"
+        f"<td>{_yn_cell(r['amendable'])}</td><td>{_vote_cell(r['vote'])}</td></tr>"
         for r in ref["characteristics"]
     )
     return (
-        "<style>body{font-family:sans-serif;color:#0a1f44}h3{color:#1b3faa}"
-        "table{border-collapse:collapse;width:100%;font-size:14px;margin-bottom:8px}"
-        "th,td{border-bottom:1px solid #caddf7;padding:7px 9px;text-align:left}"
-        "th{color:#35548c;text-transform:uppercase;font-size:12px}"
-        ".rank{font-weight:800;color:#1d4ed8}.cls{color:#35548c;font-size:12px}</style>"
-        "<h3>Order of precedence (highest → lowest)</h3>"
+        "<style>body{font-family:-apple-system,Segoe UI,sans-serif;color:#0a1f44}"
+        "h3{color:#1b3faa;margin:18px 0 8px}"
+        "table{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}"
+        "th,td{padding:9px 11px;text-align:left;border-bottom:1px solid #e6eefb}"
+        "th{color:#35548c;text-transform:uppercase;font-size:11px;letter-spacing:.5px;"
+        "background:#f4f8ff;position:sticky;top:0}"
+        "tr:nth-child(even) td{background:#fbfdff}"
+        ".rank{font-weight:800;color:#1d4ed8;text-align:center;width:34px}</style>"
+        "<h3>Order of precedence <span style='font-weight:400;color:#64748b'>"
+        "(highest → lowest)</span></h3>"
         "<table><tr><th>#</th><th>Motion</th><th>Class</th></tr>" + prec + "</table>"
         "<h3>Motion characteristics</h3>"
-        "<table><tr><th>Motion</th><th>2nd</th><th>Debate</th><th>Amend</th>"
-        "<th>Vote</th></tr>" + chars + "</table>"
+        "<table><tr><th>Motion</th><th>Class</th><th>2nd</th><th>Debate</th>"
+        "<th>Amend</th><th>Vote</th></tr>" + chars + "</table>"
     )
 
 
@@ -507,6 +551,9 @@ class ReferenceDialog(QDialog):
         view = QTextBrowser()
         view.setHtml(_reference_html(knowledge.reference_tables()))
         layout.addWidget(view)
+        close = QPushButton("Close")
+        qconnect(close.clicked, self.accept)
+        layout.addWidget(close)
 
 
 def _show_reference() -> None:
@@ -514,6 +561,15 @@ def _show_reference() -> None:
     if mw is None or mw.col is None:
         return
     ReferenceDialog(mw).exec()
+
+
+def _on_webview_message(handled, message: str, context):
+    """Open the Reference dialog from the dashboard banner link (keeps it off the
+    top toolbar). Returns a filter result tuple."""
+    if message == "rpce:reference":
+        _show_reference()
+        return (True, None)
+    return handled
 
 
 class SimulationDialog(QDialog):
@@ -807,7 +863,7 @@ def _ref_block(section: str, quote: str) -> str:
         "<div style='margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;"
         "background:#eef4ff;border-radius:10px;text-align:left'>"
         "<div style='font-weight:700;color:#1b3faa;font-size:15px'>"
-        f"RONR (12th ed.) {section}</div>"
+        f"RONR (12th ed.) §{section}</div>"
         "<div style='margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px'>"
         f"&ldquo;{quote}&rdquo;</div></div>"
     )
@@ -987,15 +1043,6 @@ def _on_toolbar_links(links, toolbar) -> None:
     )
     links.append(
         toolbar.create_link(
-            "rpce_reference",
-            "Reference",
-            _show_reference,
-            tip="Order of precedence & motion characteristics",
-            id="rpce_reference",
-        )
-    )
-    links.append(
-        toolbar.create_link(
             "rpce_dashboard",
             "Dashboard",
             _show_dashboard,
@@ -1033,5 +1080,6 @@ def setup() -> None:
     gui_hooks.overview_will_render_bottom.append(_on_overview_bottom)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
     gui_hooks.card_will_show.append(_on_card_will_show)
+    gui_hooks.webview_did_receive_js_message.append(_on_webview_message)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
     gui_hooks.state_did_change.append(_on_state_change)
