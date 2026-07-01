@@ -84,7 +84,7 @@ dialogs, so every surface is consistent.
   "Grade" button, readable feedback block.
 - **Toolbar tabs:** 16px, blue hover pill, deep-navy bar.
 - **Mobile home:** same banner (logo, title, 4 score cards, coverage bar, chips,
-  abstain note) rendered from `assets/home.html` in a WebView, on the fixed navy
+  abstain note) rendered from `assets/app.html` in a WebView, on the fixed navy
   theme with a navy status bar.
 
 ## Accessibility checklist

@@ -51,7 +51,7 @@ Mobile:
      and the Chromium remote debugger on `:8080`.
 3. On first launch the RPCE deck is seeded automatically. If the shared starter
    deck (`mobile/app/app/src/main/assets/rpce_starter.apkg`) is present it is
-   imported, so the desktop gets the **same 1000-question deck as mobile** (same
+   imported, so the desktop gets the **same deck as mobile** (same
    note GUIDs, so a later sync merges cleanly); otherwise it falls back to the
    curated seven-domain deck.
 
@@ -86,7 +86,7 @@ ADB="$ANDROID_HOME/platform-tools/adb"
 ### Regenerating the deck / native engine (only when content or engine changes)
 
 ```bash
-# 1000 RONR-grounded questions -> the phone starter deck (also read by the desktop)
+# ~6,000+ RONR-grounded questions -> the phone starter deck (also read by the desktop)
 PYTHONPATH=out/pylib out/pyenv/Scripts/python pylib/tools/rpce_export_starter.py \
   mobile/app/app/src/main/assets/rpce_starter.apkg
 

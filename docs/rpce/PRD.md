@@ -196,13 +196,14 @@ No AI ships before the apps review the same deck on a shared engine.
 
 - **Cloze** — fill key term(s) blanked from a real RONR sentence. Multiple blanks are supported; **each blank is tappable to reveal** individually (with a hint), and a **Reveal all** control reveals the rest. Rating is gated until every blank is revealed.
 - **Applied MCQ** — pick the term/answer; **tappable on both desktop and phone**, marks right/wrong, keeps the stem on screen with the answer.
-- **Ranking (MCQ)** — which of these motions has the highest precedence.
-- **Ordering** — tap a few shuffled motions into order of precedence (highest first); the sequence is checked and the correct order shown.
-- **Motion characteristics (MCQ)** — vote required / debatable / needs a second / amendable, from the curated `anki.rpce.knowledge` table.
+- **Ranking (MCQ)** — which of these motions has the highest (or lowest) precedence.
+- **Select all (multi)** — tick **every** motion that fits a rule (e.g. all that rank higher than a given motion); scored all-and-only-correct against the saved order of precedence.
+- **Ordering** — tap a few shuffled motions into order of precedence (**top = higher, bottom = lower**); the sequence is checked against the saved precedence and the correct order shown.
+- **Motion characteristics (MCQ)** — vote required / debatable / needs a second / amendable, from the curated `anki.rpce.knowledge` table (the motion bank + saved order of precedence).
 
 **Reference tab.** A dedicated tab (desktop) / home button (phone) shows the **order-of-precedence** table and a **motion-characteristics** table (second, debatable, amendable, vote), sourced from `knowledge.reference_tables()` and bundled to the phone as `reference.json`.
 
-**Generation & scale.** `rpce_generate_questions.py` produces ~1000 varied, deterministic questions: knowledge-based ranking/ordering/characteristics plus corpus-grounded cloze (with hints) and applied MCQ, each with an exact citation + verbatim quote. A guard rejects any stem/option that names a section.
+**Generation & scale.** `rpce_generate_questions.py` produces **~6,000+ varied, deterministic questions — 2–5 from every substantive RONR paragraph** (≈96% of paragraphs), plus a knowledge bank of ranking / ordering / select-all / characteristic items. Corpus-grounded cloze (with length+first-letter hints) and applied MCQ draw answer spans from **bold defined terms, italics, voting thresholds, and numbers/durations**; each item carries an exact citation + a verbatim quote, and a guard rejects any stem/option that names a section. Deterministic (fixed seed), so the deck and the practice doc reproduce exactly.
 
 - **Measurement.** The recall-vs-reworded gap (paraphrase test, spec §7d) is the success metric; a near-zero gap would mean the performance model just mirrors memory.
 
@@ -550,14 +551,14 @@ pending; **Planned** = designed, not built.
 | --- | --- | --- |
 | Points-at-Stake Queue (§7.5) | **Done** | `rslib/.../points_at_stake.rs` + proto RPC; 6 Rust + 2 Py tests |
 | Content model: 7 domains, coverage (§11) | **Done** | `anki.rpce` via tags + config (not custom tables) |
-| Multi-format flashcards: cloze + MCQ (§7.1) | **Done** | `flashcards.py`; one `RPCE Transfer` note carries both forms |
+| Question bank: cloze, applied MCQ, select-all, ordering, characteristics (§7.1, §7.6) | **Done** | `rpce_generate_questions.py` → ~6,200 questions (2–5 per RONR paragraph, ≈96% coverage) on the `RPCE Q 1` notetype; shared `render_js` on desktop + phone; `test_rpce_generation.py` guards coverage / no section-leak / one-correct MCQ / verbatim quotes. Curated `flashcards.py` is the offline fallback |
 | Every answer carries RONR (12th ed.) citation + verbatim quote (§7.3, accuracy rule) | **Done** | `refs.py` single source (quotes checked verbatim against the corpus by `test_rpce_refs`); shown on flashcard answers (desktop hook + notetype `afmt`), Section II debrief, and every Simulation ruling — desktop **and** phone |
 | Same concept = one problem, one schedule (§7.1) | **Done** | one card per concept; format rotates per repetition (`rung_for_reps`) so the same problem repeats on a single FSRS schedule, never the same shape twice in a row |
 | Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `card_will_show` rotation + `reviewer_did_answer_card` tally |
 | Dual-mode: Section I flashcards + Section II scenarios (§7.2) | **Done** | deck + `scenarios.py` + practice dialog |
 | Simulation mode: scripted meeting, respond as parliamentarian (§7.2) | **Done** | `simulations.py`; desktop `SimulationDialog` + "Simulate" tab; phone Simulation view; graded per turn by the examiner |
 | Interactive multiple choice (clickable + instant feedback) (§7.1) | **Done** | desktop reviewer MCQ rung |
-| AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
+| AI Examiner: baseline + LLM scaffold + eval + leakage (§7.3, §9) | **Done (AI-off)** | `examiner.py`: offline `BaselineExaminer`/`PlaceholderExaminer` grade the app today; `LLMExaminer` + `make_examiner()` scaffolded and **gated behind `RPCE_AI_KEY`/`OPENAI_API_KEY`** — the only missing piece is the key. No API calls in the app |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
 | Learning-phase progression (flashcards → simulation) | **Done** | `progression.py`; nudge shown on the desktop home banner and the phone Readiness view (Foundations → Application → Mastery) |
 | Timed practice (3-hour pacing) | **Removed from UI** | `timed.py` backend + tests remain; the desktop Timed tab/menu/banner chip were removed |
@@ -572,7 +573,7 @@ pending; **Planned** = designed, not built.
 | Phone: review loop (§6) | **Done** | JNI open/import/next/answer + Kotlin/WebView UI; verified on emulator |
 | Phone: three scores + give-up rule (§6) | **Done** | `scores_json` in `mobile/jni` (ported from `scores.py`) |
 | Phone: Section II practice (§7.3) | **Done** | bundled scenarios + offline placeholder examiner |
-| Two-way sync + conflict rule (§13) | **Done** | phone↔self-hosted server verified round-trip; last-writer/`usn` conflict rule (Anki's) |
+| Two-way sync + conflict rule (§13) | **Done** | stock Anki sync (AnkiWeb or self-hosted); RPCE state syncs as tags + config; last-writer/`usn` conflict rule. Reproducible round-trip: **`just rpce-sync-test`** → `SYNC OK` |
 | Desktop installer / crash test (§14, §7g) | **Partial** | `tools/build-installer` recipe exists; not run/automated |
 | `just bench` speed report (§13) | **Done** | `pylib/tools/rpce_bench.py` |
 

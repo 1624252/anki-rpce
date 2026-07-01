@@ -17,7 +17,7 @@ Feature parity with the desktop, all on the shared engine:
 - **Section II practice** — scenario prompts with the offline placeholder
   examiner (keyword-overlap grading + model-ruling debrief); increments the
   graded-scenario counter that feeds the give-up rule.
-- **Two-way sync** — logs in to and syncs with a self-hosted Anki sync server;
+- **Two-way sync** — logs in to and syncs with AnkiWeb (or a self-hosted server);
   reviews and RPCE state (tags + config) flow both ways (see below).
 
 ## Layout
@@ -39,8 +39,8 @@ From the repo root (Android SDK/NDK + `cargo-ndk` required — see
 `docs/rpce/DEPLOYMENT.md` §3):
 
 ```bash
-# arm64 device/emulator. Adds more ABIs by repeating -t (armeabi-v7a, x86_64).
-cargo ndk -t arm64-v8a -o mobile/app/app/src/main/jniLibs build -p speedrun_jni --release
+# arm64-v8a for real devices + x86_64 for the emulator (both ABIs the app packages).
+cargo ndk -t arm64-v8a -t x86_64 -o mobile/app/app/src/main/jniLibs build -p speedrun_jni --release
 ```
 
 This compiles the shared engine and copies `libspeedrun_jni.so` into
@@ -53,11 +53,12 @@ cross-compile cleanly for `aarch64-linux-android`.)
    versions in `build.gradle.kts` may need matching to your install).
 2. Run on an emulator or a connected device. The app shows the RPCE home screen
    (the same deep-blue themed readiness banner as the desktop, rendered in a
-   WebView from `assets/home.html`) and loads the shared engine — its
+   WebView from `assets/app.html`) and loads the shared engine — its
    version/build hash appears in the "Engine ready" chip, confirming the engine
    runs on device.
-3. Build a debug/installable APK: `./gradlew assembleDebug` (or `assembleRelease`
-   + sign with your keystore), then `adb install -r app-debug.apk`.
+3. Build a debug/installable APK from `mobile/app/`: `./gradlew :app:assembleDebug`
+   (or `assembleRelease` + sign with your keystore), then
+   `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Two-way sync by AnkiWeb account (spec §7b)
 
@@ -73,15 +74,20 @@ Sync uses your **AnkiWeb account** — no server IP/endpoint to configure.
 Both apps drive Anki's own sync client, so reviews and RPCE state (tags +
 config) cross devices through the shared engine.
 
-**Verified (spec §7b), reproducibly.** `pylib/tools/rpce_sync_test.py` runs the
-full round-trip against a running server — upload/download, a two-way merge
-(reviews on each device reconcile with none lost or double-counted), and a
-same-card-offline **conflict** that resolves to one consistent last-writer
-state. Start a local server (below) and run:
+**Verified (spec §7b), reproducibly.** One command spins up a temporary local
+server and runs the full round-trip — upload/download, a two-way merge (reviews
+on each device reconcile with none lost or double-counted), and a
+same-card-offline **conflict** that resolves to one consistent last-writer state:
+
+```bash
+just rpce-sync-test
+# -> SYNC OK: two-way sync + conflict resolution verified.
+```
+
+Or drive it against a server you started yourself:
 
 ```bash
 PYTHONPATH=out/pylib python pylib/tools/rpce_sync_test.py
-# -> SYNC OK: two-way sync + conflict resolution verified.
 ```
 
 **Self-hosted (optional).** For an offline/CI demo you can still point at a

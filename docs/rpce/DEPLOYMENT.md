@@ -45,7 +45,8 @@ local (see `data/README.md`).
 Then generate the RONR-grounded content (all deterministic and reproducible):
 
 ```bash
-# 1000 concept-grouped, RONR-cited practice questions -> docs/rpce/rpce_practice_questions.md
+# ~6,000+ RONR-cited practice questions (2-5 from every substantive paragraph)
+# -> docs/rpce/rpce_practice_questions.md
 python pylib/tools/rpce_generate_questions.py
 # Bundle the phone's Section II + Simulation JSON (mirrors the Python data)
 PYTHONPATH=out/pylib python pylib/tools/rpce_export_assets.py mobile/app/app/src/main/assets
@@ -216,7 +217,11 @@ Reviews flow both ways over Anki's sync protocol. Two options:
   then point both apps at its URL.
 
 A reproducible round-trip test is scripted in
-`pylib/tools/rpce_sync_test.py` (device A + device B against a local server).
+`pylib/tools/rpce_sync_test.py` (device A + device B against a local server). Run
+it end-to-end with one command — **`just rpce-sync-test`** — which spins up a
+temporary local sync server, drives the exact backend calls both apps use, and
+prints `SYNC OK` on success (upload/download, a two-way merge with none
+lost/doubled, and a same-card conflict resolved by the rule below).
 
 **Conflict rule (documented):** if the _same card_ is reviewed offline on both
 devices, the merge resolves by Anki's higher-`usn` / last-writer rule. Verified:
@@ -305,4 +310,5 @@ points-at-stake queue, flagging any result over its spec target.
 - [ ] Phone Section II + Simulation grade responses offline
 - [ ] A card reviewed on the phone appears on desktop after sync (and the reverse)
 - [ ] Offline-then-sync works; same-card conflict resolves per the documented rule
+- [ ] `just rpce-sync-test` prints `SYNC OK` (two-way merge + conflict, temp local server)
 - [ ] _(planned)_ LLM-backed examiner grades with an API key (AI-off still scores)
