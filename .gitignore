@@ -24,10 +24,7 @@ ts/.svelte-kit
 docs/_build/
 docs/autoapi/
 .complexipy_cache
-# Ignore the copyrighted RONR corpus/PDFs/sample data, but keep the generated
-# practice questions visible + committed (short cited RONR excerpts).
-/data/*
-!/data/rpce_generated_questions.md
+/data/
 # Android companion build artifacts (native libs are regenerated via cargo-ndk)
 /mobile/app/app/src/main/jniLibs/
 /mobile/app/**/build/
