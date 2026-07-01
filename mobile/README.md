@@ -59,30 +59,29 @@ cross-compile cleanly for `aarch64-linux-android`.)
 3. Build a debug/installable APK: `./gradlew assembleDebug` (or `assembleRelease`
    + sign with your keystore), then `adb install -r app-debug.apk`.
 
-## Two-way sync (spec §7b)
+## Two-way sync by AnkiWeb account (spec §7b)
 
-Both apps point at the **same self-hosted Anki sync server**, so reviews sync
-both ways. Start the server from the repo root:
+Sync uses your **AnkiWeb account** — no server IP/endpoint to configure.
+
+- **Phone:** open **Sync**, enter your AnkiWeb **email + password**, tap **Sign
+  in & sync**. The first join needs a full up/down (choose once); after that a
+  normal sync merges automatically.
+- **Desktop:** click **Sync** and sign in with the same AnkiWeb account.
+- **Conflict rule (documented):** same-card-offline edits resolve by
+  higher-`usn` / last-writer — Anki's built-in rule, inherited unchanged.
+
+Both apps drive Anki's own sync client, so reviews and RPCE state (tags +
+config) cross devices through the shared engine.
+
+**Self-hosted (optional).** For an offline/CI demo you can still point at a
+self-hosted server instead of AnkiWeb by leaving the endpoint blank in code
+(AnkiWeb) or running one locally:
 
 ```bash
 PYTHONPATH=out/pylib SYNC_USER1="rpce:rpcepass" SYNC_BASE=./out/syncsrv \
   SYNC_HOST=0.0.0.0 SYNC_PORT=8083 \
   python -c "import anki.syncserver as s; s.run_sync_server()"
 ```
-
-- **Phone:** open **Sync**, endpoint `http://10.0.2.2:8083/` (the emulator's
-  route to the host; use the host LAN IP on a real device), user `rpce` /
-  `rpcepass`, **Log in & sync**. The first join needs a full up/down (choose
-  once); after that a normal sync merges automatically.
-- **Desktop:** point Anki at the same server via *Preferences → Syncing →
-  self-hosted sync server* (`http://127.0.0.1:8083/`), then Sync.
-- **Conflict rule (documented):** same-card-offline edits resolve by
-  higher-`usn` / last-writer — Anki's built-in rule, inherited unchanged.
-
-**Verified round-trip:** a phone review session (4 reviews + 1 graded scenario)
-uploaded to the server was then downloaded by a second engine, arriving intact
-(RPCE deck, 23 cards, 4 revlog rows, scenario counter = 1) — reviews and RPCE
-state (tags + config) cross devices through the shared engine.
 
 ## Status
 

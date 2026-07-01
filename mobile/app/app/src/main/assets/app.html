@@ -138,17 +138,15 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <!-- SYNC -->
   <div id="sync" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Sync</span></div>
-    <p class="sub" style="text-align:left">Two-way sync with the same server the desktop uses. Reviews flow both ways; a normal sync merges automatically.</p>
-    <label>Sync server endpoint (e.g. http://10.0.2.2:8083/)</label>
-    <input id="sy-endpoint" value="http://10.0.2.2:8083/" autocapitalize="off" autocorrect="off">
-    <label>Username</label><input id="sy-user" autocapitalize="off" autocorrect="off">
+    <p class="sub" style="text-align:left">Sign in with your <b>AnkiWeb account</b>. Reviews sync both ways with the desktop — a normal sync merges automatically.</p>
+    <label>AnkiWeb email</label><input id="sy-user" type="email" autocapitalize="off" autocorrect="off">
     <label>Password</label><input id="sy-pass" type="password">
-    <button class="btn" onclick="doSync()" style="margin-top:16px">Log in &amp; sync</button>
+    <button class="btn" onclick="doSync()" style="margin-top:16px">Sign in &amp; sync</button>
     <div class="feedback hidden" id="sy-status"></div>
     <div id="sy-full" class="hidden">
-      <p class="note">Server and phone differ — choose once:</p>
-      <button class="btn ghost" onclick="doFull(false)">Download from server (replace phone)</button>
-      <button class="btn ghost" onclick="doFull(true)">Upload phone to server (replace server)</button>
+      <p class="note">This device and AnkiWeb differ — choose once:</p>
+      <button class="btn ghost" onclick="doFull(false)">Download from AnkiWeb (replace phone)</button>
+      <button class="btn ghost" onclick="doFull(true)">Upload phone to AnkiWeb (replace account)</button>
     </div>
   </div>
 
@@ -243,17 +241,16 @@ function gradeS2(){
 }
 function nextS2(){ sIdx=(sIdx+1)%SCEN.length; loadS2(); }
 
-/* ---- sync (runs off the UI thread via the JS bridge) ---- */
+/* ---- sync by AnkiWeb account (empty endpoint => AnkiWeb, no server IP) ---- */
 var auth={hkey:'',endpoint:''};
 function syStatus(msg){ var s=el('sy-status'); s.classList.remove('hidden'); s.textContent=msg; }
 function doSync(){
   el('sy-full').classList.add('hidden');
-  syStatus('Logging in…');
+  syStatus('Signing in…');
   setTimeout(function(){
-    var ep=el('sy-endpoint').value.trim();
-    var login=j(Engine.syncLogin(el('sy-user').value.trim(), el('sy-pass').value, ep));
-    if(!login.ok){ syStatus('Login failed: '+(login.error||'')); return; }
-    auth.hkey=login.hkey; auth.endpoint=login.endpoint||ep;
+    var login=j(Engine.syncLogin(el('sy-user').value.trim(), el('sy-pass').value, ''));
+    if(!login.ok){ syStatus('Sign-in failed: '+(login.error||'')); return; }
+    auth.hkey=login.hkey; auth.endpoint=login.endpoint||'';
     syStatus('Syncing…');
     setTimeout(function(){
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
