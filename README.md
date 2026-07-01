@@ -8,23 +8,31 @@ you must clear 80% on each.
 
 ## Build the installer from a clean checkout
 
-Prerequisites (Windows): [Rustup](https://rustup.rs), the **MSVC build tools**,
-**MSYS2**, and a few GB of free disk. Clone into a short path without spaces.
+One command builds a native installer. Because the packager (Briefcase) targets
+the machine it runs on, **build each platform's installer on that platform** (or
+a CI runner per OS) — a Mac can't produce the Windows `.msi`, and vice versa.
+Prerequisites everywhere: [Rustup](https://rustup.rs), a C toolchain, and a few
+GB of free disk. Clone into a short path without spaces.
 
-```bat
+```bash
 git clone <this-repo> speedrun && cd speedrun
-tools\build-installer.bat
 ```
 
-(macOS/Linux: `./tools/build-installer`.) The build downloads its own deps and
-writes an installer to `out\installer\dist\`:
+| Desktop | Also need | Build command            | Output in `out/installer/dist/` |
+|---------|-----------|--------------------------|---------------------------------|
+| Windows | MSVC build tools, MSYS2 | `tools\build-installer.bat` | an `.msi` (e.g. `anki-26.05-win-x64.msi`) |
+| macOS   | Xcode command-line tools | `./tools/build-installer` | a `.dmg` |
+| Linux   | standard build packages  | `./tools/build-installer` | a `.zip` |
 
-- **Windows** — an `.msi`
-- **macOS** — a `.dmg`
-- **Linux** — a tarball
+The build downloads its own remaining deps.
 
 ## Install
 
-Run the installer from `out\installer\dist\` on a clean machine (double-click the
-`.msi`, or open the `.dmg` / extract the tarball) and launch **Speedrun for the
-RPCE**. It needs no dev tools and builds the RPCE deck on first launch.
+On a clean machine, from `out/installer/dist/`:
+
+- **Windows** — double-click the `.msi`
+- **macOS** — open the `.dmg` and drag the app to Applications
+- **Linux** — unzip and run the launcher inside
+
+Then start **Speedrun for the RPCE**. It needs no dev tools and builds the RPCE
+deck on first launch.
