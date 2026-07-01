@@ -4,14 +4,19 @@
 
 """Export the RPCE starter deck to a .apkg the phone bundles for offline review.
 
-Builds the seven-domain starter deck in a throwaway collection and exports the
-RPCE deck via the shared backend, so the Android companion can import a real,
-reviewable deck on first run (before any sync).
+Builds the RPCE deck in a throwaway collection and exports it via the shared
+backend, so the Android companion can import a real, reviewable deck on first
+run (before any sync). The deck is the seven curated domain concepts **plus**
+all of the RONR-grounded generated practice questions
+(`data/rpce_generated_questions.md`, via `rpce_generate_questions.build`), so
+the phone ships the full question bank offline. Each generated question becomes
+one card carrying its exact RONR (12th ed.) citation + verbatim quote.
 
-Run from the repo root (needs the built pylib on the path):
+Run from the repo root (needs the built pylib on the path and the local RONR
+corpus under `data/`):
 
     PYTHONPATH=out/pylib python pylib/tools/rpce_export_starter.py \
-        mobile/app/app/src/main/assets/rpce_starter.apkg
+        mobile/app/app/src/main/assets/rpce_starter.apkg [count]
 """
 
 from __future__ import annotations
@@ -22,16 +27,96 @@ from pathlib import Path
 
 import anki.import_export_pb2 as pb
 from anki.collection import Collection
-from anki.rpce import build_starter_deck
+from anki.rpce import (
+    MCQ_OPTION_SEP,
+    TRANSFER_NOTETYPE,
+    build_starter_deck,
+    domain_tag,
+)
+from anki.rpce.transfer_ladder import concept_tag, format_tag
+
+# The question generator lives beside this tool (it reads the local RONR corpus).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rpce_generate_questions as gen  # noqa: E402
+
+#: Default number of generated questions to bundle (the full generated set).
+DEFAULT_COUNT = 1000
 
 
-def main(out_path: str) -> None:
+def _br(text: str) -> str:
+    """Corpus stems use newlines; the card template renders HTML."""
+    return text.replace("\n", "<br>")
+
+
+def _fields_for(q: gen.Question) -> dict[str, str]:
+    """Render one generated question into RPCE Concept notetype fields.
+
+    MCQ formats (quote→section, stated-in) fill the interactive MCQ fields;
+    cloze recall fills the cloze fields. The default card template shows
+    ``ClozeQ``/``ClozeA``, so both formats populate those too and render on the
+    phone without the desktop's format-rotation hook.
+    """
+    if q.options:  # quote_id / stated_in — multiple choice
+        idx = "ABCD".index(q.answer)
+        opts_html = "<br>".join(f"{L}) {o}" for L, o in zip("ABCD", q.options))
+        answer = f"Correct: {q.answer}) {q.options[idx]}"
+        return {
+            "ClozeQ": _br(q.stem) + "<br><br>" + opts_html,
+            "ClozeA": answer,
+            "MCQQ": _br(q.stem),
+            "MCQA": answer,
+            "MCQOptions": MCQ_OPTION_SEP.join(q.options),
+            "MCQIdx": str(idx),
+            "rung": "mcq",
+        }
+    # cloze recall — fill the blank with the emphasised term
+    return {
+        "ClozeQ": _br(q.stem),
+        "ClozeA": f"<b>{q.answer}</b>",
+        "MCQQ": "",
+        "MCQA": "",
+        "MCQOptions": "",
+        "MCQIdx": "",
+        "rung": "cloze",
+    }
+
+
+def add_generated_questions(col: Collection, deck_id: int, count: int) -> int:
+    """Add the RONR-grounded generated questions to the deck (one card each)."""
+    model = col.models.by_name(TRANSFER_NOTETYPE)
+    assert model is not None  # build_starter_deck created it
+    questions = gen.build(count)
+    for q in questions:
+        f = _fields_for(q)
+        note = col.new_note(model)
+        note["Concept"] = q.concept_id
+        note["Domain"] = str(q.domain)
+        note["ClozeQ"] = f["ClozeQ"]
+        note["ClozeA"] = f["ClozeA"]
+        note["MCQQ"] = f["MCQQ"]
+        note["MCQA"] = f["MCQA"]
+        note["MCQOptions"] = f["MCQOptions"]
+        note["MCQIdx"] = f["MCQIdx"]
+        note["Citation"] = q.citation
+        note["Quote"] = q.quote
+        note.tags = [
+            domain_tag(q.domain),
+            concept_tag(q.concept_id),
+            format_tag(f["rung"]),
+        ]
+        col.add_note(note, deck_id)
+    return len(questions)
+
+
+def main(out_path: str, count: int) -> None:
     out = Path(out_path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         col = Collection(str(Path(tmp) / "starter.anki2"))
         try:
             deck_id = build_starter_deck(col)
+            n = add_generated_questions(col, deck_id, count)
+            total = len(col.find_cards('deck:"RPCE"'))
             col._backend.export_anki_package(
                 out_path=str(out),
                 options=pb.ExportAnkiPackageOptions(
@@ -44,11 +129,15 @@ def main(out_path: str) -> None:
             )
         finally:
             col.close()
-    print(f"wrote {out} ({out.stat().st_size} bytes)")
+    print(
+        f"wrote {out} ({out.stat().st_size} bytes): "
+        f"{n} generated questions, {total} cards total"
+    )
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("usage: rpce_export_starter.py <out.apkg>", file=sys.stderr)
+    if len(sys.argv) not in (2, 3):
+        print("usage: rpce_export_starter.py <out.apkg> [count]", file=sys.stderr)
         sys.exit(2)
-    main(sys.argv[1])
+    count = int(sys.argv[2]) if len(sys.argv) == 3 else DEFAULT_COUNT
+    main(sys.argv[1], count)
