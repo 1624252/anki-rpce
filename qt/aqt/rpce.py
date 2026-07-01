@@ -295,6 +295,7 @@ def _banner_html(col) -> str:
   {note}
   <div class="rpce-foot">Use the tabs above — <b>Study</b> flashcards, practice
     <b>Section II</b>, open the <b>Dashboard</b>, or start a <b>Timed</b> session.</div>
+  <div class="rpce-foot" style="margin-top:6px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
 
@@ -362,6 +363,7 @@ def _readiness_html(col) -> str:
   <div style="text-align:center">
     <div class="rpce-h1">RPCE readiness</div>
     <div class="rpce-sub" style="margin-top:8px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+    <div class="rpce-foot" style="margin-top:8px">Last updated: <b>{_updated_str(col)}</b></div>
   </div>
   <div class="rpce-grid">{cards}</div>
   <div style="text-align:center;margin-top:26px">
@@ -389,10 +391,26 @@ def _build_deck() -> None:
     tooltip("Built the RPCE starter deck (7 domains).")
 
 
+def _updated_str(col) -> str:
+    """Human-readable 'last updated' time for the readiness panel (spec §7.4)."""
+    import time
+
+    from anki.rpce import scores
+
+    ts = scores.last_updated(col)
+    if not ts:
+        return "not yet computed"
+    return time.strftime("%b %d, %Y %H:%M", time.localtime(ts))
+
+
 def _show_dashboard() -> None:
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
+    from anki.rpce import scores
+
+    # Record this computation to the audit trail + stamp last-updated (§7.4).
+    scores.record_readiness_snapshots(mw.col)
     dialog = QDialog(mw)
     dialog.setWindowTitle("RPCE readiness")
     dialog.resize(900, 760)
@@ -554,9 +572,7 @@ class SimulationDialog(QDialog):
         sim = self._sim()
         self._turn = 0
         self._pending = None
-        self._transcript.setHtml(
-            f"<p style='color:#35548c'><i>{sim.setting}</i></p>"
-        )
+        self._transcript.setHtml(f"<p style='color:#35548c'><i>{sim.setting}</i></p>")
         self._heading.setText(f"{sim.title}")
         self._answer.clear()
         self._answer.setEnabled(True)
@@ -893,8 +909,18 @@ def _on_state_change(new_state, old_state) -> None:
             mw.bottomWeb.hide()
         else:
             mw.bottomWeb.show()
+        # A finished study session is a meaningful moment to record readiness
+        # to the audit trail + refresh the last-updated stamp (§7.4).
+        if (
+            old_state == "review"
+            and new_state in ("deckBrowser", "overview")
+            and mw.col
+        ):
+            from anki.rpce import scores
+
+            scores.record_readiness_snapshots(mw.col)
     except Exception as exc:
-        print(f"RPCE bottom-bar error: {exc}")
+        print(f"RPCE state-change error: {exc}")
 
 
 # Toolbar tabs

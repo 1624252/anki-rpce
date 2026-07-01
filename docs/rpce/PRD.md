@@ -545,7 +545,7 @@ pending; **Planned** = designed, not built.
 | Memory = FSRS-calibrated retrievability (§8) | **Partial** | current score is a heuristic recall estimate |
 | 3-build study experiment (§9) | **Partial** | `experiment.py` harness done; three real builds not run |
 | Gold-set eval from `data/` (§9) | **Partial** | harness done; real gold set not wired |
-| Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Planned** | not stored yet |
+| Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Done** | `scores.py` (synced config ring buffer); recorded on dashboard open + after study; shown in banner + dashboard |
 | Custom SQLite schema (§11b) | **Planned** | superseded for now by tags + config |
 | Phone: shared engine on device (§6) | **Done** | `mobile/jni` drives the real protobuf backend on-device |
 | Phone: review loop (§6) | **Done** | JNI open/import/next/answer + Kotlin/WebView UI; verified on emulator |

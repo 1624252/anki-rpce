@@ -25,6 +25,7 @@ Every number carries a range and a confidence; below the give-up line the app
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 from statistics import mean, pstdev
 from typing import TYPE_CHECKING
@@ -36,6 +37,11 @@ if TYPE_CHECKING:
 
 #: Config counter incremented when a Section II scenario is graded.
 SCENARIO_COUNT_KEY = "rpce:graded_scenarios"
+#: Audit trail of readiness computations (spec §7.4) + when it was last updated.
+SNAPSHOTS_KEY = "rpce:readiness_snapshots"
+LAST_UPDATED_KEY = "rpce:readiness_updated_at"
+#: Ring-buffer cap so the (syncing) config stays small.
+MAX_SNAPSHOTS = 200
 
 CONFIDENCE_ABSTAIN = "abstain"
 
@@ -246,3 +252,46 @@ def readiness(
         best_next_topic=next_topic,
         abstained=False,
     )
+
+
+def record_readiness_snapshots(col: Collection, rule: GiveUpRule | None = None) -> int:
+    """Append the current readiness for both sections to the audit trail and
+    stamp the last-updated time (spec §7.4). Stored in the syncing collection
+    config (capped ring buffer) so past predictions can be scored later, and so
+    the panel can show *when* a number was produced. Returns the epoch seconds.
+
+    Called at meaningful moments (dashboard open, after answering), not on every
+    passive render, so the trail stays a record of real computations.
+    """
+    now = int(time.time())
+    existing = col.get_config(SNAPSHOTS_KEY, None)
+    snaps: list[dict] = list(existing) if isinstance(existing, list) else []
+    for section in ("I", "II"):
+        snap = readiness(col, section, rule)
+        snaps.append(
+            {
+                "section": snap.section,
+                "p_pass": snap.p_pass,
+                "low": snap.range_low,
+                "high": snap.range_high,
+                "confidence": snap.confidence,
+                "pct_covered": snap.pct_covered,
+                "abstained": snap.abstained,
+                "ts": now,
+            }
+        )
+    col.set_config(SNAPSHOTS_KEY, snaps[-MAX_SNAPSHOTS:])
+    col.set_config(LAST_UPDATED_KEY, now)
+    return now
+
+
+def readiness_snapshots(col: Collection) -> list[dict]:
+    """The stored audit trail of past readiness computations (oldest first)."""
+    snaps = col.get_config(SNAPSHOTS_KEY, None)
+    return list(snaps) if isinstance(snaps, list) else []
+
+
+def last_updated(col: Collection) -> int | None:
+    """Epoch seconds of the most recent readiness computation, or None."""
+    ts = col.get_config(LAST_UPDATED_KEY, None)
+    return int(ts) if ts else None

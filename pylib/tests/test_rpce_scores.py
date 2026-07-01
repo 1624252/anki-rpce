@@ -8,6 +8,33 @@ from anki.rpce import scores
 from tests.shared import getEmptyCol
 
 
+def test_readiness_snapshots_audit_trail_and_last_updated():
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
+    assert scores.readiness_snapshots(col) == []
+    assert scores.last_updated(col) is None
+
+    ts = scores.record_readiness_snapshots(col)
+    snaps = scores.readiness_snapshots(col)
+    # One snapshot per section (I and II) is appended each time.
+    assert len(snaps) == 2
+    assert {s["section"] for s in snaps} == {"I", "II"}
+    assert all("p_pass" in s and "confidence" in s and "ts" in s for s in snaps)
+    assert scores.last_updated(col) == ts
+
+    # A second recording appends, preserving the trail.
+    scores.record_readiness_snapshots(col)
+    assert len(scores.readiness_snapshots(col)) == 4
+
+
+def test_readiness_snapshots_are_capped():
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
+    for _ in range(scores.MAX_SNAPSHOTS):  # 2 snapshots each -> well over the cap
+        scores.record_readiness_snapshots(col)
+    assert len(scores.readiness_snapshots(col)) == scores.MAX_SNAPSHOTS
+
+
 def _build_and_study(col, n: int) -> None:
     """Build the starter deck, select it, and answer up to n cards 'Good'."""
     did = rpce.build_starter_deck(col)  # multi-format cards across all 7 domains
