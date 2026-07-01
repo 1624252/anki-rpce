@@ -742,7 +742,7 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
-    from anki.rpce import QUESTION_NOTETYPE
+    from anki.rpce import QUESTION_NOTETYPE, RPCE_DECK_VERSION
 
     if mw.col.decks.by_name("RPCE") is None:
         _build_or_import_rpce_deck(mw)
@@ -750,20 +750,16 @@ def _on_profile_open() -> None:
         if deck is not None:
             mw.col.decks.set_current(deck["id"])
         return
-    # Migrate the app-generated deck to the one-card-per-concept model: drop any
-    # stale notes that aren't the current concept notetype (old separate
-    # cloze/mcq notes, earlier placeholders), and (re)build if concept cards are
-    # missing. Safe because the RPCE deck is generated for the candidate.
+    # Keep the desktop deck in step with the shared starter deck. Re-seed when the
+    # deck content version changes (new question types/hints) or the notetype was
+    # bumped, so the desktop always matches the phone. Safe: the RPCE deck is
+    # generated for the candidate (no user-authored notes to lose).
     try:
-        # Drop notes from an older notetype/model so the deck is rebuilt cleanly.
         stale = mw.col.find_notes(f'deck:RPCE -note:"{QUESTION_NOTETYPE}"')
         if stale:
             mw.col.remove_notes(stale)
-        # One-time re-seed: if the shared 1000-question deck is available but this
-        # profile only has the older/curated set, replace it so the desktop uses
-        # the same questions as the phone (same GUIDs → clean sync).
-        has_generated = bool(mw.col.find_cards("tag:rpce::fmt::order"))
-        if _rpce_starter_apkg() and not has_generated:
+        current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
+        if _rpce_starter_apkg() and not current:
             notes = mw.col.find_notes("deck:RPCE")
             if notes:
                 mw.col.remove_notes(notes)

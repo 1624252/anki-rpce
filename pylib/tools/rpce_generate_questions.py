@@ -36,6 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # pylib on path
+from anki.rpce import hint_for  # noqa: E402
 from anki.rpce import knowledge as kb  # noqa: E402
 
 CORPUS = Path("data/roberts_rules_of_order_12th_edition.md")
@@ -169,11 +170,6 @@ class Question:
     quote: str
 
 
-def _hint(term: str) -> str:
-    n = len(term.replace(" ", ""))
-    return f"{n}-letter word starting '{term[0].lower()}'" if term else ""
-
-
 # --- corpus-grounded questions ------------------------------------------------
 
 
@@ -198,7 +194,7 @@ def make_cloze(p: Para, cid: str, rng: random.Random) -> Question | None:
     blanks = []
     for i, term in enumerate(terms):
         text = text.replace(term, f"[[{i}]]", 1)
-        blanks.append({"a": term, "h": _hint(term)})
+        blanks.append({"a": term, "h": hint_for(term)})
     plain_a = ", ".join(terms)
     plain_q = "Fill the blank(s): " + re.sub(r"\[\[\d+\]\]", "_____", text)
     payload = {

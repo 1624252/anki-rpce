@@ -129,12 +129,18 @@ def coverage_pct(col: Collection) -> float:
 #: answer. Bumping the name triggers a clean deck rebuild on profile open.
 QUESTION_NOTETYPE = "RPCE Q 1"
 
+#: Deck content version. Bump when regenerating so the desktop re-seeds from the
+#: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
+RPCE_DECK_VERSION = "3"
+
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
 KIND_MCQ = "mcq"
 KIND_ORDER = "order"
 
 _CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
+
+_VOTE_WORDS = ("two-thirds", "two thirds", "majority", "plurality", "unanimous")
 
 
 def payload_b64(payload: dict) -> str:
@@ -143,9 +149,17 @@ def payload_b64(payload: dict) -> str:
 
 
 def hint_for(term: str) -> str:
-    """A light hint so a cloze blank isn't guesswork (length + first letter)."""
-    n = len(term.replace(" ", ""))
-    return f"{n}-letter word starting '{term[0].lower()}'" if term else ""
+    """A hint for a cloze blank — only when the answer is a closed set the
+    candidate can't infer from context (debatable/amendable/vote). Ordinary
+    blanks get no hint; hints never reveal spelling (length or first letter)."""
+    t = term.strip().lower()
+    if t == "debatable" or "not debatable" in t:
+        return "debatable or not debatable"
+    if t == "amendable" or "not amendable" in t:
+        return "amendable or not amendable"
+    if any(w in t for w in _VOTE_WORDS):
+        return "the required vote (e.g. majority or two-thirds)"
+    return ""
 
 
 def cloze_to_payload_text(cloze: str) -> tuple[str, list[dict]]:
@@ -216,6 +230,7 @@ def add_question_note(
         domain_tag(domain),
         concept_tag(concept_id),
         f"{FORMAT_TAG_PREFIX}::{payload['kind']}",
+        f"rpce::ver::{RPCE_DECK_VERSION}",
     ]
     col.add_note(note, deck_id)
 
