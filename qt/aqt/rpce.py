@@ -572,12 +572,14 @@ def _on_deck_browser_content(deck_browser, content) -> None:
 
 
 def _on_state_change(new_state, old_state) -> None:
-    """Hide the bottom bar on the home screen; restore it for study/review."""
+    """Hide Anki's bottom bar on the home and deck-overview screens (Options /
+    Custom Study / Description aren't part of the RPCE flow); keep it for the
+    reviewer, which needs the answer buttons."""
     mw = aqt.mw
     if mw is None:
         return
     try:
-        if new_state == "deckBrowser":
+        if new_state in ("deckBrowser", "overview"):
             mw.bottomWeb.hide()
         else:
             mw.bottomWeb.show()
