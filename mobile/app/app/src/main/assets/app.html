@@ -86,6 +86,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     </div>
     <button class="btn" onclick="startStudy()">Study flashcards</button>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
+    <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <button class="btn ghost" onclick="openScores()">Readiness</button>
     <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
     <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
@@ -135,6 +136,16 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button class="btn ghost" onclick="nextS2()" style="margin-top:12px">Next scenario ›</button>
   </div>
 
+  <!-- SIMULATION -->
+  <div id="simulate" class="hidden">
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="sim-title"></span></div>
+    <div class="card" id="sim-transcript" style="font-size:16px;min-height:120px"></div>
+    <p class="sub" id="sim-prompt" style="text-align:left;margin-top:14px"></p>
+    <textarea id="sim-answer" placeholder="Respond as the parliamentarian…"></textarea>
+    <button class="btn" onclick="simRespond()">Respond</button>
+    <button class="btn ghost" onclick="nextSim()" style="margin-top:12px">Next meeting ›</button>
+  </div>
+
   <!-- SYNC -->
   <div id="sync" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Sync</span></div>
@@ -156,7 +167,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 function j(s){ try { return JSON.parse(s); } catch(e){ return {ok:false,error:String(e)}; } }
 function el(id){ return document.getElementById(id); }
 function show(id){
-  ['home','review','scores','section2','sync'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
+  ['home','review','scores','section2','simulate','sync'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
 }
 function pct(x){ return (x==null) ? '—' : Math.round(x*100)+'%'; }
 
@@ -240,6 +251,42 @@ function gradeS2(){
     '<b>Model ruling:</b> '+s.gold;
 }
 function nextS2(){ sIdx=(sIdx+1)%SCEN.length; loadS2(); }
+
+/* ---- Simulation mode: a scripted meeting; respond as the parliamentarian ---- */
+var SIMS=[], simIdx=0, simTurn=0, simPending=null;
+function openSim(){ if(!SIMS.length){ SIMS=j(Engine.simulations())||[]; } simIdx=0; show('simulate'); loadSim(); }
+function loadSim(){
+  var s=SIMS[simIdx]; if(!s) return;
+  simTurn=0; simPending=null;
+  el('sim-title').textContent=s.title;
+  el('sim-transcript').innerHTML="<p style='color:var(--ink2)'><i>"+s.setting+"</i></p>";
+  el('sim-answer').value=''; el('sim-answer').disabled=false;
+  playSim();
+}
+function simAppend(html){ el('sim-transcript').innerHTML += html; }
+function playSim(){
+  var s=SIMS[simIdx];
+  while(simTurn < s.turns.length){
+    var t=s.turns[simTurn];
+    simAppend("<p><b style='color:var(--accent1)'>"+t.speaker+":</b> "+t.line+"</p>");
+    if(t.prompt && t.gold){ simPending=t; simTurn++;
+      el('sim-prompt').textContent='🎤 '+t.prompt; el('sim-answer').disabled=false; return; }
+    simTurn++;
+  }
+  simPending=null; el('sim-prompt').textContent='✅ Meeting adjourned. Well done.'; el('sim-answer').disabled=true;
+}
+function simRespond(){
+  if(!simPending) return; var ans=el('sim-answer').value.trim(); if(!ans) return;
+  var gold=toks(simPending.gold); var overlap=gold.size? inter(toks(ans),gold)/gold.size : 0;
+  var score=Math.round(5*overlap*100)/100; var passed=score>=3;
+  Engine.recordScenario();
+  simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
+    "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
+    "your answer "+(passed?'matches':'misses key points from')+" the model ruling.<br>"+
+    "<b>Model ruling:</b> "+simPending.gold+"</p>");
+  el('sim-answer').value=''; playSim();
+}
+function nextSim(){ simIdx=(simIdx+1)%SIMS.length; loadSim(); }
 
 /* ---- sync by AnkiWeb account (empty endpoint => AnkiWeb, no server IP) ---- */
 var auth={hkey:'',endpoint:''};

@@ -1,0 +1,89 @@
+[
+  {
+    "title": "New business at the Lakeside Association",
+    "setting": "You are the parliamentarian at the monthly meeting of the Lakeside Community Association. The chair turns to new business.",
+    "domain": 1,
+    "turns": [
+      {
+        "speaker": "Chair",
+        "line": "We'll now move to new business.",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Member (Ramos)",
+        "line": "I move that the Association spend $500 on new signage.",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Chair",
+        "line": "(turning to you) Before I do anything, what needs to happen with this motion?",
+        "prompt": "Advise the chair: what must happen before this main motion is debated?",
+        "gold": "A main motion requires a second before it is considered. The chair should call for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote."
+      },
+      {
+        "speaker": "Member (Chen)",
+        "line": "Second!",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Chair",
+        "line": "It is moved and seconded that the Association spend $500 on new signage. Is there any debate?",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Member (Ramos)",
+        "line": "We've heard enough — I move the previous question!",
+        "prompt": "Advise the chair: how is the motion for the Previous Question handled?",
+        "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending motion."
+      }
+    ]
+  },
+  {
+    "title": "A thin house at the Booster Club",
+    "setting": "The Booster Club meeting is scheduled to start, but only a few members are present. A member is eager to get going.",
+    "domain": 4,
+    "turns": [
+      {
+        "speaker": "Member (Doyle)",
+        "line": "There aren't many of us, but let's just start adopting motions.",
+        "prompt": "Advise the chair: what must be confirmed before the assembly transacts business?",
+        "gold": "Business cannot be transacted without a quorum present. The chair must confirm that a quorum, as defined by the bylaws, is present before the assembly takes any substantive action."
+      },
+      {
+        "speaker": "Chair",
+        "line": "Thank you. We do have a quorum. Proceed.",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Member (Ito)",
+        "line": "Point of order! I don't think the last speaker was recognized.",
+        "prompt": "Advise the chair: how is a Point of Order handled?",
+        "gold": "A Point of Order needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal."
+      }
+    ]
+  },
+  {
+    "title": "A close election at the Arts Guild",
+    "setting": "The Arts Guild is electing its president. The bylaws require a ballot vote but are silent on the threshold. Three candidates are running.",
+    "domain": 5,
+    "turns": [
+      {
+        "speaker": "Teller",
+        "line": "The results are: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes.",
+        "prompt": null,
+        "gold": null
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Alvarez has a plurality. Can I declare Alvarez elected?",
+        "prompt": "Advise the chair: is a plurality enough to elect here?",
+        "gold": "No. Unless the bylaws provide otherwise, election requires a majority — more than half of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority."
+      }
+    ]
+  }
+]

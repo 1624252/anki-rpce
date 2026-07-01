@@ -194,8 +194,8 @@ No AI ships before the apps review the same deck on a shared engine.
 
 **Goal.** Mirror the exam's two halves with two complementary practice modes on one engine.
 
-- **Section I mode — spaced retrieval.** Standard Anki review loop over MCQ/cloze cards, scheduled by FSRS and re-ordered by the Points-at-Stake Queue (§7.5).
-- **Section II mode — scenario simulation + debrief.** Free-text scenario prompts graded by the AI Examiner (§7.3); the _debrief_ is the active ingredient (Insight 4).
+- **Section I mode — spaced retrieval.** One card per **concept** (its own FSRS schedule); each concept resurfaces in a **different format** each repetition (interactive multiple choice ⇄ cloze recall — the Transfer Ladder, §7.1). After every review, regardless of format, the four Again/Hard/Good/Easy buttons drive FSRS, so the same problem repeats exactly as the algorithm schedules it.
+- **Section II mode — scenario + simulation, with debrief.** Two sub-modes: single free-text **scenario** prompts, and **Simulation mode** — a scripted **meeting** that plays out turn by turn (members and the chair speak) where the candidate responds **as the parliamentarian** at each decision point. Every response is graded for accuracy by the AI Examiner (§7.3) with an immediate debrief — the _debrief_ is the active ingredient (Insight 4).
 - **Scaffolding fade (Insight 3).** Early on, scenarios offer worked-example structure (model ruling + RONR reference shown _after_ the attempt); as mastery rises, support fades to reflection-only prompts ("justify your ruling"). The candidate is never asked to supply citations.
 - **Shared substrate.** Both modes write `attempts` (§11) into the same collection DB, so memory/performance/readiness draw from one history and sync across devices.
 
@@ -536,6 +536,8 @@ pending; **Planned** = designed, not built.
 | Same concept = one problem, one schedule (§7.1) | **Done** | one card per concept; format rotates per repetition (`rung_for_reps`) so the same problem repeats on a single FSRS schedule, never the same shape twice in a row |
 | Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `card_will_show` rotation + `reviewer_did_answer_card` tally |
 | Dual-mode: Section I flashcards + Section II scenarios (§7.2) | **Done** | deck + `scenarios.py` + practice dialog |
+| Simulation mode: scripted meeting, respond as parliamentarian (§7.2) | **Done** | `simulations.py`; desktop `SimulationDialog` + "Simulate" tab; phone Simulation view; graded per turn by the examiner |
+| Interactive multiple choice (clickable + instant feedback) (§7.1) | **Done** | desktop reviewer MCQ rung |
 | AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
 | Learning-phase progression, timed practice | **Done** | `progression.py`, `timed.py` |

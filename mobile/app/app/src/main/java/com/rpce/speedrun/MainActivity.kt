@@ -81,6 +81,11 @@ class MainActivity : AppCompatActivity() {
         fun scenarios(): String =
             assets.open("scenarios.json").bufferedReader().use { it.readText() }
 
+        /** The bundled meeting simulations (mirrors anki.rpce.simulations). */
+        @JavascriptInterface
+        fun simulations(): String =
+            assets.open("simulations.json").bufferedReader().use { it.readText() }
+
         @JavascriptInterface
         fun syncLogin(user: String, pass: String, endpoint: String): String =
             NativeBridge.syncLogin(user, pass, endpoint)

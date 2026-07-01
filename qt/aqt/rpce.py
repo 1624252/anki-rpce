@@ -495,6 +495,134 @@ def _show_scenarios() -> None:
     ScenarioDialog(mw).exec()
 
 
+class SimulationDialog(QDialog):
+    """Simulation mode: a scripted meeting plays out turn by turn — members and
+    the chair speak, and at decision points the candidate responds *as the
+    parliamentarian*. Each response is graded for accuracy with an immediate
+    debrief (SPOV 2 + Insight 4). No RONR citation is required of the candidate."""
+
+    def __init__(self, mw) -> None:
+        super().__init__(mw)
+        from anki.rpce import simulations
+
+        self._mw = mw
+        self._corpus = _load_corpus()
+        self._sims = list(simulations.all_simulations())
+        self._sim_idx = 0
+        self._turn = 0
+        self._pending = None  # the turn awaiting a response
+
+        self.setWindowTitle("RPCE — Meeting simulation")
+        self.resize(760, 720)
+        self.setStyleSheet(_DIALOG_QSS)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 22, 22, 22)
+        layout.setSpacing(12)
+
+        self._heading = QLabel()
+        self._heading.setStyleSheet("font-size:22px;font-weight:800;color:#0a1f44")
+        self._heading.setWordWrap(True)
+        layout.addWidget(self._heading)
+
+        self._transcript = QTextBrowser()
+        self._transcript.setMinimumHeight(320)
+        layout.addWidget(self._transcript)
+
+        self._prompt = QLabel()
+        self._prompt.setWordWrap(True)
+        layout.addWidget(self._prompt)
+
+        self._answer = QTextEdit()
+        self._answer.setPlaceholderText("Respond as the parliamentarian…")
+        self._answer.setMinimumHeight(90)
+        layout.addWidget(self._answer)
+
+        self._respond_btn = QPushButton("Respond")
+        qconnect(self._respond_btn.clicked, self._respond)
+        layout.addWidget(self._respond_btn)
+
+        self._next_btn = QPushButton("Next meeting →")
+        qconnect(self._next_btn.clicked, self._next_sim)
+        layout.addWidget(self._next_btn)
+
+        self._load_sim()
+
+    def _sim(self):
+        return self._sims[self._sim_idx]
+
+    def _load_sim(self) -> None:
+        sim = self._sim()
+        self._turn = 0
+        self._pending = None
+        self._transcript.setHtml(
+            f"<p style='color:#35548c'><i>{sim.setting}</i></p>"
+        )
+        self._heading.setText(f"{sim.title}")
+        self._answer.clear()
+        self._answer.setEnabled(True)
+        self._respond_btn.setEnabled(True)
+        self._play()
+
+    def _append(self, html: str) -> None:
+        self._transcript.append(html)
+
+    def _play(self) -> None:
+        """Play spoken lines until the next response point (or the end)."""
+        sim = self._sim()
+        while self._turn < len(sim.turns):
+            turn = sim.turns[self._turn]
+            self._append(
+                f"<p><b style='color:#1d4ed8'>{turn.speaker}:</b> {turn.line}</p>"
+            )
+            if turn.needs_response:
+                self._pending = turn
+                self._turn += 1
+                self._prompt.setText(f"🎤 {turn.prompt}")
+                self._answer.setEnabled(True)
+                self._answer.setFocus()
+                self._respond_btn.setEnabled(True)
+                return
+            self._turn += 1
+        # Reached the end of the meeting.
+        self._pending = None
+        self._prompt.setText("✅ Meeting adjourned. Well done.")
+        self._answer.setEnabled(False)
+        self._respond_btn.setEnabled(False)
+
+    def _respond(self) -> None:
+        from anki.rpce import examiner, scores
+
+        if self._pending is None:
+            return
+        answer = self._answer.toPlainText().strip()
+        if not answer:
+            return
+        result = examiner.PlaceholderExaminer().grade(
+            answer, self._pending.gold, self._corpus or self._pending.gold
+        )
+        scores.record_scenario(self._mw.col)
+        verdict = "pass" if result.passed else "keep practicing"
+        self._append(
+            f"<p><b>You (parliamentarian):</b> {answer}</p>"
+            f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
+            f"({verdict}) — {result.feedback}<br>"
+            f"<b>Model ruling:</b> {self._pending.gold}</p>"
+        )
+        self._answer.clear()
+        self._play()
+
+    def _next_sim(self) -> None:
+        self._sim_idx = (self._sim_idx + 1) % len(self._sims)
+        self._load_sim()
+
+
+def _show_simulation() -> None:
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    SimulationDialog(mw).exec()
+
+
 def _start_timer(section: str) -> None:
     mw = aqt.mw
     if mw is None or mw.col is None:
@@ -528,6 +656,8 @@ def _add_menu() -> None:
     qconnect(build_action.triggered, _build_deck)
     scenario_action = menu.addAction("Section II scenario practice…")
     qconnect(scenario_action.triggered, _show_scenarios)
+    sim_action = menu.addAction("Meeting simulation…")
+    qconnect(sim_action.triggered, _show_simulation)
     dash_action = menu.addAction("Readiness dashboard…")
     qconnect(dash_action.triggered, _show_dashboard)
     menu.addSeparator()
@@ -845,6 +975,15 @@ def _on_toolbar_links(links, toolbar) -> None:
             _show_scenarios,
             tip="Performance scenario practice",
             id="rpce_scenarios",
+        )
+    )
+    links.append(
+        toolbar.create_link(
+            "rpce_simulate",
+            "Simulate",
+            _show_simulation,
+            tip="Run a meeting as the parliamentarian",
+            id="rpce_simulate",
         )
     )
     links.append(
