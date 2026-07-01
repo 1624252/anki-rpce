@@ -982,8 +982,23 @@ def _on_toolbar_links(links, toolbar) -> None:
         links.append(sync_link)
 
 
+def _remove_deck_browser_bottom_bar() -> None:
+    """Delete the deck-browser bottom bar (Get Shared / Create Deck / Import
+    File) at the source. The RPCE deck is generated for the candidate, so there
+    is no deck-management UI. Overriding ``_drawButtons`` stops the bar from ever
+    being drawn — more reliable than hiding it after render, since ``BottomBar``
+    re-shows the widget asynchronously and would win the race."""
+    from aqt.deckbrowser import DeckBrowser
+
+    def _no_buttons(self) -> None:
+        self.mw.bottomWeb.hide()
+
+    DeckBrowser._drawButtons = _no_buttons
+
+
 def setup() -> None:
     """Register all RPCE desktop integration hooks."""
+    _remove_deck_browser_bottom_bar()
     gui_hooks.style_did_init.append(_on_style_init)
     gui_hooks.webview_will_set_content.append(_on_webview_content)
     gui_hooks.main_window_did_init.append(_add_menu)
