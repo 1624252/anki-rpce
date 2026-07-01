@@ -36,7 +36,7 @@ a CI runner per OS). Everywhere you need [Rustup](https://rustup.rs), a C
 toolchain, and a few GB of free disk; clone into a short path without spaces.
 
 ```bash
-git clone <this-repo> speedrun && cd speedrun
+git clone https://github.com/1624252/anki-rpce.git speedrun && cd speedrun
 ```
 
 | Desktop | Also need | Build command               | Output in `out/installer/dist/` |
