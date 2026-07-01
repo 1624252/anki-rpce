@@ -57,46 +57,51 @@ _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans
 # One cohesive "Aurora" theme (indigo -> cyan accents on deep indigo), shared by
 # the home banner and the dashboard as CSS classes so everything matches.
 _THEME_CSS = (
-    ".rpce-root{font-family:" + _FONT + ";color:#e8eaf6}"
-    ".rpce-hero{max-width:980px;margin:28px auto 12px;padding:30px 34px;border-radius:24px;"
-    "border:1px solid rgba(129,140,248,.35);box-shadow:0 18px 50px rgba(79,70,229,.28);"
-    "background:radial-gradient(120% 140% at 0% 0%,rgba(99,102,241,.30),rgba(34,211,238,.08) 52%,rgba(2,6,23,0) 100%),"
-    "linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.06))}"
-    ".rpce-head{display:flex;align-items:center;gap:14px}"
-    ".rpce-logo{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;"
-    "justify-content:center;font-weight:800;font-size:18px;color:#fff;"
-    "background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 8px 22px rgba(99,102,241,.55)}"
-    ".rpce-h1{font-size:26px;font-weight:800;letter-spacing:-.3px;color:#fff}"
-    ".rpce-h1 small{opacity:.55;font-weight:600;font-size:15px}"
-    ".rpce-sub{color:#9aa3c7;font-size:13.5px}"
-    ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-top:22px}"
-    ".rpce-card{background:rgba(129,140,248,.07);border:1px solid rgba(129,140,248,.22);border-radius:18px;"
-    "padding:20px 22px;box-shadow:0 2px 12px rgba(2,6,23,.35)}"
+    # Full-page themed background so the whole screen is designed, not a card in a void.
+    "html,body{background:"
+    "radial-gradient(1200px 720px at 12% -12%,rgba(99,102,241,.24),rgba(2,6,23,0) 60%),"
+    "linear-gradient(160deg,#0b1020 0%,#0e1233 55%,#0b1020 100%) !important;"
+    "color:#e8eaf6 !important}"
+    ".rpce-root{font-family:" + _FONT + ";color:#e8eaf6;font-size:16px}"
+    ".rpce-hero{max-width:1060px;margin:44px auto 18px;padding:42px 46px;border-radius:28px;"
+    "border:1px solid rgba(129,140,248,.38);box-shadow:0 26px 70px rgba(79,70,229,.32);"
+    "background:radial-gradient(120% 140% at 0% 0%,rgba(99,102,241,.34),rgba(34,211,238,.10) 52%,rgba(2,6,23,0) 100%),"
+    "linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.07))}"
+    ".rpce-head{display:flex;align-items:center;gap:18px}"
+    ".rpce-logo{width:58px;height:58px;border-radius:17px;display:flex;align-items:center;"
+    "justify-content:center;font-weight:800;font-size:23px;color:#fff;"
+    "background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 10px 26px rgba(99,102,241,.55)}"
+    ".rpce-h1{font-size:33px;font-weight:800;letter-spacing:-.4px;color:#fff}"
+    ".rpce-h1 small{opacity:.55;font-weight:600;font-size:19px}"
+    ".rpce-sub{color:#a6b0d6;font-size:16px}"
+    ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:28px}"
+    ".rpce-card{background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.24);border-radius:20px;"
+    "padding:24px 26px;box-shadow:0 3px 16px rgba(2,6,23,.40)}"
     ".rpce-row{display:flex;justify-content:space-between;align-items:center;gap:8px}"
-    ".rpce-label{font-size:12px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:#9aa3c7}"
-    ".rpce-val{font-size:38px;font-weight:800;margin-top:10px;line-height:1.05;letter-spacing:-.5px;color:#fff}"
-    ".rpce-pill{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:999px}"
-    ".rpce-bar{height:6px;border-radius:999px;background:rgba(148,163,184,.20);margin-top:16px;overflow:hidden}"
+    ".rpce-label{font-size:13.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#a6b0d6}"
+    ".rpce-val{font-size:46px;font-weight:800;margin-top:12px;line-height:1.02;letter-spacing:-.6px;color:#fff}"
+    ".rpce-pill{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 11px;border-radius:999px}"
+    ".rpce-bar{height:8px;border-radius:999px;background:rgba(148,163,184,.22);margin-top:18px;overflow:hidden}"
     ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
-    ".rpce-cf-abstain{color:#94a3b8}.rpce-pill.rpce-cf-abstain{background:rgba(148,163,184,.20)}"
-    ".rpce-cf-low{color:#fbbf24}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.18)}"
-    ".rpce-cf-medium{color:#34d399}.rpce-pill.rpce-cf-medium{background:rgba(52,211,153,.18)}"
-    ".rpce-cf-high{color:#818cf8}.rpce-pill.rpce-cf-high{background:rgba(129,140,248,.22)}"
-    ".rpce-covhead{display:flex;justify-content:space-between;font-size:13px;margin:22px 0 8px;color:#9aa3c7}"
+    ".rpce-cf-abstain{color:#94a3b8}.rpce-pill.rpce-cf-abstain{background:rgba(148,163,184,.22)}"
+    ".rpce-cf-low{color:#fbbf24}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.20)}"
+    ".rpce-cf-medium{color:#34d399}.rpce-pill.rpce-cf-medium{background:rgba(52,211,153,.20)}"
+    ".rpce-cf-high{color:#818cf8}.rpce-pill.rpce-cf-high{background:rgba(129,140,248,.24)}"
+    ".rpce-covhead{display:flex;justify-content:space-between;font-size:15px;margin:28px 0 10px;color:#a6b0d6}"
     ".rpce-covhead b{font-weight:600;letter-spacing:.4px;text-transform:uppercase}"
-    ".rpce-cov{height:10px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden}"
+    ".rpce-cov{height:13px;border-radius:999px;background:rgba(148,163,184,.22);overflow:hidden}"
     ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22d3ee)}"
-    ".rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}"
-    ".rpce-chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:#c7cdf2;"
-    "background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.26);padding:6px 12px;border-radius:999px}"
-    ".rpce-note{margin-top:16px;font-size:14px;color:#fcd34d;background:rgba(251,191,36,.10);"
-    "border:1px solid rgba(251,191,36,.28);border-radius:12px;padding:12px 16px}"
-    ".rpce-foot{margin-top:18px;font-size:13px;color:#9aa3c7}.rpce-foot b{color:#c7cdf2}"
-    ".rpce-tbl{border-collapse:collapse;width:100%;font-size:14.5px}"
-    ".rpce-tbl th{color:#9aa3c7;font-size:12px;text-transform:uppercase;letter-spacing:.5px;"
-    "text-align:left;padding:10px 12px;border-bottom:2px solid rgba(129,140,248,.30)}"
-    ".rpce-tbl td{padding:11px 12px;border-bottom:1px solid rgba(129,140,248,.14)}"
-    ".rpce-colbar{height:6px;width:130px;border-radius:999px;background:rgba(148,163,184,.20);overflow:hidden}"
+    ".rpce-chips{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}"
+    ".rpce-chip{display:inline-flex;align-items:center;gap:7px;font-size:15px;color:#cdd3f5;"
+    "background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.30);padding:9px 15px;border-radius:999px}"
+    ".rpce-note{margin-top:22px;font-size:16px;color:#fcd34d;background:rgba(251,191,36,.11);"
+    "border:1px solid rgba(251,191,36,.30);border-radius:14px;padding:15px 18px}"
+    ".rpce-foot{margin-top:24px;font-size:15px;color:#a6b0d6}.rpce-foot b{color:#cdd3f5}"
+    ".rpce-tbl{border-collapse:collapse;width:100%;font-size:16px}"
+    ".rpce-tbl th{color:#a6b0d6;font-size:13px;text-transform:uppercase;letter-spacing:.5px;"
+    "text-align:left;padding:12px 14px;border-bottom:2px solid rgba(129,140,248,.32)}"
+    ".rpce-tbl td{padding:13px 14px;border-bottom:1px solid rgba(129,140,248,.16)}"
+    ".rpce-colbar{height:8px;width:150px;border-radius:999px;background:rgba(148,163,184,.22);overflow:hidden}"
     ".rpce-colbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22d3ee)}"
 )
 
@@ -344,9 +349,22 @@ class ScenarioDialog(QDialog):
         self._idx = 0
 
         self.setWindowTitle("RPCE — Section II scenario practice")
-        self.resize(660, 580)
+        self.resize(720, 660)
+        self.setStyleSheet(
+            "QDialog{background:#0e1233}"
+            "QLabel{color:#cdd3f5;font-size:16px}"
+            "QTextBrowser,QTextEdit{background:#0b1020;color:#e8eaf6;border:1px solid #343a63;"
+            "border-radius:12px;font-size:16px;padding:10px}"
+            "QPushButton{background:#6366f1;color:#fff;border:none;border-radius:12px;"
+            "padding:11px 18px;font-size:15px;font-weight:600}"
+            "QPushButton:hover{background:#7c7ff5}"
+        )
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("<b>Section II — performance scenario</b>"))
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+        heading = QLabel("Section II — performance scenario")
+        heading.setStyleSheet("font-size:22px;font-weight:800;color:#fff")
+        layout.addWidget(heading)
         self._domain = QLabel()
         layout.addWidget(self._domain)
         self._prompt = QTextBrowser()
@@ -537,10 +555,23 @@ def _tab_timed() -> None:
     mw.reset()
 
 
+_TOOLBAR_CSS = (
+    "<style>"
+    "body{background:#0b1020 !important}"
+    ".header{background:linear-gradient(90deg,#0e1233,#141a44) !important;"
+    "border-bottom:1px solid rgba(129,140,248,.30) !important;padding:7px 6px !important}"
+    ".hitem{font-size:15px !important;font-weight:600 !important;color:#c7cdf2 !important;"
+    "padding:9px 18px !important;margin:0 4px !important;border-radius:10px !important;text-decoration:none !important}"
+    ".hitem:hover{background:rgba(129,140,248,.20) !important;color:#fff !important}"
+    "</style>"
+)
+
+
 def _on_toolbar_links(links, toolbar) -> None:
-    """Replace Anki's deck-management toolbar with RPCE tabs (keep Sync)."""
+    """Replace Anki's deck-management toolbar with themed RPCE tabs (keep Sync)."""
     sync_link = links[-1] if links else None
     links.clear()
+    links.append(_TOOLBAR_CSS)
     links.append(
         toolbar.create_link(
             "rpce_study",
