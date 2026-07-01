@@ -3,6 +3,8 @@
 
     <!-- Sync needs network; cleartext allows a local/self-hosted http sync server. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Reliable online/offline indicator (navigator.onLine is unreliable in WebView). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"

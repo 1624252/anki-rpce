@@ -4,8 +4,11 @@
 package com.rpce.speedrun
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import android.webkit.JavascriptInterface
@@ -34,6 +37,7 @@ class MainActivity : AppCompatActivity() {
         web = WebView(this)
         web.setBackgroundColor(Color.parseColor("#ffffff"))
         web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true // localStorage: persist sync auth + last-sync time
         web.addJavascriptInterface(EngineBridge(), "Engine")
         setContentView(web)
 
@@ -112,6 +116,18 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun reference(): String =
             assets.open("reference.json").bufferedReader().use { it.readText() }
+
+        /** Real device connectivity (navigator.onLine is unreliable in a WebView). */
+        @JavascriptInterface
+        fun online(): Boolean {
+            return try {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+                caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            } catch (e: Throwable) {
+                true // assume online if we can't tell
+            }
+        }
 
         @JavascriptInterface
         fun syncLogin(user: String, pass: String, endpoint: String): String =

@@ -126,11 +126,10 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <button class="btn ghost" onclick="openScores()">Readiness</button>
+    <button class="btn ghost" onclick="openReference()">📋 Reference tables</button>
     <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
-    <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
-    <p class="muted" style="text-align:center;margin-top:14px">
-      <a onclick="openReference()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer">📋 Reference tables</a>
-    </p>
+    <div id="net-status" style="text-align:center;margin-top:14px"></div>
+    <div style="text-align:center;margin-top:8px"><span class="chip" id="engine">engine…</span></div>
     <p class="muted" id="home-msg"></p>
   </div>
 
@@ -243,9 +242,23 @@ function initHome(){
   if (window.RPCE_CSS) el('rpce-css').textContent = RPCE_CSS;  // shared renderer styles
   if (new URLSearchParams(location.search).get('status')==='error')
     el('home-msg').textContent = 'Engine failed to open the collection.';
+  loadAuth(); updateNetStatus();
+  // React to connectivity changes: show status, and sync when back online.
+  window.addEventListener('online', function(){ updateNetStatus(); autoSync(); });
+  window.addEventListener('offline', updateNetStatus);
+  // navigator events are unreliable in a WebView, so also poll the native check
+  // and keep both-open sessions in step with a periodic background sync.
+  var wasOnline=online();
+  setInterval(function(){
+    var now=online(); updateNetStatus();
+    if(now && !wasOnline) autoSync();   // just came back online
+    else if(now) autoSync();            // periodic catch-up while online
+    wasOnline=now;
+  }, 20000);
   refreshCounts();
+  autoSync();  // catch up on launch
 }
-function goHome(){ show('home'); refreshCounts(); }
+function goHome(){ show('home'); refreshCounts(); updateNetStatus(); autoSync(); }
 
 /* ---- review loop (shared interactive renderer) ---- */
 var current=null;
@@ -283,7 +296,9 @@ function extractPayload(html){
 }
 function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
   el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
-function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
+function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; }
+  loadCard();      // show the next card first, then sync in the background
+  autoSync(); }
 
 /* ---- reference tables (order of precedence, motion characteristics) ---- */
 function classPill(c){ return '<span class="pillc c-'+c+'">'+c+'</span>'; }
@@ -458,7 +473,40 @@ function signup(){
 }
 
 /* ---- sync by AnkiWeb account (empty endpoint => AnkiWeb, no server IP) ---- */
-var auth={hkey:'',endpoint:''};
+// Persisted so auto-sync survives app restarts. We store the AnkiWeb auth *key*
+// (hkey) — never the password — plus the endpoint and the last successful sync.
+var auth={hkey:'',endpoint:'',lastSync:0};
+function loadAuth(){ try{ var s=JSON.parse(localStorage.getItem('rpce_sync')||'{}');
+  auth.hkey=s.hkey||''; auth.endpoint=s.endpoint||''; auth.lastSync=s.lastSync||0; }catch(e){} }
+function saveAuth(){ try{ localStorage.setItem('rpce_sync', JSON.stringify(auth)); }catch(e){} }
+function online(){ try{ if(window.Engine && Engine.online) return Engine.online(); }catch(e){}
+  return (typeof navigator==='undefined')||navigator.onLine!==false; }
+function relTime(ts){ if(!ts) return 'never';
+  var s=Math.max(0,Math.floor((Date.now()-ts)/1000));
+  if(s<60) return 'just now'; if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; }
+function updateNetStatus(){
+  var e=el('net-status'); if(!e) return;
+  var on=online(), linked=!!auth.hkey;
+  var dot=on?'🟢':'🔴', net=on?'Online':'Offline';
+  var sync = !linked ? 'not signed in' : ('synced '+relTime(auth.lastSync));
+  e.innerHTML='<span class="chip" style="'+(on?'':'color:var(--warn);background:rgba(180,83,9,.10);border-color:rgba(180,83,9,.35)')+'">'
+    + dot+' '+net+' · '+sync+'</span>';
+}
+/* Auto-sync after each review / on returning home, when online and signed in.
+   Anki unions the revlog, so reviews from phone + desktop ADD (none lost). */
+var _syncing=false;
+function autoSync(){
+  if(_syncing || !auth.hkey || !online()) return;
+  _syncing=true;
+  setTimeout(function(){
+    try{
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); }
+    }catch(e){}
+    _syncing=false; updateNetStatus();
+  },0);
+}
 function syStatus(msg){ var s=el('sy-status'); s.classList.remove('hidden'); s.textContent=msg; }
 function doSync(){
   var user=el('sy-user').value.trim(), pass=el('sy-pass').value;
@@ -472,14 +520,15 @@ function doSync(){
     var login=j(Engine.syncLogin(user, pass, ''));
     if(!login.ok){ syStatus(''); el('sy-status').classList.add('hidden');
       popup('Sign-in failed', friendlySyncError(login.error), '🔒'); return; }
-    auth.hkey=login.hkey; auth.endpoint=login.endpoint||'';
+    auth.hkey=login.hkey; auth.endpoint=login.endpoint||''; saveAuth(); updateNetStatus();
     syStatus('Syncing…');
     setTimeout(function(){
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
       if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden');
         popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
       if(r.required>=2){ syStatus('A full sync is required — choose an option below.'); el('sy-full').classList.remove('hidden'); }
-      else { syStatus('✓ Synced. Reviews now match the desktop.'); refreshCounts(); }
+      else { auth.lastSync=Date.now(); saveAuth(); syStatus('✓ Synced. Reviews now match the desktop.');
+        refreshCounts(); updateNetStatus(); }
     },50);
   },50);
 }
@@ -488,7 +537,8 @@ function doFull(upload){
   syStatus(upload?'Uploading to server…':'Downloading from server…');
   setTimeout(function(){
     var r=j(Engine.fullSync(auth.hkey, auth.endpoint, upload));
-    if(r.ok){ syStatus('✓ Full sync complete.'); refreshCounts(); }
+    if(r.ok){ auth.lastSync=Date.now(); saveAuth(); syStatus('✓ Full sync complete.');
+      refreshCounts(); updateNetStatus(); }
     else { syStatus(''); el('sy-status').classList.add('hidden');
       popup('Full sync failed', friendlySyncError(r.error), '⚠️'); }
   },50);
