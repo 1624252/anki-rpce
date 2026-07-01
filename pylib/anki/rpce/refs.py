@@ -21,7 +21,7 @@ class Ref:
     quote: str  # verbatim excerpt from that section
 
     def cite(self) -> str:
-        return f"RONR (12th ed.) {self.section}"
+        return f"RONR (12th ed.) §{self.section}"
 
 
 # --- One Ref per concept, reused across every mode. ---

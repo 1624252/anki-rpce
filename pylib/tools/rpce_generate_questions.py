@@ -4,27 +4,29 @@
 
 """Generate varied, answerable RPCE practice questions (spec §7).
 
-Each question carries enough on screen to answer it, and cites its RONR (12th
-ed.) section only in the answer (never in the stem or options). Types:
+Each question shows enough to answer it and cites its RONR (12th ed.) section
+only in the answer (never in a stem or option). For broad coverage the generator
+emits up to a few questions from **every** corpus paragraph, plus a bank of
+precedence/characteristic questions. Types:
 
-- **cloze**  — fill a key term blanked from a real RONR sentence. Each blank has
-  a hint (e.g. "8-letter word starting 'm'"), so it isn't guesswork; a sentence
-  with two key terms becomes a two-blank cloze.
+- **cloze**  — fill a key term blanked from a real RONR sentence. A hint appears
+  only when the answer isn't obvious from the sentence (e.g. debatable-vs-not);
+  hints never reveal spelling.
 - **mcq**    — applied multiple choice grounded in the corpus (pick the term).
-- **vote / debatable / second / amendable (mcq)** — a motion's characteristics,
-  from the curated table in :mod:`anki.rpce.knowledge`.
-- **ranking (mcq)** — which of these motions has the highest precedence.
-- **order** — put a few motions in order of precedence (highest first).
+- **multi**  — select ALL that apply (e.g. all motions ranking higher than X).
+- **order**  — put a random set of motions in order of precedence (top = higher).
+- motion characteristics (vote / debatable / second / amendable) and precedence
+  ranking / which-is-higher, from :mod:`anki.rpce.knowledge`.
 
-Ranking/order/characteristic questions come from structured knowledge because
-prose cloze can't test them (too many combinations to fill one blank). The
-corpus is read from ``data/roberts_rules_of_order_12th_edition.md``. Deterministic
-(fixed seed) so it is reproducible.
+Precedence and characteristic questions come from structured knowledge (a motion
+bank + the saved order of precedence) because prose cloze can't test them — too
+many combinations to fill one blank. The corpus is read from
+``data/roberts_rules_of_order_12th_edition.md``. Deterministic (fixed seed).
 
 Usage (from the repo root):
 
     python pylib/tools/rpce_generate_questions.py [count] [out.md]
-    # defaults: 1000  docs/rpce/rpce_practice_questions.md
+    # count 0 (default) = full coverage → docs/rpce/rpce_practice_questions.md
 """
 
 from __future__ import annotations
@@ -170,33 +172,32 @@ class Question:
     quote: str
 
 
+# Sentences describing order of precedence can't be a fair fill-in-the-blank
+# (too many possible motions) — those belong in ranking/ordering/select-all
+# questions, never cloze/term MCQ.
+_PRECEDENCE_RE = re.compile(r"\bprecedence\b|\byield(s|ed)?\b|\boutrank", re.I)
+
 # --- corpus-grounded questions ------------------------------------------------
 
 
-def make_cloze(p: Para, cid: str, rng: random.Random) -> Question | None:
+def _sentence_with(p: Para, term: str) -> str | None:
+    return next((s for s in re.split(r"(?<=[.;])\s+", p.text) if term in s), None)
+
+
+def make_cloze(
+    p: Para, cid: str, rng: random.Random, only_term: str | None = None
+) -> Question | None:
     if not p.emphases:
         return None
-    # Blank one or two distinctive terms present in a single sentence.
-    sentence = None
-    terms: list[str] = []
-    for cand in rng.sample(p.emphases, len(p.emphases)):
-        s = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if cand in s), None)
-        if s and (sentence is None or s == sentence):
-            sentence = s
-            terms.append(cand)
-        if len(terms) == 2:
-            break
-    if not sentence or not terms:
+    term = only_term or rng.choice(p.emphases)
+    if term not in p.emphases:
         return None
-    if mentions_section(sentence):
+    sentence = _sentence_with(p, term)
+    if not sentence or mentions_section(sentence) or _PRECEDENCE_RE.search(sentence):
         return None
-    text = sentence
-    blanks = []
-    for i, term in enumerate(terms):
-        text = text.replace(term, f"[[{i}]]", 1)
-        blanks.append({"a": term, "h": hint_for(term)})
-    plain_a = ", ".join(terms)
-    plain_q = "Fill the blank(s): " + re.sub(r"\[\[\d+\]\]", "_____", text)
+    text = sentence.replace(term, "[[0]]", 1)
+    blanks = [{"a": term, "h": hint_for(term)}]
+    plain_q = "Fill the blank: " + re.sub(r"\[\[\d+\]\]", "_____", text)
     payload = {
         "kind": "cloze",
         "text": text,
@@ -211,20 +212,26 @@ def make_cloze(p: Para, cid: str, rng: random.Random) -> Question | None:
         "Cloze recall",
         payload,
         plain_q,
-        f"{plain_a} — “{sentence.strip()}”",
+        f"{term} — “{sentence.strip()}”",
         p.citation,
         sentence.strip(),
     )
 
 
 def make_term_mcq(
-    p: Para, cid: str, pool: list[str], rng: random.Random
+    p: Para, cid: str, pool: list[str], rng: random.Random, only_term: str | None = None
 ) -> Question | None:
     if not p.emphases:
         return None
-    term = rng.choice(p.emphases)
-    sentence = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if term in s), None)
-    if not sentence or mentions_section(sentence, term):
+    term = only_term or rng.choice(p.emphases)
+    if term not in p.emphases:
+        return None
+    sentence = _sentence_with(p, term)
+    if (
+        not sentence
+        or mentions_section(sentence, term)
+        or _PRECEDENCE_RE.search(sentence)
+    ):
         return None
     distractors = [
         t for t in pool if t.lower() != term.lower() and not mentions_section(t)
@@ -317,13 +324,16 @@ def make_ranking(
     cid: str,
     secq: dict[int, tuple[str, str]],
     rng: random.Random,
+    which: str = "highest",
 ) -> Question:
-    top = min(motions, key=lambda m: m.rank)  # lowest rank number = highest precedence
+    # rank 1 = highest precedence, so highest = min rank, lowest = max rank.
+    pick = min if which == "highest" else max
+    target = pick(motions, key=lambda m: m.rank)
     names = [m.name for m in motions]
     rng.shuffle(names)
-    stem = "Which of these motions has the highest precedence (is taken up first)?"
-    ans = names.index(top.name)
-    cite, quote = _kb_ref(top, secq)
+    stem = f"Which of these motions has the {which} precedence?"
+    ans = names.index(target.name)
+    cite, quote = _kb_ref(target, secq)
     payload = {
         "kind": "mcq",
         "stem": stem,
@@ -333,15 +343,70 @@ def make_ranking(
         "quote": quote,
     }
     return Question(
+        2, "mcq", cid, "Precedence (ranking)", payload, stem, target.name, cite, quote
+    )
+
+
+def make_pair(
+    a: kb.Motion, b: kb.Motion, cid: str, secq: dict[int, tuple[str, str]]
+) -> Question:
+    higher = a if a.rank < b.rank else b
+    opts = [a.name, b.name]
+    stem = f"Which motion takes precedence — {a.name} or {b.name}?"
+    ans = opts.index(higher.name)
+    cite, quote = _kb_ref(higher, secq)
+    payload = {
+        "kind": "mcq",
+        "stem": stem,
+        "options": opts,
+        "answer": ans,
+        "cite": cite,
+        "quote": quote,
+    }
+    return Question(
         2,
         "mcq",
         cid,
-        "Order of precedence (ranking)",
+        "Precedence (which is higher)",
         payload,
         stem,
-        top.name,
+        higher.name,
         cite,
         quote,
+    )
+
+
+def make_multi(
+    pivot: kb.Motion,
+    others: list[kb.Motion],
+    cid: str,
+    secq: dict[int, tuple[str, str]],
+    rng: random.Random,
+    direction: str = "higher",
+) -> Question:
+    # "higher" precedence = smaller rank number.
+    names = [m.name for m in others]
+    rng.shuffle(names)
+    by_name = {m.name: m for m in others}
+    if direction == "higher":
+        correct = [i for i, nm in enumerate(names) if by_name[nm].rank < pivot.rank]
+        verb = "rank higher than (take precedence over)"
+    else:
+        correct = [i for i, nm in enumerate(names) if by_name[nm].rank > pivot.rank]
+        verb = "rank lower than (yield to)"
+    stem = f"Select ALL of these motions that {verb} the motion to {pivot.name}."
+    cite, quote = _kb_ref(pivot, secq)
+    payload = {
+        "kind": "multi",
+        "stem": stem,
+        "options": names,
+        "correct": correct,
+        "cite": cite,
+        "quote": quote,
+    }
+    plain_a = ", ".join(names[i] for i in correct) or "(none)"
+    return Question(
+        2, "multi", cid, "Precedence (select all)", payload, stem, plain_a, cite, quote
     )
 
 
@@ -350,7 +415,7 @@ def make_order(
 ) -> Question:
     ordered = sorted(motions, key=lambda m: m.rank)  # highest precedence first
     labels = [m.name for m in ordered]
-    prompt = "Tap these motions in order of precedence, highest first."
+    prompt = "Put these motions in order of precedence."
     cite, quote = _kb_ref(ordered[0], secq)
     payload = {
         "kind": "order",
@@ -363,7 +428,7 @@ def make_order(
         2,
         "order",
         cid,
-        "Order of precedence (ordering)",
+        "Precedence (ordering)",
         payload,
         prompt,
         " → ".join(labels),
@@ -377,56 +442,85 @@ def build_knowledge(
 ) -> list[Question]:
     qs: list[Question] = []
     n = 0
+
+    def cid() -> str:
+        nonlocal n
+        n += 1
+        return f"K{n:04d}"
+
     # Characteristic questions: every motion × four traits.
     for m in kb.MOTIONS:
         for which in ("vote", "debatable", "second", "amendable"):
-            n += 1
-            qs.append(make_characteristic(m, which, f"K{n:04d}", secq))
+            qs.append(make_characteristic(m, which, cid(), secq))
     ranked = kb.ranked_motions()
-    # Ranking + ordering over sliding windows and random subsets of the chart.
-    for size in (3, 4):
+    # Ranking (highest + lowest) and ordering over sliding windows + random subsets.
+    subsets: list[list[kb.Motion]] = []
+    for size in (3, 4, 5):
         for start in range(0, len(ranked) - size + 1):
-            n += 1
-            qs.append(
-                make_ranking(ranked[start : start + size], f"K{n:04d}", secq, rng)
-            )
-            n += 1
-            qs.append(make_order(ranked[start : start + size], f"K{n:04d}", secq))
-    for _ in range(40):
-        for size in (3, 4):
-            subset = rng.sample(ranked, size)
-            n += 1
-            qs.append(make_ranking(subset, f"K{n:04d}", secq, rng))
-            n += 1
-            qs.append(make_order(subset, f"K{n:04d}", secq))
+            subsets.append(ranked[start : start + size])
+    for _ in range(50):
+        subsets.append(rng.sample(ranked, rng.choice((3, 4, 5))))
+    for subset in subsets:
+        qs.append(make_ranking(subset, cid(), secq, rng, "highest"))
+        qs.append(make_ranking(subset, cid(), secq, rng, "lowest"))
+        qs.append(make_order(subset, cid(), secq))
+    # Pairwise "which is higher".
+    for _ in range(60):
+        a, b = rng.sample(ranked, 2)
+        qs.append(make_pair(a, b, cid(), secq))
+    # Select-all-that-rank-higher / lower than a pivot.
+    for _ in range(120):
+        pivot = rng.choice(ranked)
+        pool = [m for m in ranked if m is not pivot]
+        others = rng.sample(pool, rng.choice((4, 5)))
+        direction = rng.choice(("higher", "lower"))
+        # ensure a well-formed set (at least one correct and one incorrect).
+        has_c = any(
+            (m.rank < pivot.rank) if direction == "higher" else (m.rank > pivot.rank)
+            for m in others
+        )
+        has_i = any(
+            (m.rank >= pivot.rank) if direction == "higher" else (m.rank <= pivot.rank)
+            for m in others
+        )
+        if has_c and has_i:
+            qs.append(make_multi(pivot, others, cid(), secq, rng, direction))
     return qs
 
 
-def build(count: int) -> list[Question]:
+def build(count: int = 0, per_para: int = 5) -> list[Question]:
+    """Knowledge-based questions + up to ``per_para`` varied questions from every
+    corpus paragraph (spec: broad coverage). ``count`` optionally caps the total
+    (0 = no cap)."""
     rng = random.Random(SEED)
     paras = parse_corpus()
     secq = section_quotes(paras)
     term_pool = sorted({t for p in paras for t in p.emphases})
     questions: list[Question] = list(build_knowledge(secq, rng))
-    rng.shuffle(questions)  # mix the knowledge types through the deck
-    # Fill the rest from the corpus (cloze + applied MCQ), grouped by concept.
-    rng.shuffle(paras)
+    # Coverage: walk every paragraph and emit up to `per_para` varied questions
+    # from its key terms (distinct cloze + applied-MCQ items).
     cn = 0
     for p in paras:
-        if len(questions) >= count:
-            break
         cn += 1
         cid = f"C{cn:04d}"
-        for maker in (
-            lambda: make_cloze(p, cid, rng),
-            lambda: make_term_mcq(p, cid, term_pool, rng),
-        ):
-            if len(questions) >= count:
+        made = 0
+        terms = rng.sample(p.emphases, len(p.emphases)) if p.emphases else []
+        for term in terms:
+            if made >= per_para:
                 break
-            q = maker()
-            if q is not None:
-                questions.append(q)
-    return questions[:count]
+            for maker in (
+                lambda t=term: make_cloze(p, cid, rng, only_term=t),
+                lambda t=term: make_term_mcq(p, cid, term_pool, rng, only_term=t),
+            ):
+                if made >= per_para:
+                    break
+                q = maker()
+                if q is not None:
+                    questions.append(q)
+                    made += 1
+        if count and len(questions) >= count:
+            break
+    return questions[:count] if count else questions
 
 
 def render(questions: list[Question]) -> str:
@@ -464,7 +558,7 @@ def render(questions: list[Question]) -> str:
                     out.append(f"   {letter}. {opt}")
             out.append("")
             out.append(
-                f"   *Answer:* {q.plain_a}. See RONR (12th ed.) {q.cite}"
+                f"   *Answer:* {q.plain_a}. See RONR (12th ed.) §{q.cite}"
                 + (f" — “{q.quote}”" if q.quote else "")
             )
             out.append("")
@@ -478,7 +572,7 @@ def main() -> None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
-    count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    count = int(sys.argv[1]) if len(sys.argv) > 1 else 0  # 0 = full coverage
     out_path = (
         Path(sys.argv[2])
         if len(sys.argv) > 2

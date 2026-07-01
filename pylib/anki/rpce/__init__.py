@@ -131,11 +131,12 @@ QUESTION_NOTETYPE = "RPCE Q 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "4"
+RPCE_DECK_VERSION = "5"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
 KIND_MCQ = "mcq"
+KIND_MULTI = "multi"
 KIND_ORDER = "order"
 
 _CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
@@ -193,7 +194,7 @@ def _question_notetype(col: Collection):
     tmpl["afmt"] = (
         "{{PlainA}}"
         "{{#Citation}}<div class=rpce-ref>"
-        "<div class=rpce-cite>RONR (12th ed.) {{Citation}}</div>"
+        "<div class=rpce-cite>RONR (12th ed.) &sect;{{Citation}}</div>"
         "<div class=rpce-quote>&ldquo;{{Quote}}&rdquo;</div></div>{{/Citation}}"
     )
     m["css"] = render_js.RENDER_CSS + ".card{font-size:18px;color:#0a1f44}"

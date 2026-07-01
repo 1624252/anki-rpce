@@ -58,6 +58,21 @@ RENDER_CSS = """
   border-radius:10px;text-align:left}
 .rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}
 .rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}
+/* multi-select */
+.rpce-opt.sel{background:#dbeafe;border-color:#1d4ed8;font-weight:700}
+.rpce-opt .box{display:inline-block;width:18px;height:18px;border:2px solid #94a3b8;border-radius:5px;margin-right:10px;vertical-align:-3px}
+.rpce-opt.sel .box{background:#1d4ed8;border-color:#1d4ed8}
+/* ordering (vertical; top = higher precedence) */
+.rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}
+.rpce-dest{display:flex;flex-direction:column;gap:8px;min-height:8px;
+  border-left:3px solid #caddf7;padding-left:12px;margin:6px 0}
+.rpce-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;
+  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px}
+.rpce-slot .n{min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;
+  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}
+.rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}
+.rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}
+.rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}
 """
 
 RENDER_JS = r"""
@@ -66,7 +81,7 @@ RENDER_JS = r"""
     if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
   function refBlock(p){ if(!p.cite) return null;
     var d=el('div','rpce-ref');
-    d.appendChild(el('div','rpce-cite','RONR (12th ed.) '+p.cite));
+    d.appendChild(el('div','rpce-cite','RONR (12th ed.) §'+p.cite));
     if(p.quote) d.appendChild(el('div','rpce-quote','“'+p.quote+'”'));
     return d; }
   function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){
@@ -126,45 +141,76 @@ RENDER_JS = r"""
       done(host,p,opts); }
   }
 
-  // ---- order: tap items into the correct sequence ---------------------------
+  // ---- select-multiple: pick ALL that apply, then Check --------------------
+  function renderMulti(p, host, opts){
+    host.appendChild(el('div','rpce-q', p.stem));
+    var box=el('div','rpce-opts rpce-multi'); var fb=el('div','rpce-fb');
+    var letters='ABCDEFGH', graded=false;
+    p.options.forEach(function(opt,i){
+      var b=el('button','rpce-opt','<span class="box"></span><span class="k">'+letters[i]+'</span>'+opt);
+      b.onclick=function(){ if(graded) return; b.classList.toggle('sel'); };
+      box.appendChild(b);
+    });
+    host.appendChild(box);
+    function grade(){
+      if(graded) return; graded=true;
+      var correct=p.correct||[], btns=box.querySelectorAll('button'), ok=true;
+      for(var j=0;j<btns.length;j++){
+        var isC=correct.indexOf(j)>=0, sel=btns[j].classList.contains('sel');
+        btns[j].disabled=true; btns[j].classList.remove('sel');
+        if(isC){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">'+(sel?'✓':'← should be selected')+'</span>'; if(!sel) ok=false; }
+        else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗</span>'; ok=false; }
+      }
+      fb.style.color=ok?'#15803d':'#be123c';
+      fb.textContent=ok?'✓ Correct — all and only the right ones.':'✗ Not quite — the correct set is highlighted.';
+      done(host,p,opts);
+    }
+    if(opts&&opts.reveal){ (p.correct||[]).forEach(function(i){ box.querySelectorAll('button')[i].classList.add('sel'); }); grade(); return; }
+    var ctr=el('div','rpce-controls'); var chk=el('button','rpce-btn','Check answers');
+    chk.onclick=grade; ctr.appendChild(chk); host.appendChild(ctr); host.appendChild(fb);
+  }
+
+  // ---- order: tap items into precedence order (top = higher) ----------------
   function renderOrder(p, host, opts){
     host.appendChild(el('div','rpce-q', p.prompt));
-    var order=p.order;               // correct sequence of labels
-    var display = (opts&&opts.reveal) ? order.slice() : shuffle(order);
-    var box=el('div','rpce-chips'); var fb=el('div','rpce-fb');
+    var order=p.order;               // correct sequence, highest → lowest
+    var display=(opts&&opts.reveal)?order.slice():shuffle(order);
+    host.appendChild(el('div','rpce-axis','▲ Tap in order — top = HIGHER precedence, bottom = LOWER'));
+    var dest=el('div','rpce-dest'); host.appendChild(dest);
+    var src=el('div','rpce-chips rpce-src'); host.appendChild(src);
+    var fb=el('div','rpce-fb'); host.appendChild(fb);
     var picked=[], chips={};
     function evaluate(){
       var allRight=true;
-      picked.forEach(function(label,pos){
-        var chip=chips[label];
-        if(order[pos]===label){ chip.classList.add('ok'); }
-        else { chip.classList.add('no'); allRight=false; }
+      dest.querySelectorAll('.rpce-slot').forEach(function(slot,pos){
+        if(order[pos]===picked[pos]){ slot.classList.add('ok'); }
+        else { slot.classList.add('no'); allRight=false; }
       });
       fb.style.color=allRight?'#15803d':'#be123c';
-      fb.innerHTML=(allRight?'✓ Correct order.':'✗ Not quite. Correct order (highest → lowest): ')
-        + (allRight?'':'<b>'+order.join(' → ')+'</b>');
+      fb.innerHTML=allRight?'✓ Correct order.'
+        :'✗ Not quite. Correct (highest → lowest): <b>'+order.join(' → ')+'</b>';
       done(host,p,opts);
     }
+    function place(label){
+      picked.push(label);
+      var slot=el('div','rpce-slot','<span class="n">'+picked.length+'</span>'+label);
+      dest.appendChild(slot);
+      chips[label].classList.add('used');
+      if(picked.length===order.length) evaluate();
+    }
     display.forEach(function(label){
-      var chip=el('button','rpce-chip','<span class="pos" style="display:none"></span>'+label);
-      chips[label]=chip;
-      chip.onclick=function(){ if(chip.dataset.done||picked.indexOf(label)>=0) return;
-        picked.push(label); var badge=chip.querySelector('.pos');
-        badge.style.display='inline-block'; badge.textContent=picked.length;
-        if(picked.length===order.length) evaluate(); };
-      box.appendChild(chip);
+      var chip=el('button','rpce-chip',label); chips[label]=chip;
+      chip.onclick=function(){ if(chips[label].classList.contains('used')) return; place(label); };
+      src.appendChild(chip);
     });
-    host.appendChild(box); host.appendChild(fb);
-    if(opts&&opts.reveal){ order.forEach(function(label,pos){ var chip=chips[label];
-      chip.dataset.done='1'; var badge=chip.querySelector('.pos');
-      badge.style.display='inline-block'; badge.textContent=pos+1; chip.classList.add('ok'); });
-      done(host,p,opts); }
+    if(opts&&opts.reveal){ order.forEach(place); }
   }
 
   window.RPCE = { render: function(payload, host, opts){
     opts=opts||{};
     try {
       if(payload.kind==='mcq') return renderMcq(payload, host, opts);
+      if(payload.kind==='multi') return renderMulti(payload, host, opts);
       if(payload.kind==='order') return renderOrder(payload, host, opts);
       return renderCloze(payload, host, opts);
     } catch(e){ host.textContent='render error: '+e; }

@@ -212,6 +212,7 @@ def characteristics_table() -> list[dict]:
     return [
         {
             "name": m.name,
+            "class": m.klass,
             "second": yn(m.second),
             "debatable": yn(m.debatable),
             "amendable": yn(m.amendable),

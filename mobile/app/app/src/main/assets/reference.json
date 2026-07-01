@@ -76,6 +76,7 @@
  "characteristics": [
   {
    "name": "Fix the Time to Which to Adjourn",
+   "class": "privileged",
    "second": "Yes",
    "debatable": "No",
    "amendable": "Yes",
@@ -84,6 +85,7 @@
   },
   {
    "name": "Adjourn",
+   "class": "privileged",
    "second": "Yes",
    "debatable": "No",
    "amendable": "No",
@@ -92,6 +94,7 @@
   },
   {
    "name": "Recess",
+   "class": "privileged",
    "second": "Yes",
    "debatable": "No",
    "amendable": "Yes",
@@ -100,6 +103,7 @@
   },
   {
    "name": "Raise a Question of Privilege",
+   "class": "privileged",
    "second": "No",
    "debatable": "No",
    "amendable": "No",
@@ -108,6 +112,7 @@
   },
   {
    "name": "Call for the Orders of the Day",
+   "class": "privileged",
    "second": "No",
    "debatable": "No",
    "amendable": "No",
@@ -116,6 +121,7 @@
   },
   {
    "name": "Lay on the Table",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "No",
    "amendable": "No",
@@ -124,6 +130,7 @@
   },
   {
    "name": "Previous Question",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "No",
    "amendable": "No",
@@ -132,6 +139,7 @@
   },
   {
    "name": "Limit or Extend Limits of Debate",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "No",
    "amendable": "Yes",
@@ -140,6 +148,7 @@
   },
   {
    "name": "Postpone to a Certain Time",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "Yes",
@@ -148,6 +157,7 @@
   },
   {
    "name": "Commit or Refer",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "Yes",
@@ -156,6 +166,7 @@
   },
   {
    "name": "Amend",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "Yes",
@@ -164,6 +175,7 @@
   },
   {
    "name": "Postpone Indefinitely",
+   "class": "subsidiary",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "No",
@@ -172,6 +184,7 @@
   },
   {
    "name": "Main Motion",
+   "class": "main",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "Yes",
@@ -180,6 +193,7 @@
   },
   {
    "name": "Point of Order",
+   "class": "incidental",
    "second": "No",
    "debatable": "No",
    "amendable": "No",
@@ -188,6 +202,7 @@
   },
   {
    "name": "Appeal",
+   "class": "incidental",
    "second": "Yes",
    "debatable": "Yes",
    "amendable": "No",
@@ -196,6 +211,7 @@
   },
   {
    "name": "Suspend the Rules",
+   "class": "incidental",
    "second": "Yes",
    "debatable": "No",
    "amendable": "No",
@@ -204,6 +220,7 @@
   },
   {
    "name": "Object to the Consideration of a Question",
+   "class": "incidental",
    "second": "No",
    "debatable": "No",
    "amendable": "No",
@@ -212,6 +229,7 @@
   },
   {
    "name": "Division of the Assembly",
+   "class": "incidental",
    "second": "No",
    "debatable": "No",
    "amendable": "No",

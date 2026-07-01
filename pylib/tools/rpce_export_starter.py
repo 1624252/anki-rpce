@@ -36,11 +36,11 @@ from anki.rpce import add_question_note, build_starter_deck, knowledge, render_j
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rpce_generate_questions as gen  # noqa: E402
 
-DEFAULT_COUNT = 1000
+DEFAULT_COUNT = 0  # 0 = full coverage (2-5 questions from every corpus paragraph)
 
 
 def add_generated_questions(col: Collection, deck_id: int, count: int) -> int:
-    questions = gen.build(count)
+    questions = gen.build(count=count)
     for q in questions:
         add_question_note(
             col,
