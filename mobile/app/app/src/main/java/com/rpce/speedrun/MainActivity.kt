@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         web = WebView(this)
-        web.setBackgroundColor(Color.parseColor("#050c1c"))
+        web.setBackgroundColor(Color.parseColor("#ffffff"))
         web.settings.javaScriptEnabled = true
         web.addJavascriptInterface(EngineBridge(), "Engine")
         setContentView(web)

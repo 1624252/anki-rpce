@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Deep Blue theme (matches desktop; see docs/rpce/UI_DESIGN.md). -->
-    <color name="rpce_navy">#050c1c</color>
+    <!-- Light Blue-on-White theme (matches desktop; see docs/rpce/UI_DESIGN.md). -->
+    <color name="rpce_bg">#ffffff</color>
     <color name="rpce_accent">#1d4ed8</color>
 </resources>

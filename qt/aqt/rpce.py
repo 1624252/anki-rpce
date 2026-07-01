@@ -54,64 +54,62 @@ APP_TITLE = "Speedrun for the RPCE"
 
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
 
-# Qt stylesheet for RPCE dialogs, matching the Deep Blue web theme (no gray).
+# Qt stylesheet for RPCE dialogs, matching the light Blue-on-White theme (no gray).
 _DIALOG_QSS = (
-    "QDialog{background:#0a1a3a}"
-    "QLabel{color:#cfe2fb;font-size:17px}"
-    "QTextBrowser,QTextEdit{background:#0a1c3d;color:#f5f9ff;border:1px solid #1e3f77;"
+    "QDialog{background:#f1f6ff}"
+    "QLabel{color:#0a1f44;font-size:17px}"
+    "QTextBrowser,QTextEdit{background:#ffffff;color:#0a1f44;border:1px solid #caddf7;"
     "border-radius:12px;font-size:17px;padding:12px}"
     "QPushButton{background:#1d4ed8;color:#fff;border:none;border-radius:12px;"
     "padding:12px 20px;font-size:16px;font-weight:700}"
     "QPushButton:hover{background:#3b82f6}"
 )
 
-# App-wide Qt stylesheet appended to Anki's own dark theme so *every* dialog
-# (including the AnkiWeb Sync login prompt, which we don't own) fits the Deep
-# Blue theme: navy surfaces, white/light-blue readable text, large blue buttons.
+# App-wide Qt stylesheet appended to Anki's own theme so *every* dialog (including
+# the AnkiWeb Sync login prompt, which we don't own) fits the light Blue-on-White
+# theme: white surfaces, dark-navy readable text, large blue buttons.
 _APP_QSS = (
-    "QMainWindow,QDialog,QMessageBox,QInputDialog{background:#0a1a3a}"
-    "QLabel,QCheckBox,QRadioButton,QGroupBox{color:#eaf2ff;font-size:15px}"
+    "QMainWindow,QDialog,QMessageBox,QInputDialog{background:#f1f6ff}"
+    "QLabel,QCheckBox,QRadioButton,QGroupBox{color:#0a1f44;font-size:15px}"
     "QLineEdit,QTextEdit,QPlainTextEdit,QSpinBox,QDoubleSpinBox,QComboBox{"
-    "background:#0a1c3d;color:#f5f9ff;border:1px solid #1e3f77;border-radius:10px;"
-    "padding:8px 11px;font-size:15px;selection-background-color:#1d4ed8}"
+    "background:#ffffff;color:#0a1f44;border:1px solid #caddf7;border-radius:10px;"
+    "padding:8px 11px;font-size:15px;selection-background-color:#1d4ed8;selection-color:#fff}"
     "QPushButton{background:#1d4ed8;color:#ffffff;border:none;border-radius:10px;"
     "padding:10px 20px;font-size:15px;font-weight:700;min-height:20px;min-width:84px}"
     "QPushButton:hover{background:#3b82f6}"
-    "QPushButton:disabled{background:#23407a;color:#9ec3f0}"
+    "QPushButton:disabled{background:#b7ccf2;color:#eef4ff}"
 )
 
-# Injected into the reviewer (study) webview so flashcards share the Deep Blue
-# theme of the practice screen: navy background, white text, sky-blue links/cloze.
+# Injected into the reviewer (study) webview so flashcards share the light theme
+# of the practice screen: white background, dark-navy text, blue links/cloze.
 _REVIEWER_CSS = (
     "<style>"
-    # Solid navy (no gradient) — a subtle gradient bands visibly across the tall
-    # reviewer area.
-    "html,body{background:#0a1a3a !important;color:#f5f9ff !important}"
+    "html,body{background:#ffffff !important;color:#0a1f44 !important}"
     ".card{background:transparent !important;background-color:transparent !important;"
-    "color:#f5f9ff !important}"
-    "hr{border:none;border-top:1px solid #1e3f77 !important}"
-    "a{color:#7dd3fc !important}"
-    ".cloze,.cloze b{color:#60a5fa !important;font-weight:700}"
+    "color:#0a1f44 !important}"
+    "hr{border:none;border-top:1px solid #caddf7 !important}"
+    "a{color:#1d4ed8 !important}"
+    ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
     "</style>"
 )
 
-# Theme the reviewer's bottom bar: navy background, and rating buttons coloured
+# Theme the reviewer's bottom bar: light background, and rating buttons coloured
 # by difficulty (Again/Hard/Good/Easy) instead of Anki's gray defaults — matching
 # the phone app. Edit / More / Show-Answer become themed blue.
 _REVIEWER_BOTTOM_CSS = (
     "<style>"
-    "body,#innertable{background:#0a1a3a !important}"
-    "body{color:#cfe2fb !important}"
+    "body,#innertable{background:#eef4ff !important}"
+    "body{color:#35548c !important}"
     "button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:#fff !important;"
     "border:none !important;border-radius:10px !important;padding:8px 16px !important;"
-    "font-weight:700 !important;box-shadow:0 3px 10px rgba(29,78,216,.4) !important}"
+    "font-weight:700 !important;box-shadow:0 3px 10px rgba(29,78,216,.3) !important}"
     "button *{color:#fff !important}"
-    "button:hover{filter:brightness(1.12)}"
-    "button[data-ease='1']{background:#9f1239 !important}"  # Again  (red)
-    "button[data-ease='2']{background:#a16207 !important}"  # Hard   (amber)
+    "button:hover{filter:brightness(1.06)}"
+    "button[data-ease='1']{background:#be123c !important}"  # Again  (red)
+    "button[data-ease='2']{background:#b45309 !important}"  # Hard   (amber)
     "button[data-ease='3']{background:#1d4ed8 !important}"  # Good   (blue)
     "button[data-ease='4']{background:#15803d !important}"  # Easy   (green)
-    ".stattxt,.nobold,.new-count,.review-count,.learn-count{color:#cfe2fb !important}"
+    ".stattxt,.nobold,.new-count,.review-count,.learn-count{color:#35548c !important}"
     "</style>"
 )
 
@@ -120,56 +118,56 @@ _REVIEWER_BOTTOM_CSS = (
 # See docs/rpce/UI_DESIGN.md.
 _THEME_CSS = (
     ":root{"
-    "--ink:#f5f9ff;--ink2:#9ec3f0;--muted:#7dd3fc;"
-    "--ready:#4ade80;--mid:#60a5fa;--warn:#fbbf24;"
-    "--surface:#0e2144;--surface2:#12294f;--track:#0a1c3d;"
-    "--border:#1e3f77;--accent1:#1d4ed8;--accent2:#3b82f6;"
+    "--ink:#0a1f44;--ink2:#35548c;--muted:#2563eb;"
+    "--ready:#15803d;--mid:#2563eb;--warn:#b45309;"
+    "--surface:#ffffff;--surface2:#f4f8ff;--track:#dbe8fb;"
+    "--border:#caddf7;--accent1:#1d4ed8;--accent2:#3b82f6;"
     "--fs-display:42px;--fs-h1:30px;--fs-h2:22px;--fs-lead:18px;"
     "--fs-body:17px;--fs-small:15px;--fs-label:13px}"
-    # Full-page darker-navy background (solid blues, no gray).
+    # Full-page light background (white -> soft blue, no gray).
     "html,body{background:"
-    "radial-gradient(1200px 760px at 12% -12%,rgba(29,78,216,.30),rgba(5,12,28,0) 60%),"
-    "linear-gradient(160deg,#050c1c 0%,#0a1a3a 55%,#050c1c 100%) !important;"
+    "radial-gradient(1200px 760px at 12% -12%,rgba(59,130,246,.16),rgba(255,255,255,0) 60%),"
+    "linear-gradient(160deg,#ffffff 0%,#eef4ff 55%,#ffffff 100%) !important;"
     "color:var(--ink) !important}"
     ".rpce-root{font-family:" + _FONT + ";color:var(--ink);font-size:var(--fs-body)}"
     ".rpce-hero{max-width:1060px;margin:44px auto 18px;padding:42px 46px;border-radius:26px;"
-    "border:1px solid var(--border);box-shadow:0 24px 64px rgba(2,8,24,.75);"
-    "background:radial-gradient(120% 140% at 0% 0%,rgba(29,78,216,.34),rgba(59,130,246,.10) 52%,rgba(8,18,40,0) 100%),"
+    "border:1px solid var(--border);box-shadow:0 20px 50px rgba(29,78,216,.14);"
+    "background:radial-gradient(120% 140% at 0% 0%,rgba(59,130,246,.12),rgba(59,130,246,.04) 52%,rgba(255,255,255,0) 100%),"
     "var(--surface)}"
     ".rpce-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}"
     ".rpce-logo{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;"
     "justify-content:center;font-weight:800;font-size:24px;color:#fff;"
-    "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.7)}"
+    "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.4)}"
     ".rpce-h1{font-size:var(--fs-h1);font-weight:800;letter-spacing:-.4px;color:var(--ink)}"
     ".rpce-h1 small{color:var(--ink2);font-weight:600;font-size:var(--fs-lead)}"
     ".rpce-sub{color:var(--ink2);font-size:var(--fs-lead);max-width:60ch;margin-left:auto;margin-right:auto}"
     ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-top:34px}"
     ".rpce-card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;"
-    "padding:26px 22px;box-shadow:0 6px 22px rgba(2,8,24,.5);text-align:center;"
+    "padding:26px 22px;box-shadow:0 6px 20px rgba(29,78,216,.08);text-align:center;"
     "display:flex;flex-direction:column;align-items:center}"
     ".rpce-label{font-size:var(--fs-label);font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}"
     ".rpce-val{font-size:var(--fs-display);font-weight:800;margin:14px 0 16px;line-height:1.02;letter-spacing:-.6px;color:var(--ink)}"
     ".rpce-pill{display:inline-block;font-size:var(--fs-label);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:5px 13px;border-radius:999px}"
     ".rpce-bar{height:9px;width:100%;border-radius:999px;background:var(--track);margin-top:18px;overflow:hidden}"
     ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
-    ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(125,211,252,.18)}"
-    ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.20)}"
-    ".rpce-cf-medium{color:var(--mid)}.rpce-pill.rpce-cf-medium{background:rgba(96,165,250,.22)}"
-    ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(74,222,128,.20)}"
+    ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(37,99,235,.12)}"
+    ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(180,83,9,.14)}"
+    ".rpce-cf-medium{color:var(--mid)}.rpce-pill.rpce-cf-medium{background:rgba(37,99,235,.14)}"
+    ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(21,128,61,.14)}"
     ".rpce-covhead{display:flex;justify-content:space-between;font-size:var(--fs-small);margin:28px 0 10px;color:var(--ink2)}"
     ".rpce-covhead b{font-weight:700;letter-spacing:.4px;text-transform:uppercase}"
     ".rpce-cov{height:14px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
     ".rpce-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:24px}"
     ".rpce-chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-body);color:var(--ink);"
-    "background:rgba(37,99,235,.20);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
-    ".rpce-note{margin-top:22px;font-size:var(--fs-body);color:#fcd34d;background:rgba(29,78,216,.16);"
-    "border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:12px;padding:15px 18px}"
+    "background:rgba(37,99,235,.10);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
+    ".rpce-note{margin-top:22px;font-size:var(--fs-body);color:#92400e;background:rgba(180,83,9,.10);"
+    "border:1px solid rgba(180,83,9,.30);border-left:4px solid var(--warn);border-radius:12px;padding:15px 18px}"
     ".rpce-foot{margin-top:26px;text-align:center;font-size:var(--fs-small);color:var(--ink2)}.rpce-foot b{color:var(--ink)}"
     ".rpce-tbl{border-collapse:collapse;width:100%;font-size:var(--fs-body)}"
     ".rpce-tbl th{color:var(--ink2);font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.5px;"
     "text-align:left;padding:12px 14px;border-bottom:2px solid var(--border)}"
-    ".rpce-tbl td{padding:13px 14px;border-bottom:1px solid rgba(30,63,119,.7)}"
+    ".rpce-tbl td{padding:13px 14px;border-bottom:1px solid var(--border)}"
     ".rpce-colbar{height:9px;width:150px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-colbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
 )
@@ -431,7 +429,7 @@ class ScenarioDialog(QDialog):
         layout.setContentsMargins(22, 22, 22, 22)
         layout.setSpacing(14)
         heading = QLabel("Section II — performance scenario")
-        heading.setStyleSheet("font-size:24px;font-weight:800;color:#f5f9ff")
+        heading.setStyleSheet("font-size:24px;font-weight:800;color:#0a1f44")
         layout.addWidget(heading)
         self._domain = QLabel()
         layout.addWidget(self._domain)
@@ -542,17 +540,17 @@ def _add_menu() -> None:
     qconnect(t3.triggered, _stop_timer)
 
 
-def _apply_dark_theme() -> None:
-    """Lock the app to a single dark theme (no light/follow-system mode) so the
-    whole UI — menus, dialogs, and the Sync prompt — stays dark blue + white."""
+def _apply_light_theme() -> None:
+    """Lock the app to a single light theme (no dark/follow-system mode) so the
+    whole UI — menus, dialogs, and the Sync prompt — stays blue-on-white."""
     mw = aqt.mw
     if mw is None:
         return
     try:
         from aqt.theme import Theme, theme_manager
 
-        if mw.pm.theme() != Theme.DARK:
-            mw.pm.set_theme(Theme.DARK)
+        if mw.pm.theme() != Theme.LIGHT:
+            mw.pm.set_theme(Theme.LIGHT)
         theme_manager.apply_style()
     except Exception as exc:  # never block startup over theming
         print(f"RPCE theme error: {exc}")
@@ -582,7 +580,7 @@ def _on_profile_open() -> None:
     if mw is None or mw.col is None:
         return
     mw.setWindowTitle(APP_TITLE)
-    _apply_dark_theme()
+    _apply_light_theme()
     from anki.rpce import TRANSFER_NOTETYPE, build_starter_deck
 
     if mw.col.decks.by_name("RPCE") is None:
@@ -648,7 +646,7 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
             question, answer = note["ClozeQ"], note["ClozeA"]
         label = (
             "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
-            f"color:#7dd3fc;margin-bottom:14px'>{rung} · same concept</div>"
+            f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
         )
         body = f"<div style='font-size:20px;line-height:1.5'>{question}</div>"
         if "Question" in kind:
@@ -658,7 +656,7 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
                 label
                 + body
                 + "<hr id=answer>"
-                + f"<div style='font-size:20px;line-height:1.5;color:#4ade80'>{answer}</div>"
+                + f"<div style='font-size:20px;line-height:1.5;color:#15803d'>{answer}</div>"
             )
         return text
     except Exception as exc:  # never break reviewing over rendering
@@ -764,15 +762,15 @@ def _tab_timed() -> None:
 
 _TOOLBAR_CSS = (
     "<style>"
-    "body{background:#050c1c !important}"
-    ".header{background:linear-gradient(90deg,#081633,#0c2149) !important;"
-    "border-bottom:1px solid #1e3f77 !important;padding:10px 8px !important}"
+    "body{background:#ffffff !important}"
+    ".header{background:linear-gradient(90deg,#eef4ff,#e0ecff) !important;"
+    "border-bottom:1px solid #caddf7 !important;padding:10px 8px !important}"
     ".hitem{font-size:16px !important;font-weight:800 !important;color:#ffffff !important;"
     "padding:10px 20px !important;margin:0 5px !important;border-radius:12px !important;text-decoration:none !important;"
     "background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;border:1px solid #3b82f6 !important;"
-    "box-shadow:0 4px 14px rgba(29,78,216,.45) !important}"
+    "box-shadow:0 4px 14px rgba(29,78,216,.30) !important}"
     ".hitem:hover{background:linear-gradient(135deg,#2563eb,#60a5fa) !important;"
-    "color:#fff !important;border-color:#7dd3fc !important}"
+    "color:#fff !important;border-color:#1d4ed8 !important}"
     "</style>"
 )
 

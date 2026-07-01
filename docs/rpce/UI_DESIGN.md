@@ -1,36 +1,38 @@
 # RPCE UI Design System
 
-The plan for a UI that is **accessible**, **pretty** (a deep-blue palette — no
-gray), and **intuitive**. Implemented as CSS design tokens in `qt/aqt/rpce.py`
+The plan for a UI that is **accessible**, **pretty** (a blue-on-white palette —
+no gray), and **intuitive**. Implemented as CSS design tokens in `qt/aqt/rpce.py`
 (shared by the home banner and dashboard) plus matching Qt stylesheets for
 dialogs, so every surface is consistent.
 
 ## Principles
 
-- **One fixed theme (no light/dark modes):** both apps are locked to a single
-  dark-blue theme. The desktop forces Anki's dark theme and appends an app-wide
-  Qt stylesheet (`_APP_QSS`) so *every* dialog — including the AnkiWeb **Sync**
-  login prompt we don't own — is navy + white with large blue buttons. The
-  Android app uses a fixed `Theme.RPCE` (not `DayNight`), so it never follows the
+- **One fixed theme (no light/dark toggle):** both apps are locked to a single
+  **light Blue-on-White** theme. The desktop forces Anki's light theme and
+  appends an app-wide Qt stylesheet (`_APP_QSS`) so *every* dialog — including
+  the AnkiWeb **Sync** login prompt we don't own — is white + dark-navy text
+  with large blue buttons. The Android app uses a fixed `Theme.RPCE`
+  (`Theme.AppCompat.Light.NoActionBar`, not `DayNight`), so it never follows the
   system light/dark setting.
 - **Accessible:** body text ≥ 17px, never below 13px (only ALL-CAPS labels);
-  strong contrast (light text on deep navy); clear focus/hover states; color
+  strong contrast (dark navy text on white); clear focus/hover states; color
   is never the only signal (labels + shapes too).
-- **Pretty, no gray:** a single **"Deep Blue"** palette — dark navy background,
-  blue→sky accents, light-blue secondary text. No slate/gray anywhere.
+- **Pretty, no gray:** a single **Blue-on-White** palette — white/soft-blue
+  background, dark-navy text, blue→sky accents, medium-blue secondary text. No
+  slate/gray anywhere (neutrals are blue-tinted).
 - **Intuitive:** one clear hierarchy per page (title → key numbers → details →
   actions), consistent spacing, tappable/clickable targets ≥ 40px.
 
-## Color palette (Deep Blue) — dark navy + white, no gray
+## Color palette (Blue-on-White) — white + dark navy, no gray
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--bg-1` | `#0a1628` | page background (dark navy) |
-| `--bg-2` | `#0f2447` | gradient stop / raised areas |
-| `--surface` | `rgba(96,165,250,.08)` | cards / panels |
-| `--border` | `rgba(96,165,250,.30)` | card / divider borders |
-| `--ink` | `#f8fbff` | primary text (white) |
-| `--ink-2` | `#a9c7ee` | secondary text (light blue — replaces gray) |
+| `--surface` | `#ffffff` | cards / panels |
+| `--surface2` | `#f4f8ff` | raised areas |
+| `--track` | `#dbe8fb` | progress-bar tracks |
+| `--border` | `#caddf7` | card / divider borders |
+| `--ink` | `#0a1f44` | primary text (dark navy) |
+| `--ink-2` | `#35548c` | secondary text (medium blue — replaces gray) |
 | `--accent` | `#2563eb` → `#38bdf8` | primary gradient (blue→sky) |
 | `--ready` | `#4ade80` | high confidence / good (green) |
 | `--mid` | `#38bdf8` | medium confidence (sky) |
