@@ -51,6 +51,18 @@ dialogs, so every surface is consistent.
 | `--fs-small` | 15px | secondary lines |
 | `--fs-label` | 13px | ALL-CAPS labels & pills only |
 
+## Logo & branding
+
+- **Logo:** a navy (`#0a1f44`) gavel with a blue (`#2f6fed`) head and light-blue
+  (`#60a5fa`) "speed" streak — parliamentary authority + fast mastery — on a
+  rounded white tile. Matches the Blue-on-White palette; no gray, no text.
+- **Where it's used:**
+  - Desktop: application/taskbar + window icon (`qt/aqt/data/qt/icons/rpce_logo.png`)
+    and the home banner (inlined small copy `rpce_logo_small.png`).
+  - Phone: launcher icon (`res/mipmap-*/ic_launcher(.|_round.)png`) and the home
+    header (`assets/rpce_logo.png`).
+- Source master lives outside the repo; sized copies are checked in per target.
+
 ## Spacing & shape
 
 - Spacing steps: 6 / 10 / 16 / 22 / 30 px. Card radius 20px; pill radius 999px.

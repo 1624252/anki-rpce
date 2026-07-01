@@ -15,12 +15,15 @@ and is easy to remove for an upstream merge.
 
 from __future__ import annotations
 
+import base64
+import functools
 import os
 
 import aqt
 from aqt import gui_hooks
 from aqt.qt import (
     QDialog,
+    QIcon,
     QLabel,
     QMenu,
     QPushButton,
@@ -29,7 +32,45 @@ from aqt.qt import (
     QVBoxLayout,
     qconnect,
 )
-from aqt.utils import tooltip
+from aqt.utils import aqt_data_folder, tooltip
+
+
+def _icon_path(filename: str) -> str:
+    """Absolute path to a bundled icon under aqt's data/qt/icons folder."""
+    return os.path.join(aqt_data_folder(), "qt", "icons", filename)
+
+
+@functools.lru_cache(maxsize=None)
+def _logo_data_uri() -> str:
+    """The app logo as an inline data URI (cached), for the web home banner."""
+    try:
+        with open(_icon_path("rpce_logo_small.png"), "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        return f"data:image/png;base64,{b64}"
+    except OSError:
+        return ""
+
+
+def app_icon() -> QIcon:
+    """The Speedrun-for-the-RPCE window/app icon."""
+    return QIcon(_icon_path("rpce_logo.png"))
+
+
+def _apply_app_icon() -> None:
+    """Set the RPCE logo as the window + application (taskbar) icon."""
+    try:
+        icon = app_icon()
+        if icon.isNull():
+            return
+        from aqt.qt import QApplication
+
+        app = QApplication.instance()
+        if app is not None:
+            app.setWindowIcon(icon)
+        if aqt.mw is not None:
+            aqt.mw.setWindowIcon(icon)
+    except Exception as exc:  # never block startup over branding
+        print(f"RPCE icon error: {exc}")
 
 
 def _load_corpus() -> str:
@@ -141,9 +182,8 @@ _THEME_CSS = (
     "background:radial-gradient(120% 140% at 0% 0%,rgba(59,130,246,.12),rgba(59,130,246,.04) 52%,rgba(255,255,255,0) 100%),"
     "var(--surface)}"
     ".rpce-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}"
-    ".rpce-logo{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;"
-    "justify-content:center;font-weight:800;font-size:24px;color:#fff;"
-    "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.4)}"
+    ".rpce-logo{width:76px;height:76px;border-radius:20px;display:block;object-fit:contain;"
+    "box-shadow:0 10px 26px rgba(29,78,216,.28)}"
     ".rpce-h1{font-size:var(--fs-h1);font-weight:800;letter-spacing:-.4px;color:var(--ink)}"
     ".rpce-h1 small{color:var(--ink2);font-weight:600;font-size:var(--fs-lead)}"
     ".rpce-sub{color:var(--ink2);font-size:var(--fs-lead);max-width:60ch;margin-left:auto;margin-right:auto}"
@@ -295,7 +335,7 @@ def _banner_html(col) -> str:
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head">
-    <div class="rpce-logo">RP</div>
+    <img class="rpce-logo" src="{_logo_data_uri()}" alt="Speedrun for the RPCE logo">
     <div>
       <div class="rpce-h1">Speedrun <small>for the RPCE</small></div>
       <div class="rpce-sub">Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
@@ -591,6 +631,7 @@ def _add_menu() -> None:
     if mw is None:
         return
     mw.setWindowTitle(APP_TITLE)
+    _apply_app_icon()
     menu = QMenu("&RPCE", mw)
     mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
     build_action = menu.addAction("Build starter deck")
@@ -651,6 +692,7 @@ def _on_profile_open() -> None:
     if mw is None or mw.col is None:
         return
     mw.setWindowTitle(APP_TITLE)
+    _apply_app_icon()
     _apply_light_theme()
     from anki.rpce import TRANSFER_NOTETYPE, build_starter_deck
 
