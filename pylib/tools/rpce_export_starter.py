@@ -90,10 +90,14 @@ def _fields_for(q: gen.Question) -> dict[str, str]:
             "MCQIdx": str(idx),
             "rung": "mcq",
         }
-    # cloze recall — fill the blank with the emphasised term (highlighted)
+    # cloze recall — the answer fills the blank in place: the same sentence with
+    # the emphasised term restored and highlighted (not shown as a separate line).
+    term = q.answer
+    blanked = q.quote.replace(term, "_____", 1)
+    filled = q.quote.replace(term, f'<span class="cloze-reveal">{term}</span>', 1)
     return {
-        "ClozeQ": _br(q.stem),
-        "ClozeA": f'<span class="cloze-reveal">{q.answer}</span>',
+        "ClozeQ": _br(blanked),
+        "ClozeA": _br(filled),
         "MCQQ": "",
         "MCQA": "",
         "MCQOptions": "",

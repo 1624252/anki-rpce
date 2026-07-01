@@ -167,8 +167,10 @@ def _transfer_notetype(col: Collection):
     # e.g. the phone): the cloze recall prompt. Every answer carries the RONR
     # citation + verbatim quote.
     tmpl["qfmt"] = "{{ClozeQ}}"
+    # Answer fills the blank in place: show the completed sentence (ClozeA), not
+    # the blanked question again followed by a separate reveal.
     tmpl["afmt"] = (
-        "{{FrontSide}}<hr id=answer>{{ClozeA}}"
+        "{{ClozeA}}"
         "{{#Citation}}<div class=rpce-ref>"
         "<div class=rpce-cite>RONR (12th ed.) {{Citation}}</div>"
         "<div class=rpce-quote>&ldquo;{{Quote}}&rdquo;</div></div>{{/Citation}}"

@@ -129,6 +129,8 @@ _REVIEWER_CSS = (
     "hr{border:none;border-top:1px solid #caddf7 !important}"
     "a{color:#1d4ed8 !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
+    # Revealed cloze blank — green, matching the phone.
+    ".cloze-reveal{color:#15803d !important;font-weight:700}"
     "</style>"
 )
 
@@ -139,8 +141,9 @@ _REVIEWER_BOTTOM_CSS = (
     "<style>"
     "body,#innertable{background:#eef4ff !important}"
     "body{color:#35548c !important}"
-    # Remove the reviewer's Edit button (not part of the RPCE study flow).
+    # Remove the reviewer's Edit and More buttons (not part of the RPCE flow).
     "button[onclick*='edit']{display:none !important}"
+    "button[onclick*='more']{display:none !important}"
     # …and keep both side cells equal width so the rating buttons stay centered
     # now that the left (Edit) cell is empty.
     "td.stat{width:120px !important}"
@@ -636,6 +639,49 @@ def _on_webview_content(web_content, context) -> None:
         print(f"RPCE reviewer-theme error: {exc}")
 
 
+def _rpce_starter_apkg() -> str | None:
+    """Locate the committed starter deck the phone also bundles, so the desktop
+    imports the *same* 1000-question deck (identical note GUIDs → clean sync).
+    Returns None (→ curated fallback) if it can't be found (e.g. a packaged
+    install that didn't ship it)."""
+    import os
+
+    candidates = [
+        os.environ.get("RPCE_STARTER_APKG", ""),
+        # dev run: CWD is the repo root (run.bat), where the phone asset lives.
+        os.path.join("mobile", "app", "app", "src", "main", "assets", "rpce_starter.apkg"),
+    ]
+    try:
+        import anki.rpce as _r
+
+        pkg_dir = os.path.dirname(_r.__file__ or "")
+        if pkg_dir:
+            candidates.append(os.path.join(pkg_dir, "starter.apkg"))
+    except Exception:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+    return None
+
+
+def _build_or_import_rpce_deck(mw) -> None:
+    """Seed the RPCE deck: import the shared starter deck (same questions as the
+    phone) if available, otherwise build the curated seven-domain deck."""
+    from anki.rpce import build_starter_deck
+
+    apkg = _rpce_starter_apkg()
+    if apkg:
+        try:
+            import anki.import_export_pb2 as ie
+
+            mw.col.import_anki_package(ie.ImportAnkiPackageRequest(package_path=apkg))
+            return
+        except Exception as exc:  # fall back to the curated deck
+            print(f"RPCE starter-deck import failed ({exc}); building curated deck")
+    build_starter_deck(mw.col)
+
+
 def _on_profile_open() -> None:
     """Brand the window and make sure the RPCE deck exists and is selected."""
     mw = aqt.mw
@@ -644,11 +690,13 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
-    from anki.rpce import TRANSFER_NOTETYPE, build_starter_deck
+    from anki.rpce import TRANSFER_NOTETYPE
 
     if mw.col.decks.by_name("RPCE") is None:
-        deck_id = build_starter_deck(mw.col)
-        mw.col.decks.set_current(deck_id)
+        _build_or_import_rpce_deck(mw)
+        deck = mw.col.decks.by_name("RPCE")
+        if deck is not None:
+            mw.col.decks.set_current(deck["id"])
         return
     # Migrate the app-generated deck to the one-card-per-concept model: drop any
     # stale notes that aren't the current concept notetype (old separate
@@ -658,9 +706,20 @@ def _on_profile_open() -> None:
         stale = mw.col.find_notes(f'deck:RPCE -note:"{TRANSFER_NOTETYPE}"')
         if stale:
             mw.col.remove_notes(stale)
-        if not mw.col.find_cards(f'note:"{TRANSFER_NOTETYPE}"'):
-            deck_id = build_starter_deck(mw.col)
-            mw.col.decks.set_current(deck_id)
+        # One-time re-seed: if the shared 1000-question deck is available but this
+        # profile only has the older curated set, replace it so the desktop uses
+        # the same questions as the phone (same GUIDs → clean sync).
+        has_generated = bool(mw.col.find_cards("tag:rpce::fmt::mcq"))
+        if _rpce_starter_apkg() and not has_generated:
+            notes = mw.col.find_notes("deck:RPCE")
+            if notes:
+                mw.col.remove_notes(notes)
+            _build_or_import_rpce_deck(mw)
+        elif not mw.col.find_cards(f'note:"{TRANSFER_NOTETYPE}"'):
+            _build_or_import_rpce_deck(mw)
+        deck = mw.col.decks.by_name("RPCE")
+        if deck is not None:
+            mw.col.decks.set_current(deck["id"])
     except Exception as exc:
         print(f"RPCE deck migration error: {exc}")
 
@@ -761,36 +820,43 @@ def _mcq_html(note, label: str, answer_side: bool) -> str:
 
 
 def _on_card_will_show(text: str, card, kind: str) -> str:
-    """Rotate which format of a concept is shown each repetition, so the same
-    problem resurfaces in a different shape while keeping one FSRS schedule
-    (Transfer Ladder, spec §7.1). MCQ rungs are interactive multiple choice;
-    non-RPCE cards are untouched."""
+    """Render an RPCE card. Concept notes that carry both formats rotate each
+    repetition (Transfer Ladder, spec §7.1); single-format generated questions
+    render as their one format. MCQ is interactive multiple choice; cloze fills
+    the blank in place on the answer side. Non-RPCE cards are untouched."""
     try:
         if not _is_transfer_card(card):
             return text
         from anki.rpce import transfer_ladder
 
-        rung = transfer_ladder.rung_for_reps(card.reps)
         note = card.note()
-        label = (
-            "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
-            f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
-        )
+        has_mcq = bool(note["MCQOptions"])
+        # A genuine cloze prompt (not the phone's MCQ payload smuggled in ClozeQ).
+        has_cloze = bool(note["ClozeQ"]) and "mcq-data" not in note["ClozeQ"]
+        if has_mcq and has_cloze:
+            rung = transfer_ladder.rung_for_reps(card.reps)
+            label = (
+                "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
+                f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
+            )
+        else:
+            rung = "mcq" if has_mcq else "cloze"
+            label = ""
         ref = _ref_block(note["Citation"], note["Quote"])
         if rung == "mcq":
             html = _mcq_html(note, label, answer_side="Answer" in kind)
             if "Answer" in kind:
                 html += ref
             return html
-        body = f"<div style='font-size:20px;line-height:1.5'>{note['ClozeQ']}</div>"
+        # Cloze: the question shows the blanked sentence; the answer shows the
+        # same sentence with the blank filled in place (ClozeA), not a separate
+        # reveal below it.
         if "Question" in kind:
-            return label + body
+            return label + f"<div style='font-size:20px;line-height:1.5'>{note['ClozeQ']}</div>"
         if "Answer" in kind:
             return (
                 label
-                + body
-                + "<hr id=answer>"
-                + f"<div style='font-size:20px;line-height:1.5;color:#15803d'>{note['ClozeA']}</div>"
+                + f"<div style='font-size:20px;line-height:1.5'>{note['ClozeA']}</div>"
                 + ref
             )
         return text
@@ -873,9 +939,7 @@ def _select_rpce_deck() -> bool:
         return False
     deck = mw.col.decks.by_name("RPCE")
     if deck is None:
-        from anki.rpce import build_starter_deck
-
-        build_starter_deck(mw.col)
+        _build_or_import_rpce_deck(mw)
         deck = mw.col.decks.by_name("RPCE")
     if deck is None:
         return False
