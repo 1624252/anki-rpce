@@ -1,17 +1,23 @@
 # RPCE UI Design System
 
-The plan for a UI that is **accessible**, **pretty** (a warm violet palette — no
+The plan for a UI that is **accessible**, **pretty** (a deep-blue palette — no
 gray), and **intuitive**. Implemented as CSS design tokens in `qt/aqt/rpce.py`
 (shared by the home banner and dashboard) plus matching Qt stylesheets for
 dialogs, so every surface is consistent.
 
 ## Principles
 
+- **One fixed theme (no light/dark modes):** both apps are locked to a single
+  dark-blue theme. The desktop forces Anki's dark theme and appends an app-wide
+  Qt stylesheet (`_APP_QSS`) so *every* dialog — including the AnkiWeb **Sync**
+  login prompt we don't own — is navy + white with large blue buttons. The
+  Android app uses a fixed `Theme.RPCE` (not `DayNight`), so it never follows the
+  system light/dark setting.
 - **Accessible:** body text ≥ 17px, never below 13px (only ALL-CAPS labels);
-  strong contrast (light text on deep violet); clear focus/hover states; color
+  strong contrast (light text on deep navy); clear focus/hover states; color
   is never the only signal (labels + shapes too).
-- **Pretty, no gray:** a single **"Grape"** palette — deep violet background,
-  violet→fuchsia accents, warm secondary text. No slate/gray anywhere.
+- **Pretty, no gray:** a single **"Deep Blue"** palette — dark navy background,
+  blue→sky accents, light-blue secondary text. No slate/gray anywhere.
 - **Intuitive:** one clear hierarchy per page (title → key numbers → details →
   actions), consistent spacing, tappable/clickable targets ≥ 40px.
 
@@ -46,7 +52,7 @@ dialogs, so every surface is consistent.
 ## Spacing & shape
 
 - Spacing steps: 6 / 10 / 16 / 22 / 30 px. Card radius 20px; pill radius 999px.
-- Cards: `--surface` bg, `--border`, soft violet shadow `0 10px 30px rgba(88,28,135,.35)`.
+- Cards: `--surface` bg, `--border`, soft navy shadow `0 6px 22px rgba(2,8,24,.5)`.
 
 ## Per-page layout
 
@@ -56,14 +62,17 @@ dialogs, so every surface is consistent.
   hint pointing at the tabs.
 - **Dashboard window:** same score-card grid + a coverage table with per-domain
   bars; larger, scrollable.
-- **Section II dialog:** violet surface, 17px prompt/answer text, accent-gradient
+- **Section II dialog:** navy surface, 17px prompt/answer text, blue
   "Grade" button, readable feedback block.
-- **Toolbar tabs:** 16px, violet hover pill, deep-grape bar.
+- **Toolbar tabs:** 16px, blue hover pill, deep-navy bar.
+- **Mobile home:** same banner (logo, title, 4 score cards, coverage bar, chips,
+  abstain note) rendered from `assets/home.html` in a WebView, on the fixed navy
+  theme with a navy status bar.
 
 ## Accessibility checklist
 
 - [ ] Body ≥ 17px; labels ≥ 13px (caps only)
-- [ ] Text/background contrast passes AA on the grape background
+- [ ] Text/background contrast passes AA on the navy background
 - [ ] Hover + focus states on tabs, buttons, links
 - [ ] Confidence shown by **label text**, not color alone
 - [ ] Targets ≥ 40px tall
