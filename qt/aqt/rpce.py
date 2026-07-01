@@ -303,18 +303,18 @@ def _readiness_html(col) -> str:
         for c in s["coverage"]
     )
     next_topic = (
-        f"<p class='rpce-sub' style='font-size:15px'>🎯 <b style='color:var(--ink)'>Best next topic:</b> {sec1.best_next_topic}</p>"
+        f"<p class='rpce-sub'>🎯 <b style='color:var(--ink)'>Best next topic:</b> {sec1.best_next_topic}</p>"
         if sec1.best_next_topic
         else ""
     )
     return f"""{_theme_style()}
 <div class="rpce-root" style="max-width:900px;margin:0 auto;padding:14px 10px">
-  <div class="rpce-h1" style="font-size:28px">RPCE readiness</div>
-  <div class="rpce-sub" style="margin-bottom:22px;font-size:15px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+  <div class="rpce-h1">RPCE readiness</div>
+  <div class="rpce-sub" style="margin-bottom:22px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
   <div class="rpce-grid">{cards}</div>
-  <p class="rpce-sub" style="font-size:15px;margin-top:22px"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
+  <p class="rpce-sub" style="margin-top:22px"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
   {next_topic}
-  <div class="rpce-h1" style="font-size:18px;margin:26px 0 12px">Coverage map
+  <div class="rpce-h1" style="font-size:var(--fs-h2);margin:26px 0 12px">Coverage map
     <small>· 7 Performance-Expectation domains</small></div>
   <table class="rpce-tbl">
     <tr><th>Domain</th><th style="text-align:center">Cards</th><th>Exam weight</th></tr>
