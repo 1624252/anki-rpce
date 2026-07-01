@@ -84,10 +84,9 @@ _APP_QSS = (
 # theme of the practice screen: navy background, white text, sky-blue links/cloze.
 _REVIEWER_CSS = (
     "<style>"
-    "html,body{background:"
-    "radial-gradient(1200px 760px at 12% -12%,rgba(29,78,216,.30),rgba(5,12,28,0) 60%),"
-    "linear-gradient(160deg,#050c1c 0%,#0a1a3a 55%,#050c1c 100%) !important;"
-    "color:#f5f9ff !important}"
+    # Solid navy (no gradient) — a subtle gradient bands visibly across the tall
+    # reviewer area.
+    "html,body{background:#0a1a3a !important;color:#f5f9ff !important}"
     ".card{background:transparent !important;background-color:transparent !important;"
     "color:#f5f9ff !important}"
     "hr{border:none;border-top:1px solid #1e3f77 !important}"
