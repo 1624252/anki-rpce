@@ -13,7 +13,10 @@ pass the gold-set checker first).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+
+_CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
 
 
 @dataclass(frozen=True)
@@ -133,6 +136,16 @@ def flashcards_for(domain_code: int) -> list[Flashcard]:
 
 def all_flashcards() -> tuple[Flashcard, ...]:
     return FLASHCARDS
+
+
+def cloze_answer(card: Flashcard) -> str:
+    """The cloze sentence with all deletions revealed."""
+    return _CLOZE_RE.sub(r"\1", card.cloze)
+
+
+def cloze_question(card: Flashcard) -> str:
+    """The cloze sentence with deletions blanked out."""
+    return _CLOZE_RE.sub("[…]", card.cloze)
 
 
 def mcq_back(card: Flashcard) -> str:

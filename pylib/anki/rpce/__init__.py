@@ -119,40 +119,63 @@ def coverage_pct(col: Collection) -> float:
     return covered / len(cov)
 
 
-def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
-    """Create the starter deck with **multiple flashcard formats per concept**.
+#: Name of the notetype that carries every format of one concept in one note.
+TRANSFER_NOTETYPE = "RPCE Transfer"
 
-    For each concept we add a **cloze** recall card and an applied
-    **multiple-choice** card (same fact, different formats / learning styles —
-    Spiky POV 1). Section II free-text scenarios are practised separately. Cards
-    are tagged with their domain (`rpce::domain::N`), concept
-    (`rpce::concept::C`), and format rung (`rpce::fmt::cloze|mcq`). Returns the
-    deck id.
+
+def _transfer_notetype(col: Collection):
+    """Get (or create) the single-card, multi-format concept notetype.
+
+    A concept is **one problem** for spaced repetition: one note → one card →
+    one FSRS schedule (Spiky POV 1 / spec §7.1). The card carries every format
+    of the concept in its fields; the Transfer Ladder rotates which format is
+    *shown* each repetition (`transfer_ladder.rung_for_reps`), so the same
+    problem never appears in the same shape twice in a row while repeating on a
+    single schedule — exactly as the algorithm repeats one problem.
+    """
+    mm = col.models
+    existing = mm.by_name(TRANSFER_NOTETYPE)
+    if existing is not None:
+        return existing
+    m = mm.new(TRANSFER_NOTETYPE)
+    for field in ("Concept", "Domain", "ClozeQ", "ClozeA", "MCQQ", "MCQA"):
+        mm.add_field(m, mm.new_field(field))
+    tmpl = mm.new_template("Concept")
+    # Default rendering (used where the desktop format-rotation hook is absent,
+    # e.g. the phone): the cloze recall prompt.
+    tmpl["qfmt"] = "{{ClozeQ}}"
+    tmpl["afmt"] = "{{FrontSide}}<hr id=answer>{{ClozeA}}"
+    mm.add_template(m, tmpl)
+    mm.add(m)
+    return mm.by_name(TRANSFER_NOTETYPE)
+
+
+def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
+    """Create the starter deck with **one card per concept** (same problem,
+    one schedule), each carrying multiple formats that rotate on review.
+
+    Each concept becomes a single ``RPCE Transfer`` note tagged with its domain
+    (`rpce::domain::N`) and concept (`rpce::concept::C`). The cloze recall and
+    applied multiple-choice forms live in that one note's fields; the desktop
+    rotates between them per repetition (Spiky POV 1). Section II free-text
+    scenarios are practised separately. Returns the deck id.
     """
     from . import flashcards
-    from .transfer_ladder import concept_tag, format_tag
+    from .transfer_ladder import concept_tag
 
     deck_id = col.decks.id(name)
     assert deck_id is not None
-    basic = col.models.by_name("Basic")
-    cloze_model = col.models.by_name("Cloze")
-    if basic is None or cloze_model is None:
-        raise RuntimeError("Basic/Cloze notetypes not found")
+    model = _transfer_notetype(col)
 
     for card in flashcards.all_flashcards():
-        base_tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
-
-        # Cloze recall card.
-        cloze_note = col.new_note(cloze_model)
-        cloze_note["Text"] = card.cloze
-        cloze_note.tags = [*base_tags, format_tag("cloze")]
-        col.add_note(cloze_note, deck_id)
-
-        # Applied multiple-choice card (same concept, different format).
-        mcq_note = col.new_note(basic)
-        mcq_note["Front"] = flashcards.mcq_front(card)
-        mcq_note["Back"] = flashcards.mcq_back(card)
-        mcq_note.tags = [*base_tags, format_tag("mcq")]
-        col.add_note(mcq_note, deck_id)
+        note = col.new_note(model)
+        note["Concept"] = str(card.concept_id)
+        note["Domain"] = str(card.domain_code)
+        note["ClozeQ"] = flashcards.cloze_question(card)
+        note["ClozeA"] = flashcards.cloze_answer(card)
+        note["MCQQ"] = flashcards.mcq_front(card).replace("\n", "<br>")
+        note["MCQA"] = flashcards.mcq_back(card)
+        note.tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
+        col.add_note(note, deck_id)
 
     return deck_id

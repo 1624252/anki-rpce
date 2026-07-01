@@ -19,18 +19,24 @@ def test_starter_deck_populates_every_domain():
 
     cov = rpce.coverage(col)
     assert len(cov) == 7
-    # Each concept yields a cloze + an mcq card, so every domain has >= 2.
-    assert all(c.cards >= 2 for c in cov), "each domain gets cloze + mcq cards"
+    # One concept card per domain (the same problem, one schedule).
+    assert all(c.cards >= 1 for c in cov), "each domain gets a concept card"
     assert rpce.coverage_pct(col) == 1.0
 
 
-def test_starter_deck_has_multiple_formats_per_concept():
+def test_concept_is_one_card_with_multiple_formats():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
 
-    # Same content surfaces in more than one format (cloze recall + applied MCQ).
-    assert col.find_cards("tag:rpce::fmt::cloze"), "cloze cards exist"
-    assert col.find_cards("tag:rpce::fmt::mcq"), "multiple-choice cards exist"
+    # Each concept is a single note/card (one FSRS schedule), not one per format.
+    from anki.rpce import flashcards
+
+    assert col.card_count() == len(flashcards.all_flashcards())
+    # …but that one note carries both formats, which rotate on review.
+    cid = col.find_cards("tag:rpce::concept::101")[0]
+    note = col.get_card(cid).note()
+    assert note["ClozeQ"] and note["ClozeA"], "cloze recall form present"
+    assert note["MCQQ"] and note["MCQA"], "applied MCQ form present"
 
 
 def test_topic_weights_round_trip_through_config():

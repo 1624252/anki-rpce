@@ -532,8 +532,9 @@ pending; **Planned** = designed, not built.
 | --- | --- | --- |
 | Points-at-Stake Queue (§7.5) | **Done** | `rslib/.../points_at_stake.rs` + proto RPC; 6 Rust + 2 Py tests |
 | Content model: 7 domains, coverage (§11) | **Done** | `anki.rpce` via tags + config (not custom tables) |
-| Multi-format flashcards: cloze + MCQ (§7.1) | **Done** | `flashcards.py`; **advising** rung defined but not generated |
-| Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `reviewer_did_answer_card` hook |
+| Multi-format flashcards: cloze + MCQ (§7.1) | **Done** | `flashcards.py`; one `RPCE Transfer` note carries both forms |
+| Same concept = one problem, one schedule (§7.1) | **Done** | one card per concept; format rotates per repetition (`rung_for_reps`) so the same problem repeats on a single FSRS schedule, never the same shape twice in a row |
+| Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `card_will_show` rotation + `reviewer_did_answer_card` tally |
 | Dual-mode: Section I flashcards + Section II scenarios (§7.2) | **Done** | deck + `scenarios.py` + practice dialog |
 | AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |

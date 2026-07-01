@@ -26,6 +26,12 @@ if TYPE_CHECKING:
 #: Format rungs in ascending order of transfer demand.
 RUNGS: tuple[str, ...] = ("cloze", "mcq", "scenario", "advising")
 
+#: Rungs with per-concept flashcard content today (cloze recall + applied MCQ).
+#: The single concept card rotates through these each repetition so the same
+#: problem never shows in the same shape twice in a row (scenario/advising are
+#: exercised via Section II practice, not the scheduled concept card).
+AVAILABLE_RUNGS: tuple[str, ...] = ("cloze", "mcq")
+
 CONCEPT_TAG_PREFIX = "rpce::concept"
 FORMAT_TAG_PREFIX = "rpce::fmt"
 
@@ -93,15 +99,31 @@ def rung_of_tags(tags: list[str]) -> str | None:
     return None
 
 
-def record_review(col: Collection, tags: list[str]) -> str | None:
-    """Tally a review by its format rung (drives the M9 experiment analysis).
-    Returns the rung recorded, or None if the card has no format tag."""
-    rung = rung_of_tags(tags)
-    if rung is None:
-        return None
+def rung_for_reps(reps: int) -> str:
+    """The format rung to show for a concept card on its ``reps``-th showing.
+
+    Rotates through :data:`AVAILABLE_RUNGS` so the same problem never appears in
+    the same shape twice in a row, while the card keeps its single FSRS
+    schedule (the algorithm repeats one problem; only the surface format
+    changes).
+    """
+    return AVAILABLE_RUNGS[reps % len(AVAILABLE_RUNGS)]
+
+
+def record_rung(col: Collection, rung: str) -> str:
+    """Tally one review at ``rung`` (drives the M9 experiment analysis)."""
     tally = col.get_config(FORMAT_REVIEWS_KEY, None)
     if not isinstance(tally, dict):
         tally = {}
     tally[rung] = int(tally.get(rung, 0)) + 1
     col.set_config(FORMAT_REVIEWS_KEY, tally)
     return rung
+
+
+def record_review(col: Collection, tags: list[str]) -> str | None:
+    """Tally a review by its format-tag rung, if present (legacy path).
+    Returns the rung recorded, or None if the card has no format tag."""
+    rung = rung_of_tags(tags)
+    if rung is None:
+        return None
+    return record_rung(col, rung)

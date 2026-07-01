@@ -583,24 +583,87 @@ def _on_profile_open() -> None:
         return
     mw.setWindowTitle(APP_TITLE)
     _apply_dark_theme()
-    if mw.col.decks.by_name("RPCE") is None:
-        from anki.rpce import build_starter_deck
+    from anki.rpce import TRANSFER_NOTETYPE, build_starter_deck
 
+    if mw.col.decks.by_name("RPCE") is None:
         deck_id = build_starter_deck(mw.col)
         mw.col.decks.set_current(deck_id)
+        return
+    # Migrate the app-generated deck to the one-card-per-concept model: drop any
+    # stale notes that aren't the current concept notetype (old separate
+    # cloze/mcq notes, earlier placeholders), and (re)build if concept cards are
+    # missing. Safe because the RPCE deck is generated for the candidate.
+    try:
+        stale = mw.col.find_notes(f'deck:RPCE -note:"{TRANSFER_NOTETYPE}"')
+        if stale:
+            mw.col.remove_notes(stale)
+        if not mw.col.find_cards(f'note:"{TRANSFER_NOTETYPE}"'):
+            deck_id = build_starter_deck(mw.col)
+            mw.col.decks.set_current(deck_id)
+    except Exception as exc:
+        print(f"RPCE deck migration error: {exc}")
 
 
 def _on_answer_card(reviewer, card, ease) -> None:
-    """Tally each review by its Transfer-Ladder format rung."""
+    """Tally each review by the Transfer-Ladder format rung that was shown."""
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     try:
         from anki.rpce import transfer_ladder
 
-        transfer_ladder.record_review(mw.col, card.note().tags)
+        if _is_transfer_card(card):
+            # reps was incremented by answering; the shown rung used reps-before.
+            rung = transfer_ladder.rung_for_reps(max(0, card.reps - 1))
+            transfer_ladder.record_rung(mw.col, rung)
+        else:
+            transfer_ladder.record_review(mw.col, card.note().tags)
     except Exception as exc:  # never break reviewing over the tally
         print(f"RPCE format-tally error: {exc}")
+
+
+def _is_transfer_card(card) -> bool:
+    from anki.rpce import TRANSFER_NOTETYPE
+
+    try:
+        return card.note_type()["name"] == TRANSFER_NOTETYPE
+    except Exception:
+        return False
+
+
+def _on_card_will_show(text: str, card, kind: str) -> str:
+    """Rotate which format of a concept is shown each repetition, so the same
+    problem resurfaces in a different shape while keeping one FSRS schedule
+    (Transfer Ladder, spec §7.1). Non-RPCE cards are untouched."""
+    try:
+        if not _is_transfer_card(card):
+            return text
+        from anki.rpce import transfer_ladder
+
+        rung = transfer_ladder.rung_for_reps(card.reps)
+        note = card.note()
+        if rung == "mcq":
+            question, answer = note["MCQQ"], note["MCQA"]
+        else:
+            question, answer = note["ClozeQ"], note["ClozeA"]
+        label = (
+            "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
+            f"color:#7dd3fc;margin-bottom:14px'>{rung} · same concept</div>"
+        )
+        body = f"<div style='font-size:20px;line-height:1.5'>{question}</div>"
+        if "Question" in kind:
+            return label + body
+        if "Answer" in kind:
+            return (
+                label
+                + body
+                + "<hr id=answer>"
+                + f"<div style='font-size:20px;line-height:1.5;color:#4ade80'>{answer}</div>"
+            )
+        return text
+    except Exception as exc:  # never break reviewing over rendering
+        print(f"RPCE format-render error: {exc}")
+        return text
 
 
 def _on_deck_browser_content(deck_browser, content) -> None:
@@ -769,5 +832,6 @@ def setup() -> None:
     gui_hooks.deck_browser_did_render.append(_on_deck_browser_did_render)
     gui_hooks.overview_will_render_bottom.append(_on_overview_bottom)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
+    gui_hooks.card_will_show.append(_on_card_will_show)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
     gui_hooks.state_did_change.append(_on_state_change)

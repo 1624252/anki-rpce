@@ -53,6 +53,25 @@ def test_rung_of_tags():
     assert tl.rung_of_tags(["rpce::fmt::bogus"]) is None
 
 
+def test_rung_for_reps_rotates_without_repeating():
+    # One concept card, one schedule: the shown format alternates each rep so
+    # the same problem never appears in the same shape twice in a row.
+    seq = [tl.rung_for_reps(r) for r in range(4)]
+    assert seq == ["cloze", "mcq", "cloze", "mcq"]
+    for a, b in zip(seq, seq[1:]):
+        assert a != b, "consecutive repetitions must change format"
+
+
+def test_record_rung_tallies_directly():
+    from tests.shared import getEmptyCol
+
+    col = getEmptyCol()
+    tl.record_rung(col, "cloze")
+    tl.record_rung(col, "mcq")
+    tl.record_rung(col, "cloze")
+    assert col.get_config(tl.FORMAT_REVIEWS_KEY) == {"cloze": 2, "mcq": 1}
+
+
 def test_record_review_tallies_by_rung():
     from tests.shared import getEmptyCol
 
