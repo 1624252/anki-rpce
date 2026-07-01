@@ -450,10 +450,12 @@ def _show_dashboard() -> None:
     close = QPushButton("Close")
     qconnect(close.clicked, dialog.accept)
     layout.addWidget(close)
+    # Non-modal (retain a reference so it isn't garbage-collected) so the webview
+    # renders in the normal event loop and can stay open while studying.
+    qconnect(dialog.finished, lambda *_: web.cleanup())
+    mw._rpce_dashboard = dialog
     dialog.show()
     web.stdHtml(html)
-    dialog.exec()
-    web.cleanup()
 
 
 class ScenarioDialog(QDialog):
