@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Single fixed dark theme (no DayNight/light variant) so the app is always
+         dark blue + white, matching the desktop app. -->
+    <style name="Theme.RPCE" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/rpce_navy</item>
+        <item name="android:statusBarColor">@color/rpce_navy</item>
+        <item name="android:navigationBarColor">@color/rpce_navy</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">@color/rpce_accent</item>
+        <item name="colorAccent">@color/rpce_accent</item>
+    </style>
+</resources>

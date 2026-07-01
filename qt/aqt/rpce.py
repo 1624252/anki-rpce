@@ -65,6 +65,21 @@ _DIALOG_QSS = (
     "QPushButton:hover{background:#3b82f6}"
 )
 
+# App-wide Qt stylesheet appended to Anki's own dark theme so *every* dialog
+# (including the AnkiWeb Sync login prompt, which we don't own) fits the Deep
+# Blue theme: navy surfaces, white/light-blue readable text, large blue buttons.
+_APP_QSS = (
+    "QMainWindow,QDialog,QMessageBox,QInputDialog{background:#0a1a3a}"
+    "QLabel,QCheckBox,QRadioButton,QGroupBox{color:#eaf2ff;font-size:15px}"
+    "QLineEdit,QTextEdit,QPlainTextEdit,QSpinBox,QDoubleSpinBox,QComboBox{"
+    "background:#0a1c3d;color:#f5f9ff;border:1px solid #1e3f77;border-radius:10px;"
+    "padding:8px 11px;font-size:15px;selection-background-color:#1d4ed8}"
+    "QPushButton{background:#1d4ed8;color:#ffffff;border:none;border-radius:10px;"
+    "padding:10px 20px;font-size:15px;font-weight:700;min-height:20px;min-width:84px}"
+    "QPushButton:hover{background:#3b82f6}"
+    "QPushButton:disabled{background:#23407a;color:#9ec3f0}"
+)
+
 # One cohesive "Deep Blue" theme (dark navy + white, blue->sky accents),
 # driven by CSS design tokens so the home banner and dashboard stay consistent.
 # See docs/rpce/UI_DESIGN.md.
@@ -492,12 +507,34 @@ def _add_menu() -> None:
     qconnect(t3.triggered, _stop_timer)
 
 
+def _apply_dark_theme() -> None:
+    """Lock the app to a single dark theme (no light/follow-system mode) so the
+    whole UI — menus, dialogs, and the Sync prompt — stays dark blue + white."""
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        from aqt.theme import Theme, theme_manager
+
+        if mw.pm.theme() != Theme.DARK:
+            mw.pm.set_theme(Theme.DARK)
+        theme_manager.apply_style()
+    except Exception as exc:  # never block startup over theming
+        print(f"RPCE theme error: {exc}")
+
+
+def _on_style_init(style: str) -> str:
+    """Append the Deep Blue app stylesheet after Anki's own theme so it wins."""
+    return style + _APP_QSS
+
+
 def _on_profile_open() -> None:
     """Brand the window and make sure the RPCE deck exists and is selected."""
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     mw.setWindowTitle(APP_TITLE)
+    _apply_dark_theme()
     if mw.col.decks.by_name("RPCE") is None:
         from anki.rpce import build_starter_deck
 
@@ -650,6 +687,7 @@ def _on_toolbar_links(links, toolbar) -> None:
 
 def setup() -> None:
     """Register all RPCE desktop integration hooks."""
+    gui_hooks.style_did_init.append(_on_style_init)
     gui_hooks.main_window_did_init.append(_add_menu)
     gui_hooks.profile_did_open.append(_on_profile_open)
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
