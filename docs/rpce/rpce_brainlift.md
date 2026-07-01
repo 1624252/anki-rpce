@@ -10,19 +10,19 @@
 
 ### Purpose
 
-The purpose of this BrainLift is to build a research-grounded foundation for **how to design a study tool for the NAP Registered Parliamentarian Credentialing Exam (RPCE)** — grounding each product and AI-feature decision in evidence about _how parliamentary skills are actually learned, why the skill and the credential matter, who the market is, and where today's prep falls short_ — so the tool is driven by evidence rather than flashcard intuition. The RPCE is unusual in structure: it is administered in a single day (within quarterly 7-day windows) and has two independently scored sections — **Section I**, **100 multiple-choice questions** in **3 hours**, auto-scored by the exam platform, and **Section II**, a written **performance** exam of scenarios scored by trained examiners in **3 hours**. A candidate must score **80% on _each_ section independently**, so "passing" means demonstrating that you can _apply_ and _cite_ rules under both formats, under time pressure, not just recall them.
+The purpose of this BrainLift is to build a research-grounded foundation for **how to design a study tool for the NAP Registered Parliamentarian Credentialing Exam (RPCE)** — grounding each product and AI-feature decision in evidence about *how parliamentary skills are actually learned, why the skill and the credential matter, who the market is, and where today's prep falls short* — so the tool is driven by evidence rather than flashcard intuition. The RPCE is unusual in structure: it is administered in a single day (within quarterly 7-day windows) and has two independently scored sections — **Section I**, **100 multiple-choice questions** in **3 hours**, auto-scored by the exam platform, and **Section II**, a written **performance** exam of scenarios scored by trained examiners in **3 hours**. A candidate must score **80% on *each* section independently**, so "passing" means demonstrating that you can *apply* and *cite* rules under both formats, under time pressure, not just recall them.
 
 ### In Scope
 
 - **How parliamentary skills are learned:** the simulation-vs-flashcards question, retrieval/spacing for durable facts, and scenario+debrief for applied performance — at the graduate/college/adult-professional level.
-- **Why parliamentary procedure matters and works:** its applications across governance and the _mechanism_ (procedural justice / meeting science) by which structured procedure produces accepted decisions.
+- **Why parliamentary procedure matters and works:** its applications across governance and the *mechanism* (procedural justice / meeting science) by which structured procedure produces accepted decisions.
 - **What the Registered Parliamentarian (RP) credential provides and who the market is:** the value of the credential and both the candidate market (who sits the exam) and the demand market (who hires parliamentarians).
 - **The competitive landscape:** the format/style of existing prep, what each competitor does well and poorly, and where the gap is.
 
 ### Out of Scope
 
-- **Teaching parliamentary procedure itself:** this BrainLift covers _how people learn it and how the exam/market works_, not a substitute for RONR.
-- **Re-deriving the full exam-structure fact base:** the exam's section/scoring/Performance-Expectation details are treated as background; this document focuses on the _design-relevant_ research.
+- **Teaching parliamentary procedure itself:** this BrainLift covers *how people learn it and how the exam/market works*, not a substitute for RONR.
+- **Re-deriving the full exam-structure fact base:** the exam's section/scoring/Performance-Expectation details are treated as background; this document focuses on the *design-relevant* research.
 - **Engineering/product implementation:** architecture, schemas, and APIs are out of scope here.
 - **High-school / FFA contexts:** evidence here is deliberately graduate/college/adult-professional only.
 
@@ -30,12 +30,12 @@ The purpose of this BrainLift is to build a research-grounded foundation for **h
 
 ## DOK 4: Spiky Points of View (SPOVs)
 
-- **Spiky POV 1:** Consistency is a trap — practicing one question format breeds a false sense of mastery, so the tool should _vary the format_ even when the underlying content is the same.
-  - **Elaboration:** Drilling the same style of question every day _feels_ like progress, but it is exactly how recall-heavy practice lures a learner into a false sense of temporary mastery (Insight 1): you get good at the format, not at the knowledge. True mastery is the ability to apply the same knowledge across _different_ contexts — which is precisely what the RPCE demands, since Section I and Section II test the same Performance Expectations in two entirely different formats, and a real meeting never presents a rule in the tidy shape a flashcard did. Consistent, same-wording practice trains pattern-matching to the question rather than the concept, so it collapses the moment the context shifts. The design implication is direct: for a given piece of content, the tool should deliberately rotate the format — cloze recall, applied multiple-choice, free-text scenario, advising prompt — so the learner proves they can transfer the knowledge, not just recognize a familiar template. This also dovetails with fading scaffolding as mastery grows (Insight 3): the _same_ fact should resurface in progressively harder formats over time rather than in one comfortable, repeated shape.
-- **Spiky POV 2:** Even the single most effective learning method is insufficient on its own — the tool must combine methods, because each one builds a different skill.
-  - **Elaboration:** "Simulation vs. flashcards" is a false binary (Insight 1): spaced-repetition flashcards build durable factual recall and fight the skill decay that one-shot practice cannot prevent (BMC Medical Education 2019; Brazilian Journal of Health Review 2024), while simulation builds the applied competence and confidence that recall drills never produce (Chernikova et al. 2020) — and that competence only sticks when paired with debriefing (JPSE 2018). A recall-only tool and a simulation-only tool are each half a solution, and worse, a recall-heavy tool can lure a candidate into a false sense of temporary mastery. Because the RPCE itself is split into a recall section and a performance section, the design conclusion is forced: a hybrid engine whose two modes mirror the two sections — spaced retrieval for Section I, scenario + debrief simulation for Section II — sequenced to lean on worked examples early and reflection as mastery grows (Insight 3). Optimizing any one method to perfection still loses, because it leaves an entire tested skill untrained.
-- **Spiky POV 3:** The AI's job in this tool is to be an _examiner_, not a _tutor_.
-  - **Elaboration:** Every RPCE candidate has already cleared the NAP membership (RONRIB) exam, so they enter with high prior knowledge — and the learning science says high-prior-knowledge learners gain from _reflection_, not from being fed more worked examples (Insight 3). At the same time, the entire exam is grounded in a closed, definitive corpus (RONR 12th edition), which means factual answers are fixed and citable; an AI tutor inventing or fumbling facts is both low-value and actively harmful, exactly the trust failure visible in competitors that ship incorrect answers (NAPMobile). The genuinely hard, under-taught skill is _application_ — reading a scenario, choosing and justifying the correct ruling — and the active ingredient that makes simulation work is the debrief/feedback, not the spectacle (Insight 4). Putting these together: the AI should grade and debrief the candidate's performance answers against the seven Performance Expectations like an examiner, demanding RONR citations and probing the reasoning, rather than lecturing facts the candidate is presumed to know. This is also the one lever the incumbent's delayed, instructor-mediated feedback structurally cannot pull at scale.
+- **Spiky POV 1:** The AI's job in this tool is to be an *examiner*, not a *tutor*.
+  - **Elaboration:** Every RPCE candidate has already cleared the NAP membership (RONRIB) exam, so they enter with high prior knowledge — and the learning science says high-prior-knowledge learners gain from *reflection*, not from being fed more worked examples (Insight 3). At the same time, the entire exam is grounded in a closed, definitive corpus (RONR 12th edition), which means factual answers are fixed and citable; an AI tutor inventing or fumbling facts is both low-value and actively harmful, exactly the trust failure visible in competitors that ship incorrect answers (NAPMobile). The genuinely hard, under-taught skill is *application* — reading a scenario, choosing and justifying the correct ruling — and the active ingredient that makes simulation work is the debrief/feedback, not the spectacle (Insight 4). Putting these together: the AI should grade and debrief the candidate's performance answers against the seven Performance Expectations like an examiner, demanding RONR citations and probing the reasoning, rather than lecturing facts the candidate is presumed to know. This is also the one lever the incumbent's delayed, instructor-mediated feedback structurally cannot pull at scale.
+- **Spiky POV 2:** Consistency is a trap — practicing one question format breeds a false sense of mastery, so the tool should *vary the format* even when the underlying content is the same.
+  - **Elaboration:** Drilling the same style of question every day *feels* like progress, but it is exactly how recall-heavy practice lures a learner into a false sense of temporary mastery (Insight 1): you get good at the format, not at the knowledge. True mastery is the ability to apply the same knowledge across *different* contexts — which is precisely what the RPCE demands, since Section I and Section II test the same Performance Expectations in two entirely different formats, and a real meeting never presents a rule in the tidy shape a flashcard did. Consistent, same-wording practice trains pattern-matching to the question rather than the concept, so it collapses the moment the context shifts. The design implication is direct: for a given piece of content, the tool should deliberately rotate the format — cloze recall, applied multiple-choice, free-text scenario, advising prompt — so the learner proves they can transfer the knowledge, not just recognize a familiar template. This also dovetails with fading scaffolding as mastery grows (Insight 3): the *same* fact should resurface in progressively harder formats over time rather than in one comfortable, repeated shape.
+- **Spiky POV 3:** A single readiness score is misleading for the RPCE — readiness must be reported as *two* separate signals, one for knowledge and one for application.
+  - **Elaboration:** The RPCE is two independently scored sections that each require 80% on their own: Section I machine-scores recall of RONR facts/citations, while Section II is a human-scored written *performance* exam (advising, opinion/script writing, presiding). Because a strong recall score cannot compensate for weak applied performance (or vice versa), a single blended "X% ready" number is not just unhelpful, it is dishonest — a candidate can look ready on memory while being guaranteed to fail the section that doesn't forgive. This follows directly from Insight 2 (map methods to the exam's two halves) and Insight 1 (recall and application are different skills, learned differently). The implication for the tool is concrete: surface two readiness gates — knowledge and application — each with its own range and its own give-up rule, and weight abstention more aggressively on the application gate, since that evidence is harder to earn. Memorizing every rule does not mean you can apply it in a contentious meeting, so the readiness display must refuse to let the easy half mask the hard one.
 
 ---
 
@@ -54,7 +54,7 @@ The purpose of this BrainLift is to build a research-grounded foundation for **h
 - **Frank Fischer**
   - **Who:** Senior author of the simulation-based-learning meta-analysis; chair of education and educational psychology at LMU Munich and a leading learning-sciences researcher.
   - **Focus:** Scaffolding frameworks for simulation-based learning — specifically the prior-knowledge → scaffolding-type mapping (worked examples for novices, reflection for the more expert).
-  - **Why Follow:** His scaffolding framework is the direct basis for _sequencing_ the tool's support — worked examples early, reflection as mastery grows.
+  - **Why Follow:** His scaffolding framework is the direct basis for *sequencing* the tool's support — worked examples early, reflection as mastery grows.
   - **Where:** [Google Scholar](https://scholar.google.com/citations?user=YL1eEDEAAAAJ&hl=en) · [LMU Munich profile](https://www.psy.lmu.de/ffp_en/persons/chair-holder/fischer-frank/index.html)
 - **Tina Seidel**
   - **Who:** Co-author of the meta-analysis; educational psychologist known for research on teaching quality and learning processes.
@@ -63,7 +63,7 @@ The purpose of this BrainLift is to build a research-grounded foundation for **h
   - **Where:** [Google Scholar](https://scholar.google.com/citations?user=e-kd_M0AAAAJ&hl=en) · [TUM profile](https://www.professoren.tum.de/en/seidel-tina)
 - **Tom R. Tyler**
   - **Who:** Social psychologist; foremost researcher on procedural justice and legitimacy.
-  - **Focus:** Why _fair procedures_ drive acceptance of decisions and institutional legitimacy, independent of whether people like the outcome.
+  - **Focus:** Why *fair procedures* drive acceptance of decisions and institutional legitimacy, independent of whether people like the outcome.
   - **Why Follow:** Supplies the "why parliamentary procedure works" mechanism — procedure manufactures legitimacy — which reframes the RP's competence as applied judgment.
   - **Where:** [Google Scholar](https://scholar.google.com/citations?user=Z_94FToAAAAJ&hl=en) · [Yale Law School](https://law.yale.edu/tom-r-tyler)
 - **Steven G. Rogelberg (with Leach, Warr, Burnfield, Cohen)**
@@ -83,21 +83,21 @@ The purpose of this BrainLift is to build a research-grounded foundation for **h
 
 ### How parliamentary skills are learned
 
-- **Insight 1 (the false binary):** "Simulation vs. flashcards" is the wrong question — the evidence says you need _both_, because they do different jobs. Spaced-repetition flashcards build durable factual recall while simulation builds applied competence and confidence (Brazilian Journal of Health Review 2024), and simulation skill _decays_ without spaced re-exposure (BMC Medical Education 2019). A recall-only tool and a simulation-only tool are each half a solution.
+- **Insight 1 (the false binary):** "Simulation vs. flashcards" is the wrong question — the evidence says you need *both*, because they do different jobs. Spaced-repetition flashcards build durable factual recall while simulation builds applied competence and confidence (Brazilian Journal of Health Review 2024), and simulation skill *decays* without spaced re-exposure (BMC Medical Education 2019). A recall-only tool and a simulation-only tool are each half a solution.
 - **Insight 2 (map methods to the exam's two halves):** The RPCE's structure hands you the design: Section I (machine-scored recall of RONR facts/citations) maps to **spaced retrieval/flashcards**, and Section II (human-scored written performance — advising, opinion/script writing, presiding) maps to **scenario + debrief simulation**. The tool should be a hybrid whose two modes mirror the two sections, not one engine stretched across both.
-- **Insight 3 (sequence by expertise):** Scaffolding should change as the learner improves — worked examples for low-prior-knowledge learners, reflection for high-prior-knowledge learners (Chernikova et al. 2020). Because the RPCE candidate has already cleared the RONRIB membership exam, they enter as _high prior knowledge_, so the tool should lean toward reflection/scenario practice rather than feeding more examples — and can transition from worked examples to reflection as mastery grows.
-- **Insight 4 (feedback is the active ingredient):** What makes simulation work is the _debrief_, not the spectacle — simulation **with** debriefing produced the best long-term retention; simulation alone was second; non-simulation worst (JPSE 2018). Current NAP prep's feedback is delayed and instructor-mediated; immediate, per-item feedback is the specific lever a tool can pull that the incumbent cannot.
+- **Insight 3 (sequence by expertise):** Scaffolding should change as the learner improves — worked examples for low-prior-knowledge learners, reflection for high-prior-knowledge learners (Chernikova et al. 2020). Because the RPCE candidate has already cleared the RONRIB membership exam, they enter as *high prior knowledge*, so the tool should lean toward reflection/scenario practice rather than feeding more examples — and can transition from worked examples to reflection as mastery grows.
+- **Insight 4 (feedback is the active ingredient):** What makes simulation work is the *debrief*, not the spectacle — simulation **with** debriefing produced the best long-term retention; simulation alone was second; non-simulation worst (JPSE 2018). Current NAP prep's feedback is delayed and instructor-mediated; immediate, per-item feedback is the specific lever a tool can pull that the incumbent cannot.
 - **Insight 5 (recall fights decay, and matches the credential's own cadence):** Spaced retrieval exists precisely to counter the skill decay that one-shot simulation can't prevent (BMC 2019) — and that maps onto the RP credential's own 2-year continuing-education renewal cycle, extending the tool's usefulness past exam day into maintenance.
 
 ### Why parliamentary procedure matters and works
 
-- **Insight 6 (procedure manufactures legitimacy):** Parliamentary procedure works because _fair process produces acceptance_ — people support outcomes they voted against when the procedure gave them voice and neutrality (Tyler, "Governing amid Diversity"). This reframes "knowing the rules" as applied judgment in service of legitimacy, which is why the exam tests application and the tool should too.
+- **Insight 6 (procedure manufactures legitimacy):** Parliamentary procedure works because *fair process produces acceptance* — people support outcomes they voted against when the procedure gave them voice and neutrality (Tyler, "Governing amid Diversity"). This reframes "knowing the rules" as applied judgment in service of legitimacy, which is why the exam tests application and the tool should too.
 - **Insight 7 (procedure = codified meeting science):** The features RONR standardizes — agendas, orders of business, recorded motions/minutes, time discipline, a neutral facilitator — are exactly the design characteristics that independent meeting-science research finds raise meeting quality (Rogelberg/Leach/Cohen). Parliamentary procedure is a mature implementation of what works, and a trained parliamentarian (the RP) is its steward — the real-world value behind the credential (UNC School of Government).
 
 ### What the credential provides and who the market is
 
-- **Insight 8 (the credential is a scarcity/trust signal):** In a field with _no required license_, the NAP/AIP credential is what separates "casual dabblers" from people organizations will pay (LegalClarity), and the credentialed pool is tiny — only several hundred CPP/PRP holders among thousands of members (NAP / Slaughter). Passing the RPCE buys the right to market yourself, directory discovery, and a scarcity premium.
-- **Insight 9 (target working adults in governance settings):** The demand market is broad and governance-centric — nonprofits, corporations, government, HOAs, trade/professional/religious associations (NAP "Find a PRP") — and the paid work is heavily _applied_ (presiding, advising live, drafting). The ideal user is therefore a working adult already embedded in one of these settings, and the tool must build performance, not just recall.
+- **Insight 8 (the credential is a scarcity/trust signal):** In a field with *no required license*, the NAP/AIP credential is what separates "casual dabblers" from people organizations will pay (LegalClarity), and the credentialed pool is tiny — only several hundred CPP/PRP holders among thousands of members (NAP / Slaughter). Passing the RPCE buys the right to market yourself, directory discovery, and a scarcity premium.
+- **Insight 9 (target working adults in governance settings):** The demand market is broad and governance-centric — nonprofits, corporations, government, HOAs, trade/professional/religious associations (NAP "Find a PRP") — and the paid work is heavily *applied* (presiding, advising live, drafting). The ideal user is therefore a working adult already embedded in one of these settings, and the tool must build performance, not just recall.
 
 ### The competitive landscape
 
@@ -130,11 +130,11 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
         - Exams not uploaded within **eight hours** of the exam start time will not be scored.
         - Candidates must use Examplify by ExamSoft, which locks down the computer and will not run on Chromebooks, Android, or Linux.
       - **DOK 2 - Summary & Analysis:**
-        - Time pressure is a distinct, testable skill: three hours for 100 multiple-choice items plus three hours to _write_ performance answers means pacing and rapid rule-location matter, not just whether the candidate ultimately knows the rule. A prep tool should rehearse timed performance, not only untimed recall.
+        - Time pressure is a distinct, testable skill: three hours for 100 multiple-choice items plus three hours to *write* performance answers means pacing and rapid rule-location matter, not just whether the candidate ultimately knows the rule. A prep tool should rehearse timed performance, not only untimed recall.
       - **Link to source:** [RPCE Rules](https://www.parliamentarians.org/credentialing/rp-rules)
 - **How Parliamentary Skills Are Learned (Simulation vs. Flashcards)**
   - **Simulation For Complex, Applied Skills**
-    - **Source: Chernikova et al. (2020), "Simulation-Based Learning in Higher Education: A Meta-Analysis," _Review of Educational Research, 90_(4).**
+    - **Source: Chernikova et al. (2020), "Simulation-Based Learning in Higher Education: A Meta-Analysis," *Review of Educational Research, 90*(4).**
       - **DOK 1 - Facts:**
         - Meta-analysis of 145 empirical studies of simulation-based learning in higher education.
         - Large overall positive effect on complex-skill learning: g = 0.85 (95% CI [0.69, 1.02]).
@@ -143,7 +143,7 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
       - **DOK 2 - Summary & Analysis:**
         - Simulation is among the most effective ways to teach complex applied skills — exactly what RPCE Section II demands. Because the RPCE candidate already passed the RONRIB membership exam (high prior knowledge), reflection/feedback after simulated scenarios should beat being fed more examples, so the performance layer should be scenario+debrief, not more cards.
       - **Link to source:** [https://journals.sagepub.com/doi/10.3102/0034654320933544](https://journals.sagepub.com/doi/10.3102/0034654320933544)
-    - **Source: Bernstein & Meizlish (2006), "Simulating a Senate Office: The Impact on Student Knowledge and Attitudes," _Journal of Political Science Education, 2_(2).**
+    - **Source: Bernstein & Meizlish (2006), "Simulating a Senate Office: The Impact on Student Knowledge and Attitudes," *Journal of Political Science Education, 2*(2).**
       - **DOK 1 - Facts:**
         - Pre/post comparison across two college "Intro to American Government" sections: one lecture-only (control), one supplemented with an online legislative simulation.
         - Simulation students gained significantly more knowledge of the legislative process and showed decreased cynicism.
@@ -151,7 +151,7 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
       - **DOK 2 - Summary & Analysis:**
         - College-level evidence that simulating a procedural/legislative process beats passive instruction for procedural knowledge — transferable to learning how a deliberative assembly runs. The "clear objectives" caveat means each scenario must map to a specific RP Performance Expectation, not gamify for its own sake.
       - **Link to source:** [https://www.tandfonline.com/doi/abs/10.1080/15512160600668967](https://www.tandfonline.com/doi/abs/10.1080/15512160600668967)
-    - **Source: "Simulating Parliamentary Budget Debates: Role-Play as a Pedagogical Tool …," _IJARPED, 15_(1) (Malaysia).**
+    - **Source: "Simulating Parliamentary Budget Debates: Role-Play as a Pedagogical Tool …," *IJARPED, 15*(1) (Malaysia).**
       - **DOK 1 - Facts:**
         - University-level role-play of parliamentary budget debates (students act as legislators/ministers/opposition).
         - Reports improved understanding and retention of legislative processes vs. lecture-based learning.
@@ -160,7 +160,7 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
         - Reinforces, in an explicitly parliamentary higher-ed context, that procedure is learned by enacting roles — supporting a "perform the motion / preside / advise" practice mode for the applied half of the RPCE.
       - **Link to source:** [https://hrmars.com/IJARPED/article/view/27834/](https://hrmars.com/IJARPED/article/view/27834/)
   - **Feedback / Debrief As The Active Ingredient**
-    - **Source: "Assessing Knowledge Retention, With and Without Simulations," _Journal of Political Science Education_ (2018).**
+    - **Source: "Assessing Knowledge Retention, With and Without Simulations," *Journal of Political Science Education* (2018).**
       - **DOK 1 - Facts:**
         - Compared four modes on a delayed (~3-month) quiz: simulation + debriefing; simulation only; discussion + research essay; discussion only.
         - Simulation **with debriefing** produced the best long-term retention; simulation alone nearly as good; non-simulation modes least effective.
@@ -169,15 +169,15 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
         - The active ingredient is debriefing/feedback, not the simulation alone. NAP prep gives delayed, instructor-mediated feedback; a tool with immediate per-item feedback targets the exact lever isolated here. The delayed-quiz design also models honest delayed-retention testing over in-session scores.
       - **Link to source:** [https://www.tandfonline.com/doi/full/10.1080/15512169.2017.1405355](https://www.tandfonline.com/doi/full/10.1080/15512169.2017.1405355)
   - **Why You Need Flashcards Too (Decay And Hybrid Design)**
-    - **Source: Long-term retention after simulation-based training of procedural skills, _BMC Medical Education_ (2019).**
+    - **Source: Long-term retention after simulation-based training of procedural skills, *BMC Medical Education* (2019).**
       - **DOK 1 - Facts:**
         - Adult emergency physicians/residents; technical skill measured on a validated scale at intervals after a single simulation course.
         - Performance high immediately post-training but declined ~15% by 6 months, plateaued, then dropped ~35% and was effectively lost by ~4 years without practice.
         - Authors recommend re-training roughly every 2 years.
       - **DOK 2 - Summary & Analysis:**
-        - Simulation alone is not durable — skills decay without spaced re-exposure. The answer to "simulation vs. flashcards" is _both_: spaced retrieval combats decay while simulation builds applied competence. It also mirrors the RP credential's 2-year continuing-education renewal cycle.
+        - Simulation alone is not durable — skills decay without spaced re-exposure. The answer to "simulation vs. flashcards" is *both*: spaced retrieval combats decay while simulation builds applied competence. It also mirrors the RP credential's 2-year continuing-education renewal cycle.
       - **Link to source:** [https://doi.org/10.1186/s12909-019-1793-6](https://doi.org/10.1186/s12909-019-1793-6)
-    - **Source: Active-learning review incl. spaced-repetition flashcards (Anki) and virtual simulation in medical education, _Brazilian Journal of Health Review_ (2024).**
+    - **Source: Active-learning review incl. spaced-repetition flashcards (Anki) and virtual simulation in medical education, *Brazilian Journal of Health Review* (2024).**
       - **DOK 1 - Facts:**
         - Reviews evidence-based methods: problem-based learning, spaced repetition, virtual simulation, gamification.
         - Spaced-repetition flashcards (e.g., Anki) effective for knowledge retention; virtual simulations improved confidence and applied skill but did not always beat conventional methods on objective measures.
@@ -189,22 +189,22 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
     - **Source: UNC School of Government, "A Parliamentary Procedure Primer for Local Governments," Public Management Bulletin No. 28 (2023).**
       - **DOK 1 - Facts:**
         - Parliamentary procedure is a set of rules/customs that let deliberative assemblies (boards, commissions, committees) make decisions and take action.
-        - Robert's Rules (first published 1876) is among the oldest and most widely used manuals; its policy is to let a body do business efficiently _despite_ internal tension, giving the minority a full chance to be heard before the majority decides.
+        - Robert's Rules (first published 1876) is among the oldest and most widely used manuals; its policy is to let a body do business efficiently *despite* internal tension, giving the minority a full chance to be heard before the majority decides.
         - Procedural rules should promote orderly business, fairness, decorum, and a common decision framework — and should be simplified if they impair business.
       - **DOK 2 - Summary & Analysis:**
-        - Authoritative confirmation that parliamentary skill is core governance infrastructure, not a niche hobby — it is how boards at every level transact business, grounding the RP's real-world value. "Simplify if it impairs business" also explains why a tool focused on _applying_ rules (not memorizing 700 pages) matches how the skill is used.
+        - Authoritative confirmation that parliamentary skill is core governance infrastructure, not a niche hobby — it is how boards at every level transact business, grounding the RP's real-world value. "Simplify if it impairs business" also explains why a tool focused on *applying* rules (not memorizing 700 pages) matches how the skill is used.
       - **Link to source:** [https://www.sog.unc.edu/sites/default/files/reports/PMB%2028_2023207.pdf](https://www.sog.unc.edu/sites/default/files/reports/PMB%2028_2023207.pdf)
   - **The Mechanism: Why It Works**
-    - **Source: Tyler & Mitchell, "Governing amid Diversity: The Effect of Fair Decisionmaking Procedures on the Legitimacy of Government," _Law & Society Review_.**
+    - **Source: Tyler & Mitchell, "Governing amid Diversity: The Effect of Fair Decisionmaking Procedures on the Legitimacy of Government," *Law & Society Review*.**
       - **DOK 1 - Facts:**
         - Two experiments and a survey tested whether judgments about the fairness of lawmaking procedures drive perceived legitimacy of a national institution (Congress), versus self-interested agreement with decisions.
         - Procedural-justice judgments strongly influenced legitimacy evaluations.
         - Demographic factors (ethnicity, gender, education, age, income, ideology) did not change the criteria people use to judge procedural fairness.
-        - Conclusion: fair procedures sustain support _despite_ disagreement on the outcome.
+        - Conclusion: fair procedures sustain support *despite* disagreement on the outcome.
       - **DOK 2 - Summary & Analysis:**
         - The core "why it works" finding: parliamentary procedure manufactures legitimacy — people accept an outcome they voted against when the process was fair (voice + neutrality), exactly what motions, debate rights, and majority-rule-with-minority-protection do. RONR's stated policy is a working mechanism for binding, durable decisions, not etiquette.
       - **Link to source:** [https://doi.org/10.2307/3053998](https://doi.org/10.2307/3053998)
-    - **Source: Leach, Rogelberg, Warr & Burnfield (2009) / Cohen et al. (2011), "Meeting Design Characteristics and Attendee Perceptions of Staff/Team Meeting Quality," _Group Dynamics / J. Applied._**
+    - **Source: Leach, Rogelberg, Warr & Burnfield (2009) / Cohen et al. (2011), "Meeting Design Characteristics and Attendee Perceptions of Staff/Team Meeting Quality," *Group Dynamics / J. Applied.***
       - **DOK 1 - Facts:**
         - Survey of 367 working adults within 48 hours of their most recent staff/team meeting tested 18 meeting-design characteristics (temporal, physical, procedural, attendee).
         - Nine characteristics significantly predicted perceived meeting quality, including agenda use, punctuality, facilitation, and use of written agreements/records.
@@ -253,16 +253,16 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
         - ParliPrep 2026: 17 weekly live Zoom sessions (1-hr lecture + up to 30-min demo/Q&A) by expert parliamentarians; paid; earns 1 CEU/session.
         - Parliamentary Fundamentals 102: ~$199 self-paced intro course.
       - **DOK 2 - Summary & Analysis:**
-        - _Does well:_ directly blueprint-aligned (the legitimate authority on content), expert instructors, official CEUs, low/zero cost for the core course, social accountability via live cohorts.
-        - _Does poorly:_ lecture/static-video and scheduled-cohort format; no adaptive spaced repetition; delayed, instructor-mediated feedback (not per-item); some content lags current exam rules; no calibrated readiness estimate.
+        - *Does well:* directly blueprint-aligned (the legitimate authority on content), expert instructors, official CEUs, low/zero cost for the core course, social accountability via live cohorts.
+        - *Does poorly:* lecture/static-video and scheduled-cohort format; no adaptive spaced repetition; delayed, instructor-mediated feedback (not per-item); some content lags current exam rules; no calibrated readiness estimate.
       - **Link to source:** [https://napuniversity.com/courses/51179](https://napuniversity.com/courses/51179) · [https://napuniversity.com/courses/119775](https://napuniversity.com/courses/119775)
     - **Source: NAPMobile (official NAP app).**
       - **DOK 1 - Facts:**
         - Official NAP app offering quiz questions and a vote/ballot calculator; explicitly marketed as practice for the membership exam and the RP exam.
         - Appears to contain a few incorrect answers (a direct contradiction observed in use).
       - **DOK 2 - Summary & Analysis:**
-        - _Does well:_ official, mobile, exam-branded, includes a practical tool (ballot calc).
-        - _Does poorly:_ a simple quiz bank — no spacing/scheduling, no Section II performance practice, no readiness modeling or coverage map, and no verification of answers.
+        - *Does well:* official, mobile, exam-branded, includes a practical tool (ballot calc).
+        - *Does poorly:* a simple quiz bank — no spacing/scheduling, no Section II performance practice, no readiness modeling or coverage map, and no verification of answers.
       - **Link to source:** [https://apps.apple.com/us/app/napmobile/id1352218439](https://apps.apple.com/us/app/napmobile/id1352218439)
   - **Commercial Robert's Rules Training (Adjacent: Board Skills, Not Exam Prep)**
     - **Source: Robert's Rules Made Simple; AMC Governance Academy ("Meeting Rules Made Easy"); RobertsRules.org.**
@@ -271,6 +271,6 @@ The Knowledge Tree below contains DOK 1 facts and DOK 2 summaries only. Scope: g
         - AMC "Meeting Rules Made Easy": self-paced course (~7 lessons + worksheets, instructor Q&A), completion certificate; 35 yrs training boards.
         - RobertsRules.org: free 6-lesson interactive tutorial, a meeting app, and "Parliamentary Games" (Model UN/Congress simulations with AI opponents).
       - **DOK 2 - Summary & Analysis:**
-        - _Does well:_ approachable UX, video/interactive, simplification of an 800-page book, and (RobertsRules.org) a genuine AI-opponent simulation — the closest existing analog to a Section II performance mode.
-        - _Does poorly:_ target board members who want to run meetings, not RPCE candidates; cover only basic motions, far below RPCE depth (no opinion/script writing, no full RONR citation rigor); no exam blueprint, no readiness scoring. "Parliamentary Games" is not openly accessible (appears invite-only with applications closed — likely still in testing).
+        - *Does well:* approachable UX, video/interactive, simplification of an 800-page book, and (RobertsRules.org) a genuine AI-opponent simulation — the closest existing analog to a Section II performance mode.
+        - *Does poorly:* target board members who want to run meetings, not RPCE candidates; cover only basic motions, far below RPCE depth (no opinion/script writing, no full RONR citation rigor); no exam blueprint, no readiness scoring. "Parliamentary Games" is not openly accessible (appears invite-only with applications closed — likely still in testing).
       - **Link to source:** [https://robertsrulesmadesimple.com/](https://robertsrulesmadesimple.com/) · [https://www.amcnposolutions.com/roberts-rules-made-easy/](https://www.amcnposolutions.com/roberts-rules-made-easy/) · [https://robertsrules.org/games](https://robertsrules.org/games)
