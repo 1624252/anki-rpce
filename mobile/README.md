@@ -73,6 +73,17 @@ Sync uses your **AnkiWeb account** — no server IP/endpoint to configure.
 Both apps drive Anki's own sync client, so reviews and RPCE state (tags +
 config) cross devices through the shared engine.
 
+**Verified (spec §7b), reproducibly.** `pylib/tools/rpce_sync_test.py` runs the
+full round-trip against a running server — upload/download, a two-way merge
+(reviews on each device reconcile with none lost or double-counted), and a
+same-card-offline **conflict** that resolves to one consistent last-writer
+state. Start a local server (below) and run:
+
+```bash
+PYTHONPATH=out/pylib python pylib/tools/rpce_sync_test.py
+# -> SYNC OK: two-way sync + conflict resolution verified.
+```
+
 **Self-hosted (optional).** For an offline/CI demo you can still point at a
 self-hosted server instead of AnkiWeb by leaving the endpoint blank in code
 (AnkiWeb) or running one locally:
