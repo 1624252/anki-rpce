@@ -237,6 +237,13 @@ def _banner_html(col) -> str:
     covered = sum(1 for c in s["coverage"] if c.cards > 0)
     total = len(s["coverage"])
     pct = covered / total if total else 0.0
+    cal = scores.memory_calibration(col)
+    cal_line = (
+        f"Memory calibration: <b>Brier {cal['brier']:.3f}</b> · log-loss "
+        f"{cal['log_loss']:.3f} (FSRS retrievability vs. outcome, n={cal['n']})"
+        if cal
+        else "Memory calibration: review more with FSRS on to measure accuracy"
+    )
 
     def section_value(snap) -> str:
         return (
@@ -298,8 +305,9 @@ def _banner_html(col) -> str:
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   {chips_row}
   {note}
-  <div class="rpce-foot">Use the tabs above — <b>Study</b> flashcards, practice
-    <b>Section II</b>, open the <b>Dashboard</b>, or start a <b>Timed</b> session.</div>
+  <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
+  <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
+    practice <b>Section II</b>, run a <b>Simulation</b> or a <b>Timed</b> session.</div>
   <div class="rpce-foot" style="margin-top:6px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
@@ -419,50 +427,18 @@ def _updated_str(col) -> str:
 
 
 def _show_dashboard() -> None:
+    """The readiness dashboard IS the home screen (the deck-browser banner) — no
+    popup. Record a snapshot to refresh 'last updated', then return home."""
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     from anki.rpce import scores
 
-    # Record this computation to the audit trail + stamp last-updated (§7.4).
     try:
         scores.record_readiness_snapshots(mw.col)
-        html = _readiness_html(mw.col)
-    except Exception as exc:  # never blank the dashboard over a data error
+    except Exception as exc:
         print(f"RPCE dashboard error: {exc}")
-        html = (
-            f"{_theme_style()}<div class='rpce-root' style='padding:24px'>"
-            "<div class='rpce-h1'>RPCE readiness</div>"
-            f"<p class='rpce-sub'>Couldn't build the dashboard: {exc}</p></div>"
-        )
-
-    # Close any previously-open dashboard so reopening doesn't stack windows.
-    prev = getattr(mw, "_rpce_dashboard", None)
-    if prev is not None:
-        try:
-            prev.close()
-        except Exception:
-            pass
-    dialog = QDialog(mw)
-    dialog.setWindowTitle("RPCE readiness")
-    dialog.resize(900, 760)
-    dialog.setStyleSheet(_DIALOG_QSS)
-    layout = QVBoxLayout(dialog)
-    layout.setContentsMargins(0, 0, 0, 0)
-    # Parent the webview to the dialog and render after it's shown, so it always
-    # paints (a parentless AnkiWebView can come up blank).
-    web = AnkiWebView(parent=dialog, title="rpce-dashboard")
-    web.setMinimumSize(640, 520)
-    layout.addWidget(web, 1)
-    close = QPushButton("Close")
-    qconnect(close.clicked, dialog.accept)
-    layout.addWidget(close)
-    # Non-modal (retain a reference so it isn't garbage-collected) so the webview
-    # renders in the normal event loop and can stay open while studying.
-    qconnect(dialog.finished, lambda *_: web.cleanup())
-    mw._rpce_dashboard = dialog
-    dialog.show()
-    web.stdHtml(html)
+    mw.moveToState("deckBrowser")
 
 
 class ScenarioDialog(QDialog):
