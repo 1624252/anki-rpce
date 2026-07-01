@@ -23,9 +23,12 @@ impl Build {
         .unwrap();
 
         writeln!(&mut buf, "builddir = {}", self.buildroot.as_str()).unwrap();
+        // Use the native path separator: n2 execs commands via CreateProcess,
+        // which can't resolve a relative forward-slash exe path on Windows.
+        let sep = if cfg!(windows) { '\\' } else { '/' };
         writeln!(
             &mut buf,
-            "runner = $builddir/rust/release/{}",
+            "runner = $builddir{sep}rust{sep}release{sep}{}",
             with_exe("runner")
         )
         .unwrap();
