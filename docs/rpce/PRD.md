@@ -541,7 +541,8 @@ pending; **Planned** = designed, not built.
 | Interactive multiple choice (clickable + instant feedback) (§7.1) | **Done** | desktop reviewer MCQ rung |
 | AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
 | Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
-| Learning-phase progression, timed practice | **Done** | `progression.py`, `timed.py` |
+| Learning-phase progression | **Done** | `progression.py` |
+| Timed practice (3-hour pacing) | **Removed from UI** | `timed.py` backend + tests remain; the desktop Timed tab/menu/banner chip were removed |
 | Memory = FSRS-calibrated retrievability (§8) | **Done** | `scores.py` uses real FSRS retrievability (FSRS enabled on the deck), heuristic fallback when absent |
 | Memory calibration Brier/log-loss/ECE (§9 Step 1) | **Done** | `scores.memory_calibration` (FSRS retrievability vs. outcome); shown on the dashboard |
 | Paraphrase gap wired to real reworded data (§7d) | **Partial** | `metrics.paraphrase_gap` done; not yet fed live reworded-question results |

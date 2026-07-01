@@ -256,19 +256,6 @@ def _chip(text: str) -> str:
     return f"<span class='rpce-chip'>{text}</span>"
 
 
-def _timer_chip(col) -> str:
-    from anki.rpce import timed
-
-    status = timed.active_session(col)
-    if status is None:
-        return ""
-    if status.expired:
-        return _chip(f"⏱ Section {status.section} time is up")
-    return _chip(
-        f"⏱ Section {status.section}: <b>{timed.format_hms(status.remaining_secs)}</b> left"
-    )
-
-
 def _banner_html(col) -> str:
     from anki.rpce import scores
 
@@ -330,7 +317,6 @@ def _banner_html(col) -> str:
     chips = _chip(f"📈 Phase: <b>{phase.title}</b> — {phase.focus}")
     if sec1.best_next_topic:
         chips += _chip(f"🎯 Next: <b>{sec1.best_next_topic}</b>")
-    chips += _timer_chip(col)
     chips_row = f"<div class='rpce-chips'>{chips}</div>" if chips else ""
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
@@ -348,7 +334,7 @@ def _banner_html(col) -> str:
   {note}
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
-    practice <b>Section II</b>, run a <b>Simulation</b> or a <b>Timed</b> session.</div>
+    practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   <div class="rpce-foot" style="margin-top:6px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
@@ -604,28 +590,6 @@ def _show_simulation() -> None:
     SimulationDialog(mw).exec()
 
 
-def _start_timer(section: str) -> None:
-    mw = aqt.mw
-    if mw is None or mw.col is None:
-        return
-    from anki.rpce import timed
-
-    timed.start_session(mw.col, section)
-    mw.reset()
-    tooltip(f"Started timed Section {section} (3-hour limit).")
-
-
-def _stop_timer() -> None:
-    mw = aqt.mw
-    if mw is None or mw.col is None:
-        return
-    from anki.rpce import timed
-
-    timed.clear_session(mw.col)
-    mw.reset()
-    tooltip("Stopped the practice timer.")
-
-
 def _add_menu() -> None:
     mw = aqt.mw
     if mw is None:
@@ -642,14 +606,6 @@ def _add_menu() -> None:
     qconnect(sim_action.triggered, _show_simulation)
     dash_action = menu.addAction("Readiness dashboard…")
     qconnect(dash_action.triggered, _show_dashboard)
-    menu.addSeparator()
-    timer_menu = menu.addMenu("Timed practice")
-    t1 = timer_menu.addAction("Start Section I (3h)")
-    qconnect(t1.triggered, lambda: _start_timer("I"))
-    t2 = timer_menu.addAction("Start Section II (3h)")
-    qconnect(t2.triggered, lambda: _start_timer("II"))
-    t3 = timer_menu.addAction("Stop timer")
-    qconnect(t3.triggered, _stop_timer)
 
 
 def _apply_light_theme() -> None:
@@ -940,21 +896,6 @@ def _tab_study() -> None:
     mw.moveToState("overview")
 
 
-def _tab_timed() -> None:
-    mw = aqt.mw
-    if mw is None or mw.col is None:
-        return
-    from anki.rpce import timed
-
-    if timed.active_session(mw.col):
-        timed.clear_session(mw.col)
-        tooltip("Timed session stopped.")
-    else:
-        timed.start_session(mw.col, "I")
-        tooltip("Started timed Section I (3-hour limit).")
-    mw.reset()
-
-
 _TOOLBAR_CSS = (
     "<style>"
     "body{background:#ffffff !important}"
@@ -1009,15 +950,6 @@ def _on_toolbar_links(links, toolbar) -> None:
             _show_dashboard,
             tip="Readiness dashboard",
             id="rpce_dashboard",
-        )
-    )
-    links.append(
-        toolbar.create_link(
-            "rpce_timed",
-            "Timed",
-            _tab_timed,
-            tip="Start/stop a 3-hour timed session",
-            id="rpce_timed",
         )
     )
     if sync_link is not None:
