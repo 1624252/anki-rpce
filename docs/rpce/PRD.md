@@ -545,7 +545,7 @@ pending; **Planned** = designed, not built.
 | Memory calibration Brier/log-loss/ECE (§9 Step 1) | **Done** | `scores.memory_calibration` (FSRS retrievability vs. outcome); shown on the dashboard |
 | Paraphrase gap wired to real reworded data (§7d) | **Partial** | `metrics.paraphrase_gap` done; not yet fed live reworded-question results |
 | 3-build study experiment (§9) | **Partial** | `experiment.py` harness done; three real builds not run |
-| Gold-set eval from `data/` (§9) | **Partial** | harness done; real gold set not wired |
+| Gold-set eval from `data/` (§9) | **Done** | `anki.rpce.gold` + `just rpce-eval` on the official sample questions: 36 Q / 7 domains, accuracy + false-pass vs cutoffs, leakage-clean |
 | Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Done** | `scores.py` (synced config ring buffer); recorded on dashboard open + after study; shown in banner + dashboard |
 | Custom SQLite schema (§11b) | **Planned** | superseded for now by tags + config |
 | Phone: shared engine on device (§6) | **Done** | `mobile/jni` drives the real protobuf backend on-device |

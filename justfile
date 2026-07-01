@@ -157,6 +157,10 @@ ftl-deprecate:
 bench *args:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_bench.py {{ args }}
 
+# RPCE: gold-set eval of the AI examiner on the official sample questions (spec §7f, §9).
+rpce-eval:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_gold_eval.py
+
 # Build documentation site
 docs:
     {{ uv }} run --group docs sphinx-build -b html docs out/docs/html
