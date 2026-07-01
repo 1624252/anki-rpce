@@ -161,6 +161,10 @@ bench *args:
 rpce-eval:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_gold_eval.py
 
+# RPCE: two-way sync round-trip proof (spec §7b) — spins up a temp local sync server.
+rpce-sync-test:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_sync_test_run.py
+
 # Build documentation site
 docs:
     {{ uv }} run --group docs sphinx-build -b html docs out/docs/html

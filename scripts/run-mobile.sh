@@ -33,6 +33,15 @@ fi
 echo "==> SDK: $SDK"
 echo "==> JAVA_HOME: ${JAVA_HOME:-<system default>}"
 
+# --- native engine (build the shared .so if missing) ------------------------
+# Gradle packages arm64-v8a (devices) + x86_64 (emulator); without the .so the
+# APK installs but crashes on System.loadLibrary. Build it once with cargo-ndk.
+JNILIBS=mobile/app/app/src/main/jniLibs
+if [ ! -f "$JNILIBS/arm64-v8a/libspeedrun_jni.so" ] || [ ! -f "$JNILIBS/x86_64/libspeedrun_jni.so" ]; then
+  echo "==> Native engine missing — building with cargo-ndk (arm64-v8a + x86_64)…"
+  cargo ndk -t arm64-v8a -t x86_64 -o "$JNILIBS" build -p speedrun_jni --release
+fi
+
 # --- build -------------------------------------------------------------------
 echo "==> Building debug APK (first run downloads Gradle)…"
 ( cd mobile/app && ./gradlew :app:assembleDebug )
