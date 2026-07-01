@@ -102,6 +102,9 @@ _REVIEWER_BOTTOM_CSS = (
     "body{color:#35548c !important}"
     # Remove the reviewer's Edit button (not part of the RPCE study flow).
     "button[onclick*='edit']{display:none !important}"
+    # …and keep both side cells equal width so the rating buttons stay centered
+    # now that the left (Edit) cell is empty.
+    "td.stat{width:120px !important}"
     "button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:#fff !important;"
     "border:none !important;border-radius:10px !important;padding:8px 16px !important;"
     "font-weight:700 !important;box-shadow:0 3px 10px rgba(29,78,216,.3) !important}"
