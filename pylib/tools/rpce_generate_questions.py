@@ -2,28 +2,24 @@
 # Copyright: Ankitects Pty Ltd and contributors
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-"""Generate RPCE practice questions grounded in the real RONR 12th-ed. corpus.
+"""Generate varied, answerable RPCE practice questions (spec §7).
 
-Every question is built from actual paragraph text in
-``data/roberts_rules_of_order_12th_edition.md`` so that each answer can cite the
-**exact section** (e.g. ``RONR (12th ed.) 10:11``) and give a **verbatim quote**
-from that section — nothing is fabricated (spec §7: AI output must trace to a
-named source). The generator is deterministic (fixed seed) so it is reproducible.
+Each question carries enough on screen to answer it, and cites its RONR (12th
+ed.) section only in the answer (never in the stem or options). Types:
 
-Question types (varied, per the sample set in
-``data/RPCE-Sample-Questions-v4-100625.md``). Both test the rule's content;
-neither names a RONR section in the stem or options — the section appears only
-in the answer, alongside the relevant verbatim quote:
+- **cloze**  — fill a key term blanked from a real RONR sentence. Each blank has
+  a hint (e.g. "8-letter word starting 'm'"), so it isn't guesswork; a sentence
+  with two key terms becomes a two-blank cloze.
+- **mcq**    — applied multiple choice grounded in the corpus (pick the term).
+- **vote / debatable / second / amendable (mcq)** — a motion's characteristics,
+  from the curated table in :mod:`anki.rpce.knowledge`.
+- **ranking (mcq)** — which of these motions has the highest precedence.
+- **order** — put a few motions in order of precedence (highest first).
 
-- **cloze**    — recall a key (emphasised) term blanked out of a real sentence.
-- **term_mcq** — applied multiple choice: pick the term that fills the blank,
-  among plausible distractor terms drawn from other concepts.
-
-Each item is tagged with a **Concept ID** and a **format**. Every format of one
-concept shares its Concept ID, so the spaced-repetition scheduler treats them as
-a single problem on one FSRS schedule and rotates the format each repetition
-(spec §7.1 / SPOV 1 — the Transfer Ladder). The format tag is how answers of the
-same type are tracked.
+Ranking/order/characteristic questions come from structured knowledge because
+prose cloze can't test them (too many combinations to fill one blank). The
+corpus is read from ``data/roberts_rules_of_order_12th_edition.md``. Deterministic
+(fixed seed) so it is reproducible.
 
 Usage (from the repo root):
 
@@ -39,24 +35,26 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # pylib on path
+from anki.rpce import knowledge as kb  # noqa: E402
+
 CORPUS = Path("data/roberts_rules_of_order_12th_edition.md")
 SEED = 20260701
 
-# A paragraph line looks like:
-#   [<a id="pg-573"></a>]<a id="p-44-1"></a>*44:1* <text...>
 _PARA_RE = re.compile(
     r'(?:<a id="pg-\d+"></a>)*<a id="p-(\d+)-(\d+)"></a>\*([\d]+:[\d]+[^*]*)\*\s*(.*)'
 )
 _TAG_RE = re.compile(r'<a id="[^"]*"></a>')
-_LINK_RE = re.compile(r"\[([^\]]+)\]\((?:#|https?)[^)]*\)")  # keep link text
-_BOLD_RE = re.compile(r"\*\*([^*]+)\*\*")  # run-in headings
-_EMPH_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")  # italic key terms only
+_LINK_RE = re.compile(r"\[([^\]]+)\]\((?:#|https?)[^)]*\)")
+_BOLD_RE = re.compile(r"\*\*([^*]+)\*\*")
+_EMPH_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _MULTISPACE_RE = re.compile(r"\s+")
-# Footnote markers like "> **13.**" and leading blockquotes.
 _FOOTNOTE_RE = re.compile(r"^>\s*")
 
-# The seven Performance-Expectation domains, by primary RONR section ranges.
-# (Approximate blueprint mapping; the citation/quote is the authoritative part.)
+# A RONR section reference (e.g. "10:5", "§23", "Section 4"). Never allowed in a
+# question stem or option — it belongs only in the answer citation.
+_SECTION_RE = re.compile(r"\b\d+:\d+\b|§|\bRONR\b|\bsections?\s+\d+", re.I)
+
 DOMAIN_NAMES = {
     1: "Motions in General and Main Motions",
     2: "Subsidiary and Privileged Motions",
@@ -65,6 +63,14 @@ DOMAIN_NAMES = {
     5: "Voting, Nominations, and Elections",
     6: "Being and Serving as a Professional Parliamentarian and Teaching Parliamentary Procedure",
     7: "Boards and Committees, and Writing and Interpreting Bylaws",
+}
+
+# Motion class -> Performance-Expectation domain (for coverage tagging).
+_CLASS_DOMAIN = {
+    kb.CLASS_MAIN: 1,
+    kb.CLASS_PRIVILEGED: 2,
+    kb.CLASS_SUBSIDIARY: 2,
+    kb.CLASS_INCIDENTAL: 3,
 }
 
 
@@ -81,29 +87,40 @@ def domain_for_section(sec: int) -> int:
         return 7
     if sec in (61, 62, 63):
         return 6
-    # Everything else (basic provisions, meetings, minutes, officers, notice…).
     return 4
 
 
 def clean(text: str) -> str:
-    """Turn raw corpus markup into clean prose, restoring conversion mojibake."""
-    text = text.replace("\ufffd?T", "\u2019").replace("\ufffd?o", "\u201c")
-    text = text.replace("\ufffd", "")
+    text = text.replace("�?T", "’").replace("�?o", "“")
+    text = text.replace("�", "")
     text = _FOOTNOTE_RE.sub("", text)
     text = _TAG_RE.sub("", text)
     text = _LINK_RE.sub(r"\1", text)
-    # Strip markdown emphasis markers so display text is plain prose.
     text = text.replace("**", "").replace("*", "").replace("_", "")
     text = _MULTISPACE_RE.sub(" ", text).strip()
     return text
 
 
+def first_sentence(text: str, limit: int = 300) -> str:
+    parts = [s.strip() for s in re.split(r"(?<=[.;:])\s+(?=[A-Z(“])", text)]
+    chosen = next((s for s in parts if len(s) >= 60), None)
+    if chosen is None:
+        chosen = max(parts, key=len) if parts else text.strip()
+    if len(chosen) > limit:
+        chosen = chosen[:limit].rsplit(" ", 1)[0] + "…"
+    return chosen.strip()
+
+
+def mentions_section(*texts: str) -> bool:
+    return any(_SECTION_RE.search(t) for t in texts if t)
+
+
 @dataclass
 class Para:
-    citation: str  # e.g. "10:11"
+    citation: str
     section: int
     domain: int
-    text: str  # cleaned full paragraph
+    text: str
     emphases: list[str] = field(default_factory=list)
 
 
@@ -116,14 +133,11 @@ def parse_corpus() -> list[Para]:
         sec = int(m.group(1))
         citation = m.group(3).strip()
         body = m.group(4)
-        # Italic key terms only (drop **bold run-in headings** first).
         italic_src = _BOLD_RE.sub(" ", body)
         emphases = [clean(e) for e in _EMPH_RE.findall(italic_src)]
         text = clean(body)
-        # Keep substantive prose only.
         if len(text) < 90 or ":" not in citation:
             continue
-        # Usable emphasised terms: multi-char, not pure punctuation/numbers.
         emph = [
             e
             for e in emphases
@@ -133,131 +147,287 @@ def parse_corpus() -> list[Para]:
     return paras
 
 
-# A RONR section reference (e.g. "10:5", "§23", "Section 4"). Questions and their
-# options must NOT mention sections — that belongs only in the answer citation.
-_SECTION_RE = re.compile(r"\b\d+:\d+\b|§|\bRONR\b|\bsections?\s+\d+", re.I)
-
-
-def mentions_section(*texts: str) -> bool:
-    """True if any text names a RONR section (disallowed in stems/options)."""
-    return any(_SECTION_RE.search(t) for t in texts if t)
+def section_quotes(paras: list[Para]) -> dict[int, tuple[str, str]]:
+    """First substantive (citation, quote) found for each RONR section."""
+    out: dict[int, tuple[str, str]] = {}
+    for p in paras:
+        if p.section not in out:
+            out[p.section] = (p.citation, first_sentence(p.text))
+    return out
 
 
 @dataclass
 class Question:
     domain: int
-    kind: str  # human-readable format label
-    fmt: str  # machine format key: cloze | term_mcq
-    concept_id: str  # e.g. "C0007" — shared by every format of one concept
-    stem: str
-    options: list[str]  # empty for non-MCQ
-    answer: str  # letter for MCQ, or the term/quote
-    citation: str
+    kind: str  # cloze | mcq | order
+    concept_id: str
+    label: str  # human category label (for the doc)
+    payload: dict  # full render payload, incl. cite + quote
+    plain_q: str  # no-JS / doc question text
+    plain_a: str  # no-JS / doc answer text
+    cite: str
     quote: str
 
 
-def make_cloze(p: Para, concept_id: str, rng: random.Random) -> Question | None:
+def _hint(term: str) -> str:
+    n = len(term.replace(" ", ""))
+    return f"{n}-letter word starting '{term[0].lower()}'" if term else ""
+
+
+# --- corpus-grounded questions ------------------------------------------------
+
+
+def make_cloze(p: Para, cid: str, rng: random.Random) -> Question | None:
     if not p.emphases:
         return None
-    term = rng.choice(p.emphases)
-    sentence = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if term in s), None)
-    if not sentence:
+    # Blank one or two distinctive terms present in a single sentence.
+    sentence = None
+    terms: list[str] = []
+    for cand in rng.sample(p.emphases, len(p.emphases)):
+        s = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if cand in s), None)
+        if s and (sentence is None or s == sentence):
+            sentence = s
+            terms.append(cand)
+        if len(terms) == 2:
+            break
+    if not sentence or not terms:
         return None
-    blanked = sentence.replace(term, "_____", 1)
-    # Never quiz on a sentence that itself names a section.
-    if mentions_section(blanked):
+    if mentions_section(sentence):
         return None
+    text = sentence
+    blanks = []
+    for i, term in enumerate(terms):
+        text = text.replace(term, f"[[{i}]]", 1)
+        blanks.append({"a": term, "h": _hint(term)})
+    plain_a = ", ".join(terms)
+    plain_q = "Fill the blank(s): " + re.sub(r"\[\[\d+\]\]", "_____", text)
+    payload = {
+        "kind": "cloze",
+        "text": text,
+        "blanks": blanks,
+        "cite": p.citation,
+        "quote": sentence.strip(),
+    }
     return Question(
         p.domain,
-        "Cloze recall",
         "cloze",
-        concept_id,
-        f"Fill in the blank: {blanked}",
-        [],
-        term,
+        cid,
+        "Cloze recall",
+        payload,
+        plain_q,
+        f"{plain_a} — “{sentence.strip()}”",
         p.citation,
         sentence.strip(),
     )
 
 
 def make_term_mcq(
-    p: Para, concept_id: str, term_pool: list[str], rng: random.Random
+    p: Para, cid: str, pool: list[str], rng: random.Random
 ) -> Question | None:
-    """Applied multiple-choice on the concept's key term.
-
-    The stem is the concept sentence with its key term blanked; the options are
-    that term plus three plausible distractor terms drawn from other concepts.
-    This tests understanding of the *rule itself* — never which section a
-    passage came from (that kind of section-recall question is intentionally
-    excluded; the citation is shown only in the answer debrief).
-    """
     if not p.emphases:
         return None
     term = rng.choice(p.emphases)
     sentence = next((s for s in re.split(r"(?<=[.;])\s+", p.text) if term in s), None)
-    if not sentence:
+    if not sentence or mentions_section(sentence, term):
         return None
-    blanked = sentence.replace(term, "_____", 1)
-    # Skip sentences/terms that name a section (must stay out of stems & options).
-    if mentions_section(blanked, term):
-        return None
-    pool = [
-        t for t in term_pool if t.lower() != term.lower() and not mentions_section(t)
+    distractors = [
+        t for t in pool if t.lower() != term.lower() and not mentions_section(t)
     ]
-    if len(pool) < 3:
+    if len(distractors) < 3:
         return None
-    options = [term, *rng.sample(pool, 3)]
+    options = [term, *rng.sample(distractors, 3)]
     rng.shuffle(options)
-    letter = "ABCD"[options.index(term)]
+    answer = options.index(term)
+    stem = f"Fill in the blank: {sentence.replace(term, '_____', 1)}"
+    payload = {
+        "kind": "mcq",
+        "stem": stem,
+        "options": options,
+        "answer": answer,
+        "cite": p.citation,
+        "quote": sentence.strip(),
+    }
     return Question(
         p.domain,
+        "mcq",
+        cid,
         "Applied multiple-choice",
-        "term_mcq",
-        concept_id,
-        f"Fill in the blank: {blanked}",
-        options,
-        letter,
+        payload,
+        stem,
+        f"{'ABCD'[answer]}) {options[answer]}",
         p.citation,
         sentence.strip(),
     )
 
 
-# The formats each concept is taught in (Transfer Ladder / SPOV 1: same concept,
-# different shapes). Every format of one concept shares its Concept ID so the
-# spaced-repetition scheduler treats them as ONE problem on ONE FSRS schedule.
-# Both formats test the rule's content; the RONR section is never named in a
-# stem or option — it appears only in the answer's citation/quote.
-FORMATS = ("cloze", "term_mcq")
+# --- knowledge-based questions (motions & characteristics) --------------------
+
+
+def _motion_domain(m: kb.Motion) -> int:
+    return _CLASS_DOMAIN.get(m.klass, 4)
+
+
+def _kb_ref(m: kb.Motion, secq: dict[int, tuple[str, str]]) -> tuple[str, str]:
+    cite, quote = secq.get(m.section, (str(m.section), ""))
+    return cite, quote
+
+
+def make_characteristic(
+    m: kb.Motion, which: str, cid: str, secq: dict[int, tuple[str, str]]
+) -> Question:
+    cite, quote = _kb_ref(m, secq)
+    if which == "vote":
+        stem = f"What vote does the motion to {m.name} require to be adopted?"
+        opts = [
+            "Majority vote",
+            "Two-thirds vote",
+            "No vote (chair rules / demand)",
+            "Unanimous consent",
+        ]
+        ans = opts.index(kb.VOTE_LABELS[m.vote])
+    elif which == "debatable":
+        stem = f"Is the motion to {m.name} debatable?"
+        opts = ["Debatable", "Not debatable"]
+        ans = 0 if m.debatable else 1
+    elif which == "second":
+        stem = f"Does the motion to {m.name} require a second?"
+        opts = ["Requires a second", "No second required"]
+        ans = 0 if m.second else 1
+    else:  # amendable
+        stem = f"Can the motion to {m.name} be amended?"
+        opts = ["Amendable", "Not amendable"]
+        ans = 0 if m.amendable else 1
+    payload = {
+        "kind": "mcq",
+        "stem": stem,
+        "options": opts,
+        "answer": ans,
+        "cite": cite,
+        "quote": quote,
+    }
+    label = {
+        "vote": "Vote required",
+        "debatable": "Debatability",
+        "second": "Second required",
+        "amendable": "Amendability",
+    }[which]
+    return Question(
+        _motion_domain(m), "mcq", cid, label, payload, stem, f"{opts[ans]}", cite, quote
+    )
+
+
+def make_ranking(
+    motions: list[kb.Motion],
+    cid: str,
+    secq: dict[int, tuple[str, str]],
+    rng: random.Random,
+) -> Question:
+    top = min(motions, key=lambda m: m.rank)  # lowest rank number = highest precedence
+    names = [m.name for m in motions]
+    rng.shuffle(names)
+    stem = "Which of these motions has the highest precedence (is taken up first)?"
+    ans = names.index(top.name)
+    cite, quote = _kb_ref(top, secq)
+    payload = {
+        "kind": "mcq",
+        "stem": stem,
+        "options": names,
+        "answer": ans,
+        "cite": cite,
+        "quote": quote,
+    }
+    return Question(
+        2,
+        "mcq",
+        cid,
+        "Order of precedence (ranking)",
+        payload,
+        stem,
+        top.name,
+        cite,
+        quote,
+    )
+
+
+def make_order(
+    motions: list[kb.Motion], cid: str, secq: dict[int, tuple[str, str]]
+) -> Question:
+    ordered = sorted(motions, key=lambda m: m.rank)  # highest precedence first
+    labels = [m.name for m in ordered]
+    prompt = "Tap these motions in order of precedence, highest first."
+    cite, quote = _kb_ref(ordered[0], secq)
+    payload = {
+        "kind": "order",
+        "prompt": prompt,
+        "order": labels,
+        "cite": cite,
+        "quote": quote,
+    }
+    return Question(
+        2,
+        "order",
+        cid,
+        "Order of precedence (ordering)",
+        payload,
+        prompt,
+        " → ".join(labels),
+        cite,
+        quote,
+    )
+
+
+def build_knowledge(
+    secq: dict[int, tuple[str, str]], rng: random.Random
+) -> list[Question]:
+    qs: list[Question] = []
+    n = 0
+    # Characteristic questions: every motion × four traits.
+    for m in kb.MOTIONS:
+        for which in ("vote", "debatable", "second", "amendable"):
+            n += 1
+            qs.append(make_characteristic(m, which, f"K{n:04d}", secq))
+    ranked = kb.ranked_motions()
+    # Ranking + ordering over sliding windows and random subsets of the chart.
+    for size in (3, 4):
+        for start in range(0, len(ranked) - size + 1):
+            n += 1
+            qs.append(
+                make_ranking(ranked[start : start + size], f"K{n:04d}", secq, rng)
+            )
+            n += 1
+            qs.append(make_order(ranked[start : start + size], f"K{n:04d}", secq))
+    for _ in range(40):
+        for size in (3, 4):
+            subset = rng.sample(ranked, size)
+            n += 1
+            qs.append(make_ranking(subset, f"K{n:04d}", secq, rng))
+            n += 1
+            qs.append(make_order(subset, f"K{n:04d}", secq))
+    return qs
 
 
 def build(count: int) -> list[Question]:
-    """Generate ``count`` questions **grouped by concept**.
-
-    A *concept* is one source paragraph. For each concept we emit up to two
-    format variants (cloze recall + applied multiple-choice), both tagged with
-    the same ``concept_id``. Downstream, items sharing a Concept ID are scheduled
-    as a single problem whose *format rotates* each repetition — never the same
-    shape twice in a row (spec §7.1 / SPOV 1). Deterministic (fixed seed).
-    """
     rng = random.Random(SEED)
     paras = parse_corpus()
-    # Distractor pool for the applied MCQ: every emphasised term in the corpus.
+    secq = section_quotes(paras)
     term_pool = sorted({t for p in paras for t in p.emphases})
+    questions: list[Question] = list(build_knowledge(secq, rng))
+    rng.shuffle(questions)  # mix the knowledge types through the deck
+    # Fill the rest from the corpus (cloze + applied MCQ), grouped by concept.
     rng.shuffle(paras)
-    questions: list[Question] = []
-    concept_n = 0
+    cn = 0
     for p in paras:
         if len(questions) >= count:
             break
-        concept_n += 1
-        concept_id = f"C{concept_n:04d}"
-        for fmt in FORMATS:
+        cn += 1
+        cid = f"C{cn:04d}"
+        for maker in (
+            lambda: make_cloze(p, cid, rng),
+            lambda: make_term_mcq(p, cid, term_pool, rng),
+        ):
             if len(questions) >= count:
                 break
-            if fmt == "cloze":
-                q = make_cloze(p, concept_id, rng)
-            else:  # term_mcq
-                q = make_term_mcq(p, concept_id, term_pool, rng)
+            q = maker()
             if q is not None:
                 questions.append(q)
     return questions[:count]
@@ -265,21 +435,19 @@ def build(count: int) -> list[Question]:
 
 def render(questions: list[Question]) -> str:
     concepts = {q.concept_id for q in questions}
+    kinds: dict[str, int] = {}
+    for q in questions:
+        kinds[q.label] = kinds.get(q.label, 0) + 1
     out: list[str] = [
         "# RPCE Practice Questions (generated, RONR 12th-ed.-grounded)",
         "",
-        f"{len(questions)} questions across {len(concepts)} concepts, generated from "
-        "the transcribed *Robert's Rules of Order Newly Revised, 12th ed.* corpus. "
-        "Every answer cites the exact section and quotes it verbatim (spec §7). "
-        "Question types are varied (cloze recall, quote→section, stated-in-section), "
-        "following [`RPCE-Sample-Questions-v4-100625.md`](./RPCE-Sample-Questions-v4-100625.md).",
+        f"{len(questions)} questions across {len(concepts)} concepts. Types are "
+        "varied so the same fact resurfaces in different shapes (cloze with hints, "
+        "applied multiple choice, order-of-precedence ranking and ordering, and "
+        "motion-characteristic questions). Every question is answerable from what "
+        "it shows; the RONR (12th ed.) section is cited only in the answer.",
         "",
-        "**Spaced-repetition grouping.** Each item is tagged `[Concept Cxxxx · "
-        "format]`. Items that share a **Concept ID** are the *same concept in "
-        "different formats*: the app schedules them as **one problem on a single "
-        "FSRS schedule** and *rotates* the format each repetition — never the same "
-        "shape twice in a row (spec §7.1 / SPOV 1, the Transfer Ladder). The format "
-        "tag is how the scheduler tracks answers of the same type.",
+        "Counts by type: " + ", ".join(f"{k} ({v})" for k, v in sorted(kinds.items())),
         "",
         "> Reproduce with `python pylib/tools/rpce_generate_questions.py`.",
         "",
@@ -287,45 +455,34 @@ def render(questions: list[Question]) -> str:
     by_domain: dict[int, list[Question]] = {d: [] for d in DOMAIN_NAMES}
     for q in questions:
         by_domain[q.domain].append(q)
-
     for d in sorted(DOMAIN_NAMES):
         qs = by_domain[d]
         if not qs:
             continue
         out.append(f"## Domain {d}: {DOMAIN_NAMES[d]}")
         out.append("")
-        answers: list[str] = []
-        for n, q in enumerate(qs, 1):
-            out.append(f"**{n}.** `[{q.concept_id} · {q.fmt}]` _{q.kind}_ — {q.stem}")
-            out.append("")
-            if q.options:
-                for letter, opt in zip("ABCD", q.options):
+        for i, q in enumerate(qs, 1):
+            out.append(f"**{i}.** `[{q.concept_id} · {q.label}]` {q.plain_q}")
+            if q.payload.get("options"):
+                for letter, opt in zip("ABCD", q.payload["options"]):
                     out.append(f"   {letter}. {opt}")
-                out.append("")
-            anchor = "p-" + q.citation.split("(")[0].replace(":", "-")
-            link = f"[{q.citation}](roberts_rules_of_order_12th_edition.md#{anchor})"
-            label = "Correct answer" if q.options else "Answer"
-            answers.append(
-                f"{n}. `[{q.concept_id} · {q.fmt}]` {label}: **{q.answer}**. "
-                f'See RONR (12th ed.) {link} — "{q.quote}"'
+            out.append("")
+            out.append(
+                f"   *Answer:* {q.plain_a}. See RONR (12th ed.) {q.cite}"
+                + (f" — “{q.quote}”" if q.quote else "")
             )
-        out.append("**Answer Key** (with Concept ID · format for SRS tracking)")
-        out.append("")
-        out.extend(answers)
-        out.append("")
+            out.append("")
         out.append("---")
         out.append("")
     return "\n".join(out)
 
 
 def main() -> None:
-    # The summary contains non-cp1252 characters (e.g. "→"); force UTF-8 output.
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-    # Default to the repo-tracked docs path (data/ is a gitignored nested repo).
     out_path = (
         Path(sys.argv[2])
         if len(sys.argv) > 2
@@ -335,9 +492,8 @@ def main() -> None:
     out_path.write_text(render(questions), encoding="utf-8")
     kinds: dict[str, int] = {}
     for q in questions:
-        kinds[q.kind] = kinds.get(q.kind, 0) + 1
-    concepts = len({q.concept_id for q in questions})
-    print(f"wrote {len(questions)} questions across {concepts} concepts to {out_path}")
+        kinds[q.label] = kinds.get(q.label, 0) + 1
+    print(f"wrote {len(questions)} questions to {out_path}")
     for k, v in sorted(kinds.items()):
         print(f"  {k}: {v}")
 

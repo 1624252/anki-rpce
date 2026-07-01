@@ -1,0 +1,227 @@
+{
+ "precedence": [
+  {
+   "rank": 1,
+   "name": "Fix the Time to Which to Adjourn",
+   "class": "privileged",
+   "section": 22
+  },
+  {
+   "rank": 2,
+   "name": "Adjourn",
+   "class": "privileged",
+   "section": 21
+  },
+  {
+   "rank": 3,
+   "name": "Recess",
+   "class": "privileged",
+   "section": 20
+  },
+  {
+   "rank": 4,
+   "name": "Raise a Question of Privilege",
+   "class": "privileged",
+   "section": 19
+  },
+  {
+   "rank": 5,
+   "name": "Call for the Orders of the Day",
+   "class": "privileged",
+   "section": 18
+  },
+  {
+   "rank": 6,
+   "name": "Lay on the Table",
+   "class": "subsidiary",
+   "section": 17
+  },
+  {
+   "rank": 7,
+   "name": "Previous Question",
+   "class": "subsidiary",
+   "section": 16
+  },
+  {
+   "rank": 8,
+   "name": "Limit or Extend Limits of Debate",
+   "class": "subsidiary",
+   "section": 15
+  },
+  {
+   "rank": 9,
+   "name": "Postpone to a Certain Time",
+   "class": "subsidiary",
+   "section": 14
+  },
+  {
+   "rank": 10,
+   "name": "Commit or Refer",
+   "class": "subsidiary",
+   "section": 13
+  },
+  {
+   "rank": 11,
+   "name": "Amend",
+   "class": "subsidiary",
+   "section": 12
+  },
+  {
+   "rank": 12,
+   "name": "Postpone Indefinitely",
+   "class": "subsidiary",
+   "section": 11
+  }
+ ],
+ "characteristics": [
+  {
+   "name": "Fix the Time to Which to Adjourn",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 22
+  },
+  {
+   "name": "Adjourn",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "Majority vote",
+   "section": 21
+  },
+  {
+   "name": "Recess",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 20
+  },
+  {
+   "name": "Raise a Question of Privilege",
+   "second": "No",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "No vote (chair rules / demand)",
+   "section": 19
+  },
+  {
+   "name": "Call for the Orders of the Day",
+   "second": "No",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "No vote (chair rules / demand)",
+   "section": 18
+  },
+  {
+   "name": "Lay on the Table",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "Majority vote",
+   "section": 17
+  },
+  {
+   "name": "Previous Question",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "Two-thirds vote",
+   "section": 16
+  },
+  {
+   "name": "Limit or Extend Limits of Debate",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "Yes",
+   "vote": "Two-thirds vote",
+   "section": 15
+  },
+  {
+   "name": "Postpone to a Certain Time",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 14
+  },
+  {
+   "name": "Commit or Refer",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 13
+  },
+  {
+   "name": "Amend",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 12
+  },
+  {
+   "name": "Postpone Indefinitely",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "No",
+   "vote": "Majority vote",
+   "section": 11
+  },
+  {
+   "name": "Main Motion",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "Yes",
+   "vote": "Majority vote",
+   "section": 10
+  },
+  {
+   "name": "Point of Order",
+   "second": "No",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "No vote (chair rules / demand)",
+   "section": 23
+  },
+  {
+   "name": "Appeal",
+   "second": "Yes",
+   "debatable": "Yes",
+   "amendable": "No",
+   "vote": "Majority vote",
+   "section": 24
+  },
+  {
+   "name": "Suspend the Rules",
+   "second": "Yes",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "Two-thirds vote",
+   "section": 25
+  },
+  {
+   "name": "Object to the Consideration of a Question",
+   "second": "No",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "Two-thirds vote",
+   "section": 26
+  },
+  {
+   "name": "Division of the Assembly",
+   "second": "No",
+   "debatable": "No",
+   "amendable": "No",
+   "vote": "No vote (chair rules / demand)",
+   "section": 29
+  }
+ ],
+ "voteLegend": {
+  "majority": "Majority vote",
+  "two-thirds": "Two-thirds vote",
+  "none": "No vote (chair rules / demand)"
+ }
+}

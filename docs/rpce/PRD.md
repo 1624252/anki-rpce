@@ -185,10 +185,25 @@ No AI ships before the apps review the same deck on a shared engine.
 
 **Goal.** Defeat false mastery by never letting a concept be practiced in the same format twice in a row.
 
-- **Group by exact concept → one schedule.** Every format of a concept lives in a single note/card, so the concept has **one FSRS schedule**. Anki's existing spaced-repetition algorithm decides _when_ the concept returns; the Transfer Ladder decides _which format_ surfaces. FSRS intervals stay valid.
-- **Four options after every problem.** No matter the format shown, answering uses Anki's four **Again / Hard / Good / Easy** buttons and the standard FSRS formula updates the one schedule.
-- **Never the same format twice in a row.** When a concept comes back, its format differs from last time. The scheduled deck rotates `cloze recall ⇄ applied MCQ` (`rung_for_reps` alternates by repetition); the broader ladder (`cloze → applied MCQ → free-text scenario → advising prompt`) escalates transfer demand as mastery rises and drops a rung on a lapse (scaffolding fade, Insight 3).
-- **Format fits the question / learning style.** Different formats suit different concepts and learners. For example, an **order-of-precedence** item is fine as multiple choice _once the learner has recalled the full precedence chart first_ — so recall (cloze) precedes the applied MCQ.
+- **Concept tagging + one FSRS schedule per card.** Each card is one **answerable question** tagged to its concept (`rpce::concept::…`) and format (`rpce::fmt::…`). Anki's spaced-repetition algorithm schedules each; the same concept resurfaces in **different question types** across the deck, so a fact is never drilled in one shape only.
+- **Four options after every problem.** Whatever the type, answering uses Anki's four **Again / Hard / Good / Easy** buttons and standard FSRS. On the phone those buttons appear only **after** the learner has answered (tapped an option / ordered the motions) or **revealed** the cloze — mirrored on the desktop by the native Show-Answer step.
+- **Types escalate transfer demand.** `cloze recall → applied MCQ → ranking / ordering → free-text scenario → advising prompt`. Recall (cloze) is the low rung; ordering the precedence chart and Section II scenarios are higher. Format tags let the M9 experiment compare recall vs. reworded performance (spec §7d).
+- **Answerability rule.** Every question shows enough to answer it. Things with many combinations (order of precedence) are **ranking/ordering** questions, not fill-in-the-blank; cloze blanks carry a **hint** (length + first letter). See §7.6.
+
+### 7.6 Question Types & Reference Tab
+
+**Goal.** Vary how a fact is tested — and only test what the screen makes answerable. Each question is one note (`RPCE Q` notetype) of a **Kind** with a JSON **Payload** that the *same* renderer draws on desktop and phone (single source, `anki.rpce.render_js`). The section is cited **only in the answer**, never in a stem or option.
+
+- **Cloze** — fill key term(s) blanked from a real RONR sentence. Multiple blanks are supported; **each blank is tappable to reveal** individually (with a hint), and a **Reveal all** control reveals the rest. Rating is gated until every blank is revealed.
+- **Applied MCQ** — pick the term/answer; **tappable on both desktop and phone**, marks right/wrong, keeps the stem on screen with the answer.
+- **Ranking (MCQ)** — which of these motions has the highest precedence.
+- **Ordering** — tap a few shuffled motions into order of precedence (highest first); the sequence is checked and the correct order shown.
+- **Motion characteristics (MCQ)** — vote required / debatable / needs a second / amendable, from the curated `anki.rpce.knowledge` table.
+
+**Reference tab.** A dedicated tab (desktop) / home button (phone) shows the **order-of-precedence** table and a **motion-characteristics** table (second, debatable, amendable, vote), sourced from `knowledge.reference_tables()` and bundled to the phone as `reference.json`.
+
+**Generation & scale.** `rpce_generate_questions.py` produces ~1000 varied, deterministic questions: knowledge-based ranking/ordering/characteristics plus corpus-grounded cloze (with hints) and applied MCQ, each with an exact citation + verbatim quote. A guard rejects any stem/option that names a section.
+
 - **Measurement.** The recall-vs-reworded gap (paraphrase test, spec §7d) is the success metric; a near-zero gap would mean the performance model just mirrors memory.
 
 ### 7.2 Dual-Mode Hybrid Engine (SPOV 2)

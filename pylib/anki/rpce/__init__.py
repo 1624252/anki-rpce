@@ -14,6 +14,9 @@ queue (see `get_points_at_stake_queue`).
 
 from __future__ import annotations
 
+import base64
+import json
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -119,109 +122,152 @@ def coverage_pct(col: Collection) -> float:
     return covered / len(cov)
 
 
-#: Name of the notetype that carries every format of one concept in one note.
-#: (Versioned: bumping the name triggers a clean deck rebuild on profile open.)
-#: v2 adds the RONR (12th ed.) Citation + Quote shown with every answer.
-TRANSFER_NOTETYPE = "RPCE Concept 2"
+#: Notetype for every RPCE question. One note = one question of a given Kind
+#: (cloze | mcq | order), fully described by a base64-JSON Payload the shared
+#: renderer reads. PlainQ/PlainA are the no-JS fallback (and what the browser and
+#: search show); Citation/Quote are the RONR (12th ed.) source shown with the
+#: answer. Bumping the name triggers a clean deck rebuild on profile open.
+QUESTION_NOTETYPE = "RPCE Q 1"
 
-#: Delimiter separating the individual MCQ options within the MCQOptions field.
-MCQ_OPTION_SEP = "||"
+#: Question kinds (payload["kind"]).
+KIND_CLOZE = "cloze"
+KIND_MCQ = "mcq"
+KIND_ORDER = "order"
+
+_CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
 
 
-def _transfer_notetype(col: Collection):
-    """Get (or create) the single-card, multi-format concept notetype.
+def payload_b64(payload: dict) -> str:
+    """Encode a render payload as base64 JSON (safe in an HTML attribute)."""
+    return base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
 
-    A concept is **one problem** for spaced repetition: one note → one card →
-    one FSRS schedule (Spiky POV 1 / spec §7.1). The card carries every format
-    of the concept in its fields; the Transfer Ladder rotates which format is
-    *shown* each repetition (`transfer_ladder.rung_for_reps`), so the same
-    problem never appears in the same shape twice in a row while repeating on a
-    single schedule — exactly as the algorithm repeats one problem.
-    """
-    from . import transfer_ladder
+
+def hint_for(term: str) -> str:
+    """A light hint so a cloze blank isn't guesswork (length + first letter)."""
+    n = len(term.replace(" ", ""))
+    return f"{n}-letter word starting '{term[0].lower()}'" if term else ""
+
+
+def cloze_to_payload_text(cloze: str) -> tuple[str, list[dict]]:
+    """Convert ``{{c1::term}}`` markup to ``[[i]]`` blanks + a hinted blanks list."""
+    blanks: list[dict] = []
+
+    def repl(m: re.Match) -> str:
+        term = m.group(1)
+        i = len(blanks)
+        blanks.append({"a": term, "h": hint_for(term)})
+        return f"[[{i}]]"
+
+    return _CLOZE_RE.sub(repl, cloze), blanks
+
+
+def _question_notetype(col: Collection):
+    from . import render_js
 
     mm = col.models
-    existing = mm.by_name(TRANSFER_NOTETYPE)
+    existing = mm.by_name(QUESTION_NOTETYPE)
     if existing is not None:
         return existing
-    m = mm.new(TRANSFER_NOTETYPE)
-    # MCQQ = stem; MCQA = correct-answer text; MCQOptions = the options joined by
-    # MCQ_OPTION_SEP; MCQIdx = index of the correct option (for interactive MCQ).
-    # Citation/Quote = the RONR (12th ed.) section and verbatim excerpt shown
-    # with every answer (project accuracy rule; spec §6/§9).
-    for field in (
-        "Concept",
-        "Domain",
-        "ClozeQ",
-        "ClozeA",
-        "MCQQ",
-        "MCQA",
-        "MCQOptions",
-        "MCQIdx",
-        "Citation",
-        "Quote",
-    ):
+    m = mm.new(QUESTION_NOTETYPE)
+    for field in ("Kind", "Payload", "PlainQ", "PlainA", "Citation", "Quote"):
         mm.add_field(m, mm.new_field(field))
-    tmpl = mm.new_template("Concept")
-    # Default rendering (used where the desktop format-rotation hook is absent,
-    # e.g. the phone): the cloze recall prompt. Every answer carries the RONR
-    # citation + verbatim quote.
-    tmpl["qfmt"] = "{{ClozeQ}}"
-    # Answer fills the blank in place: show the completed sentence (ClozeA), not
-    # the blanked question again followed by a separate reveal.
+    tmpl = mm.new_template("Question")
+    # The hidden payload feeds the interactive renderer (phone); PlainQ is the
+    # no-JS fallback. The answer shows PlainA + the RONR citation/quote.
+    tmpl["qfmt"] = (
+        '<div class="rpce-plain">{{PlainQ}}</div>'
+        '<div id="rpce-payload" data-kind="{{Kind}}" data-p="{{Payload}}" '
+        'style="display:none"></div>'
+    )
     tmpl["afmt"] = (
-        "{{ClozeA}}"
+        "{{PlainA}}"
         "{{#Citation}}<div class=rpce-ref>"
         "<div class=rpce-cite>RONR (12th ed.) {{Citation}}</div>"
         "<div class=rpce-quote>&ldquo;{{Quote}}&rdquo;</div></div>{{/Citation}}"
     )
-    m["css"] = (
-        ".card{font-size:18px;color:#0a1f44}"
-        # Revealed cloze blank — a distinct color so the answer stands out.
-        f".cloze-reveal{{color:{transfer_ladder.CLOZE_REVEAL_COLOR};font-weight:700}}"
-        ".rpce-ref{margin-top:18px;padding:14px 16px;border-left:4px solid #2f6fed;"
-        "background:#eef4ff;border-radius:10px;text-align:left}"
-        ".rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}"
-        ".rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}"
-    )
+    m["css"] = render_js.RENDER_CSS + ".card{font-size:18px;color:#0a1f44}"
     mm.add_template(m, tmpl)
     mm.add(m)
-    return mm.by_name(TRANSFER_NOTETYPE)
+    return mm.by_name(QUESTION_NOTETYPE)
+
+
+def add_question_note(
+    col: Collection,
+    deck_id: int,
+    *,
+    payload: dict,
+    plain_q: str,
+    plain_a: str,
+    domain: int,
+    concept_id: str,
+) -> None:
+    """Add one question note from a render payload (kind lives in the payload)."""
+    from .transfer_ladder import FORMAT_TAG_PREFIX, concept_tag
+
+    model = _question_notetype(col)
+    note = col.new_note(model)
+    note["Kind"] = payload["kind"]
+    note["Payload"] = payload_b64(payload)
+    note["PlainQ"] = plain_q
+    note["PlainA"] = plain_a
+    note["Citation"] = payload.get("cite", "")
+    note["Quote"] = payload.get("quote", "")
+    note.tags = [
+        domain_tag(domain),
+        concept_tag(concept_id),
+        f"{FORMAT_TAG_PREFIX}::{payload['kind']}",
+    ]
+    col.add_note(note, deck_id)
 
 
 def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
-    """Create the starter deck with **one card per concept** (same problem,
-    one schedule), each carrying multiple formats that rotate on review.
-
-    Each concept becomes a single ``RPCE Transfer`` note tagged with its domain
-    (`rpce::domain::N`) and concept (`rpce::concept::C`). The cloze recall and
-    applied multiple-choice forms live in that one note's fields; the desktop
-    rotates between them per repetition (Spiky POV 1). Section II free-text
-    scenarios are practised separately. Returns the deck id.
-    """
+    """Build the offline starter deck: a cloze and an applied-MCQ question for
+    each curated concept, covering all seven domains. Used as the no-corpus
+    fallback and by tests; the full 1000-question deck is imported from the
+    starter ``.apkg`` (see ``pylib/tools/rpce_export_starter.py``). Returns the
+    deck id."""
     from . import flashcards
-    from .transfer_ladder import concept_tag
 
     deck_id = col.decks.id(name)
     assert deck_id is not None
-    # Enable FSRS so the memory score uses real retrievability (spec §8), not
-    # only the reps/lapses heuristic fallback.
+    # FSRS on so the memory score uses real retrievability (spec §8).
     col.set_config("fsrs", True)
-    model = _transfer_notetype(col)
+    _question_notetype(col)
 
     for card in flashcards.all_flashcards():
-        note = col.new_note(model)
-        note["Concept"] = str(card.concept_id)
-        note["Domain"] = str(card.domain_code)
-        note["ClozeQ"] = flashcards.cloze_question(card)
-        note["ClozeA"] = flashcards.cloze_answer(card)
-        note["MCQQ"] = card.mcq_question
-        note["MCQA"] = flashcards.mcq_back(card)
-        note["MCQOptions"] = MCQ_OPTION_SEP.join(card.mcq_options)
-        note["MCQIdx"] = str(card.mcq_answer_index)
-        note["Citation"] = card.ref.section
-        note["Quote"] = card.ref.quote
-        note.tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
-        col.add_note(note, deck_id)
-
+        text, blanks = cloze_to_payload_text(card.cloze)
+        cid = str(card.concept_id)
+        cloze_payload = {
+            "kind": KIND_CLOZE,
+            "text": text,
+            "blanks": blanks,
+            "cite": card.ref.section,
+            "quote": card.ref.quote,
+        }
+        add_question_note(
+            col,
+            deck_id,
+            payload=cloze_payload,
+            plain_q="Fill the blank(s): " + _CLOZE_RE.sub("_____", card.cloze),
+            plain_a=", ".join(b["a"] for b in blanks),
+            domain=card.domain_code,
+            concept_id=cid,
+        )
+        mcq_payload = {
+            "kind": KIND_MCQ,
+            "stem": card.mcq_question,
+            "options": list(card.mcq_options),
+            "answer": card.mcq_answer_index,
+            "cite": card.ref.section,
+            "quote": card.ref.quote,
+        }
+        add_question_note(
+            col,
+            deck_id,
+            payload=mcq_payload,
+            plain_q=card.mcq_question,
+            plain_a=flashcards.mcq_back(card),
+            domain=card.domain_code,
+            concept_id=cid,
+        )
     return deck_id

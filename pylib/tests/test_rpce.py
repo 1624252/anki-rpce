@@ -24,19 +24,22 @@ def test_starter_deck_populates_every_domain():
     assert rpce.coverage_pct(col) == 1.0
 
 
-def test_concept_is_one_card_with_multiple_formats():
+def test_concept_becomes_cloze_and_mcq_questions():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
 
-    # Each concept is a single note/card (one FSRS schedule), not one per format.
+    # Each curated concept yields two question notes: a cloze and an applied MCQ.
     from anki.rpce import flashcards
 
-    assert col.card_count() == len(flashcards.all_flashcards())
-    # …but that one note carries both formats, which rotate on review.
-    cid = col.find_cards("tag:rpce::concept::101")[0]
-    note = col.get_card(cid).note()
-    assert note["ClozeQ"] and note["ClozeA"], "cloze recall form present"
-    assert note["MCQQ"] and note["MCQA"], "applied MCQ form present"
+    assert col.card_count() == 2 * len(flashcards.all_flashcards())
+    cids = col.find_cards("tag:rpce::concept::101")
+    assert len(cids) == 2
+    kinds = {col.get_card(c).note()["Kind"] for c in cids}
+    assert kinds == {rpce.KIND_CLOZE, rpce.KIND_MCQ}
+    for c in cids:
+        note = col.get_card(c).note()
+        assert note["Payload"], "render payload present"
+        assert note["PlainQ"] and note["PlainA"], "no-JS fallback present"
 
 
 def test_every_concept_card_carries_ronr_citation_and_quote():
