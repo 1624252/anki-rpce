@@ -15,21 +15,21 @@ dialogs, so every surface is consistent.
 - **Intuitive:** one clear hierarchy per page (title → key numbers → details →
   actions), consistent spacing, tappable/clickable targets ≥ 40px.
 
-## Color palette (Grape) — no gray
+## Color palette (Deep Blue) — dark navy + white, no gray
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--bg-1` | `#1b0e38` | page background (deep grape) |
-| `--bg-2` | `#2a1458` | gradient stop / raised areas |
-| `--surface` | `rgba(167,139,250,.10)` | cards / panels |
-| `--border` | `rgba(167,139,250,.30)` | card / divider borders |
-| `--ink` | `#faf5ff` | primary text (warm white) |
-| `--ink-2` | `#d8b4fe` | secondary text (light violet — replaces gray) |
-| `--accent` | `#a855f7` → `#ec4899` | primary gradient (violet→fuchsia) |
-| `--ready` | `#34d399` | high confidence / good (emerald) |
+| `--bg-1` | `#0a1628` | page background (dark navy) |
+| `--bg-2` | `#0f2447` | gradient stop / raised areas |
+| `--surface` | `rgba(96,165,250,.08)` | cards / panels |
+| `--border` | `rgba(96,165,250,.30)` | card / divider borders |
+| `--ink` | `#f8fbff` | primary text (white) |
+| `--ink-2` | `#a9c7ee` | secondary text (light blue — replaces gray) |
+| `--accent` | `#2563eb` → `#38bdf8` | primary gradient (blue→sky) |
+| `--ready` | `#4ade80` | high confidence / good (green) |
 | `--mid` | `#38bdf8` | medium confidence (sky) |
 | `--warn` | `#fbbf24` | low confidence / warnings (amber) |
-| `--muted` | `#c4b5fd` | abstain / neutral (lavender, not gray) |
+| `--muted` | `#93c5fd` | abstain / neutral (light blue, not gray) |
 
 ## Type scale (consistent everywhere)
 
