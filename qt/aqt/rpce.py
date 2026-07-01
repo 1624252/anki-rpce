@@ -128,11 +128,13 @@ _THEME_CSS = (
     "--border:#caddf7;--accent1:#1d4ed8;--accent2:#3b82f6;"
     "--fs-display:42px;--fs-h1:30px;--fs-h2:22px;--fs-lead:18px;"
     "--fs-body:17px;--fs-small:15px;--fs-label:13px}"
-    # Full-page light background (white -> soft blue, no gray).
-    "html,body{background:"
+    # Full-page light background (white -> soft blue, no gray). min-height fills
+    # the whole viewport so short content doesn't leave the webview's black
+    # backing showing below the banner.
+    "html,body{min-height:100vh !important;margin:0 !important;background:"
     "radial-gradient(1200px 760px at 12% -12%,rgba(59,130,246,.16),rgba(255,255,255,0) 60%),"
     "linear-gradient(160deg,#ffffff 0%,#eef4ff 55%,#ffffff 100%) !important;"
-    "color:var(--ink) !important}"
+    "background-attachment:fixed !important;color:var(--ink) !important}"
     ".rpce-root{font-family:" + _FONT + ";color:var(--ink);font-size:var(--fs-body)}"
     ".rpce-hero{max-width:1060px;margin:44px auto 18px;padding:42px 46px;border-radius:26px;"
     "border:1px solid var(--border);box-shadow:0 20px 50px rgba(29,78,216,.14);"
