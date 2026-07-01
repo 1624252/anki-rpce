@@ -5,7 +5,7 @@
         android:allowBackup="true"
         android:label="Speedrun RPCE"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight">
+        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
         <activity
             android:name=".MainActivity"
             android:exported="true">

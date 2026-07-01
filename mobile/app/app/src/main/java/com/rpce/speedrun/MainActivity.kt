@@ -3,27 +3,35 @@
 
 package com.rpce.speedrun
 
+import android.graphics.Color
 import android.os.Bundle
-import android.widget.TextView
+import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 
 /**
- * Minimal companion entry point: proves the shared engine loads and runs on the
- * device by calling into the native bridge. The full review/sync UI is built on
- * top of this (reusing AnkiDroid's review surfaces over the same engine).
+ * RPCE home screen. Renders the same deep-blue themed banner as the desktop app
+ * (assets/home.html) in a WebView so the two apps look like one product. The
+ * shared Rust engine is loaded via [NativeBridge]; its version/build hash proves
+ * the "one engine" runs on device (spec §3). Live scores arrive with the
+ * review/sync UI.
  */
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val view = TextView(this)
-        view.textSize = 16f
-        view.setPadding(48, 96, 48, 48)
-        view.text = try {
-            "Speedrun for the RPCE\n\nShared engine running on device:\n" +
-                NativeBridge.engineInfo()
+
+        val engine = try {
+            NativeBridge.engineInfo()
         } catch (e: Throwable) {
-            "Engine failed to load: ${e.message}"
+            "engine unavailable: ${e.message}"
         }
-        setContentView(view)
+
+        val html = assets.open("home.html").bufferedReader().use { it.readText() }
+            .replace("{{ENGINE}}", engine)
+
+        val web = WebView(this)
+        // Match the page background so there's no white flash before load.
+        web.setBackgroundColor(Color.parseColor("#050c1c"))
+        web.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null)
+        setContentView(web)
     }
 }

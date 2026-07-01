@@ -30,15 +30,19 @@ cross-compile cleanly for `aarch64-linux-android`.)
 
 1. Open `mobile/app/` in **Android Studio** and let it sync Gradle (the plugin
    versions in `build.gradle.kts` may need matching to your install).
-2. Run on an emulator or a connected device. The app loads the shared engine and
-   shows its version/build hash, confirming the engine runs on device.
+2. Run on an emulator or a connected device. The app shows the RPCE home screen
+   (the same deep-blue themed readiness banner as the desktop, rendered in a
+   WebView from `assets/home.html`) and loads the shared engine — its
+   version/build hash appears in the "Engine ready" chip, confirming the engine
+   runs on device.
 3. Build a debug/installable APK: `./gradlew assembleDebug` (or `assembleRelease`
    + sign with your keystore), then `adb install -r app-debug.apk`.
 
 ## Status & remaining work
 
 - **Done / verified:** the shared engine cross-compiles for Android; the JNI
-  bridge links it and is callable from Kotlin; the app scaffold loads the lib.
+  bridge links it and is callable from Kotlin; the app loads the lib and renders
+  the themed RPCE home screen (deep-blue banner matching desktop).
 - **Remaining (larger):** the full review/sync UI — reusing AnkiDroid's review
   surfaces over this engine — so the companion runs real RPCE reviews and
   two-way syncs with desktop (spec §3, §7b). The native libs are gitignored
