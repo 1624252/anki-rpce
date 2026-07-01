@@ -86,21 +86,21 @@ _THEME_CSS = (
     "border:1px solid var(--border);box-shadow:0 24px 64px rgba(2,8,24,.75);"
     "background:radial-gradient(120% 140% at 0% 0%,rgba(29,78,216,.34),rgba(59,130,246,.10) 52%,rgba(8,18,40,0) 100%),"
     "var(--surface)}"
-    ".rpce-head{display:flex;align-items:center;gap:18px}"
-    ".rpce-logo{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;"
+    ".rpce-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}"
+    ".rpce-logo{width:62px;height:62px;border-radius:18px;display:flex;align-items:center;"
     "justify-content:center;font-weight:800;font-size:24px;color:#fff;"
     "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.7)}"
     ".rpce-h1{font-size:var(--fs-h1);font-weight:800;letter-spacing:-.4px;color:var(--ink)}"
     ".rpce-h1 small{color:var(--ink2);font-weight:600;font-size:var(--fs-lead)}"
-    ".rpce-sub{color:var(--ink2);font-size:var(--fs-lead)}"
-    ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:28px}"
+    ".rpce-sub{color:var(--ink2);font-size:var(--fs-lead);max-width:60ch;margin-left:auto;margin-right:auto}"
+    ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-top:34px}"
     ".rpce-card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;"
-    "padding:24px 26px;box-shadow:0 6px 22px rgba(2,8,24,.5)}"
-    ".rpce-row{display:flex;justify-content:space-between;align-items:center;gap:8px}"
+    "padding:26px 22px;box-shadow:0 6px 22px rgba(2,8,24,.5);text-align:center;"
+    "display:flex;flex-direction:column;align-items:center}"
     ".rpce-label{font-size:var(--fs-label);font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}"
-    ".rpce-val{font-size:var(--fs-display);font-weight:800;margin-top:12px;line-height:1.02;letter-spacing:-.6px;color:var(--ink)}"
-    ".rpce-pill{font-size:var(--fs-label);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 11px;border-radius:999px}"
-    ".rpce-bar{height:9px;border-radius:999px;background:var(--track);margin-top:18px;overflow:hidden}"
+    ".rpce-val{font-size:var(--fs-display);font-weight:800;margin:14px 0 16px;line-height:1.02;letter-spacing:-.6px;color:var(--ink)}"
+    ".rpce-pill{display:inline-block;font-size:var(--fs-label);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:5px 13px;border-radius:999px}"
+    ".rpce-bar{height:9px;width:100%;border-radius:999px;background:var(--track);margin-top:18px;overflow:hidden}"
     ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
     ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(125,211,252,.18)}"
     ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.20)}"
@@ -110,12 +110,12 @@ _THEME_CSS = (
     ".rpce-covhead b{font-weight:700;letter-spacing:.4px;text-transform:uppercase}"
     ".rpce-cov{height:14px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
-    ".rpce-chips{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}"
+    ".rpce-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:24px}"
     ".rpce-chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-body);color:var(--ink);"
     "background:rgba(37,99,235,.20);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
     ".rpce-note{margin-top:22px;font-size:var(--fs-body);color:#fcd34d;background:rgba(29,78,216,.16);"
     "border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:12px;padding:15px 18px}"
-    ".rpce-foot{margin-top:24px;font-size:var(--fs-small);color:var(--ink2)}.rpce-foot b{color:var(--ink)}"
+    ".rpce-foot{margin-top:26px;text-align:center;font-size:var(--fs-small);color:var(--ink2)}.rpce-foot b{color:var(--ink)}"
     ".rpce-tbl{border-collapse:collapse;width:100%;font-size:var(--fs-body)}"
     ".rpce-tbl th{color:var(--ink2);font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.5px;"
     "text-align:left;padding:12px 14px;border-bottom:2px solid var(--border)}"
@@ -148,11 +148,13 @@ def _score_card(
         bar = (
             f"<div class='rpce-bar'><i class='{cf}' style='width:{pct:.0f}%'></i></div>"
         )
+    # Centered, stacked card: label, big value, confidence pill, optional bar.
     return (
-        "<div class='rpce-card'><div class='rpce-row'>"
-        f"<span class='rpce-label'>{label}</span>"
-        f"<span class='rpce-pill {cf}'>{confidence}</span></div>"
-        f"<div class='rpce-val'>{value}</div>{bar}</div>"
+        "<div class='rpce-card'>"
+        f"<div class='rpce-label'>{label}</div>"
+        f"<div class='rpce-val'>{value}</div>"
+        f"<span class='rpce-pill {cf}'>{confidence}</span>"
+        f"{bar}</div>"
     )
 
 
@@ -308,13 +310,17 @@ def _readiness_html(col) -> str:
         else ""
     )
     return f"""{_theme_style()}
-<div class="rpce-root" style="max-width:900px;margin:0 auto;padding:14px 10px">
-  <div class="rpce-h1">RPCE readiness</div>
-  <div class="rpce-sub" style="margin-bottom:22px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+<div class="rpce-root" style="max-width:900px;margin:0 auto;padding:20px 12px">
+  <div style="text-align:center">
+    <div class="rpce-h1">RPCE readiness</div>
+    <div class="rpce-sub" style="margin-top:8px">Three scores, each with a range — and an honest abstain when the data is thin.</div>
+  </div>
   <div class="rpce-grid">{cards}</div>
-  <p class="rpce-sub" style="margin-top:22px"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
-  {next_topic}
-  <div class="rpce-h1" style="font-size:var(--fs-h2);margin:26px 0 12px">Coverage map
+  <div style="text-align:center;margin-top:26px">
+    <p class="rpce-sub"><b style="color:var(--ink)">Why:</b> {sec1.evidence}</p>
+    {next_topic}
+  </div>
+  <div class="rpce-h1" style="font-size:var(--fs-h2);margin:34px 0 12px">Coverage map
     <small>· 7 Performance-Expectation domains</small></div>
   <table class="rpce-tbl">
     <tr><th>Domain</th><th style="text-align:center">Cards</th><th>Exam weight</th></tr>
