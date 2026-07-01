@@ -72,6 +72,14 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 .rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid var(--accent1);background:rgba(47,111,237,.10);border-radius:10px;text-align:left}
 .rpce-cite{font-weight:700;color:var(--accent2);font-size:15px}
 .rpce-quote{margin-top:6px;font-style:italic;color:var(--ink);font-size:16px}
+/* Account / sync message popup */
+.overlay{position:fixed;inset:0;background:rgba(10,31,68,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50}
+.overlay.hidden{display:none}  /* beat .overlay's display:flex so it starts hidden */
+.modal{background:#fff;border:1px solid var(--border);border-radius:20px;max-width:420px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(10,31,68,.32);text-align:center;animation:pop .16s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+.modal .icon{font-size:42px;line-height:1}
+.modal h3{margin:12px 0 6px;font-size:20px;font-weight:800;color:var(--ink)}
+.modal p{color:var(--ink2);font-size:15px;line-height:1.5;margin:0 0 20px}
 </style>
 </head>
 <body>
@@ -159,11 +167,24 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <label>AnkiWeb email</label><input id="sy-user" type="email" autocapitalize="off" autocorrect="off">
     <label>Password</label><input id="sy-pass" type="password">
     <button class="btn" onclick="doSync()" style="margin-top:16px">Sign in &amp; sync</button>
+    <p class="muted" style="margin-top:16px">No account yet?
+      <a onclick="signup()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer">Create a free AnkiWeb account</a>
+    </p>
     <div class="feedback hidden" id="sy-status"></div>
     <div id="sy-full" class="hidden">
       <p class="note">This device and AnkiWeb differ — choose once:</p>
       <button class="btn ghost" onclick="doFull(false)">Download from AnkiWeb (replace phone)</button>
       <button class="btn ghost" onclick="doFull(true)">Upload phone to AnkiWeb (replace account)</button>
+    </div>
+  </div>
+
+  <!-- ACCOUNT / SYNC MESSAGE POPUP -->
+  <div id="popup" class="overlay hidden" onclick="if(event.target===this)closePopup()">
+    <div class="modal" role="alertdialog" aria-modal="true">
+      <div class="icon" id="pop-icon">⚠️</div>
+      <h3 id="pop-title"></h3>
+      <p id="pop-msg"></p>
+      <button class="btn" onclick="closePopup()">OK</button>
     </div>
   </div>
 
@@ -313,21 +334,60 @@ function simRespond(){
 }
 function nextSim(){ simIdx=(simIdx+1)%SIMS.length; loadSim(); }
 
+/* ---- account/sync message popup ---- */
+function popup(title, msg, icon){
+  el('pop-icon').textContent = icon || '⚠️';
+  el('pop-title').textContent = title;
+  el('pop-msg').textContent = msg;
+  el('popup').classList.remove('hidden');
+}
+function closePopup(){ el('popup').classList.add('hidden'); }
+/* Turn a raw engine/sync error into something a candidate can act on. */
+function friendlySyncError(raw){
+  var e=(raw||'').toLowerCase();
+  if(e.indexOf('auth')>=0||e.indexOf('invalid')>=0||e.indexOf('password')>=0||e.indexOf('credential')>=0||e.indexOf('403')>=0)
+    return 'That AnkiWeb email or password wasn’t accepted. Double-check them and try again.';
+  if(e.indexOf('network')>=0||e.indexOf('connect')>=0||e.indexOf('timeout')>=0||e.indexOf('timed out')>=0||e.indexOf('dns')>=0||e.indexOf('resolve')>=0||e.indexOf('offline')>=0)
+    return 'Can’t reach AnkiWeb. Check your internet connection and try again.';
+  if(e.indexOf('clock')>=0||e.indexOf('time')>=0)
+    return 'Your device clock looks off. Fix the date & time, then retry.';
+  if(e.indexOf('server')>=0||e.indexOf('500')>=0||e.indexOf('503')>=0)
+    return 'AnkiWeb is having trouble right now. Please try again in a moment.';
+  return raw ? ('Sync couldn’t complete: '+raw) : 'Something went wrong. Please try again.';
+}
+
+/* ---- sign up: open AnkiWeb account creation in the browser ---- */
+function signup(){
+  var ok=false;
+  try { ok = Engine.openSignup(); } catch(_){ ok=false; }
+  if(!ok)
+    popup('Create your account online',
+      'Open ankiweb.net/account/signup in a browser to make a free AnkiWeb account, then come back here and sign in.',
+      'ℹ️');
+}
+
 /* ---- sync by AnkiWeb account (empty endpoint => AnkiWeb, no server IP) ---- */
 var auth={hkey:'',endpoint:''};
 function syStatus(msg){ var s=el('sy-status'); s.classList.remove('hidden'); s.textContent=msg; }
 function doSync(){
+  var user=el('sy-user').value.trim(), pass=el('sy-pass').value;
+  if(!user || !pass){
+    popup('Enter your account details', 'Please type your AnkiWeb email and password, then tap Sign in & sync.', '📝');
+    return;
+  }
   el('sy-full').classList.add('hidden');
   syStatus('Signing in…');
   setTimeout(function(){
-    var login=j(Engine.syncLogin(el('sy-user').value.trim(), el('sy-pass').value, ''));
-    if(!login.ok){ syStatus('Sign-in failed: '+(login.error||'')); return; }
+    var login=j(Engine.syncLogin(user, pass, ''));
+    if(!login.ok){ syStatus(''); el('sy-status').classList.add('hidden');
+      popup('Sign-in failed', friendlySyncError(login.error), '🔒'); return; }
     auth.hkey=login.hkey; auth.endpoint=login.endpoint||'';
     syStatus('Syncing…');
     setTimeout(function(){
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
-      if(!r.ok){ syStatus('Sync failed: '+(r.error||'')); return; }
-      if(r.required>=2){ syStatus('A full sync is required.'); el('sy-full').classList.remove('hidden'); }
+      if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden');
+        popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
+      if(r.required>=2){ syStatus('A full sync is required — choose an option below.'); el('sy-full').classList.remove('hidden'); }
       else { syStatus('✓ Synced. Reviews now match the desktop.'); refreshCounts(); }
     },50);
   },50);
@@ -337,8 +397,9 @@ function doFull(upload){
   syStatus(upload?'Uploading to server…':'Downloading from server…');
   setTimeout(function(){
     var r=j(Engine.fullSync(auth.hkey, auth.endpoint, upload));
-    syStatus(r.ok ? '✓ Full sync complete.' : ('Full sync failed: '+(r.error||'')));
-    if(r.ok) refreshCounts();
+    if(r.ok){ syStatus('✓ Full sync complete.'); refreshCounts(); }
+    else { syStatus(''); el('sy-status').classList.add('hidden');
+      popup('Full sync failed', friendlySyncError(r.error), '⚠️'); }
   },50);
 }
 

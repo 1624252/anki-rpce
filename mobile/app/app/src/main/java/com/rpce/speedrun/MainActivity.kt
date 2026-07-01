@@ -4,7 +4,9 @@
 package com.rpce.speedrun
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -20,6 +22,11 @@ import kotlin.concurrent.thread
  */
 class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
+
+    companion object {
+        /** Where AnkiWeb accounts are created (sign-up is web-only). */
+        private const val SIGNUP_URL = "https://ankiweb.net/account/signup"
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,9 +69,24 @@ class MainActivity : AppCompatActivity() {
     private fun parseFound(json: String): Boolean =
         json.contains("\"found\":true")
 
+    /** Open the AnkiWeb sign-up page in the system browser. Returns false if
+     *  no browser could handle the intent, so the web UI can explain. */
+    private fun openSignupPage(): Boolean =
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(SIGNUP_URL))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            true
+        } catch (e: Throwable) {
+            false
+        }
+
     /** Bridge the web UI calls straight into the shared engine. */
     inner class EngineBridge {
         @JavascriptInterface fun engineInfo(): String = NativeBridge.engineInfo()
+
+        /** Open the AnkiWeb account sign-up page; true if a browser opened it. */
+        @JavascriptInterface fun openSignup(): Boolean = openSignupPage()
 
         @JavascriptInterface fun deckCounts(): String = NativeBridge.deckCounts()
 
