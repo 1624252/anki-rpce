@@ -95,9 +95,25 @@ _REVIEWER_CSS = (
     "</style>"
 )
 
-# Navy background for the reviewer's answer-button bar so the whole study screen
-# is one theme.
-_REVIEWER_BOTTOM_CSS = "<style>body,#innertable{background:#0a1a3a !important}</style>"
+# Theme the reviewer's bottom bar: navy background, and rating buttons coloured
+# by difficulty (Again/Hard/Good/Easy) instead of Anki's gray defaults — matching
+# the phone app. Edit / More / Show-Answer become themed blue.
+_REVIEWER_BOTTOM_CSS = (
+    "<style>"
+    "body,#innertable{background:#0a1a3a !important}"
+    "body{color:#cfe2fb !important}"
+    "button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:#fff !important;"
+    "border:none !important;border-radius:10px !important;padding:8px 16px !important;"
+    "font-weight:700 !important;box-shadow:0 3px 10px rgba(29,78,216,.4) !important}"
+    "button *{color:#fff !important}"
+    "button:hover{filter:brightness(1.12)}"
+    "button[data-ease='1']{background:#9f1239 !important}"  # Again  (red)
+    "button[data-ease='2']{background:#a16207 !important}"  # Hard   (amber)
+    "button[data-ease='3']{background:#1d4ed8 !important}"  # Good   (blue)
+    "button[data-ease='4']{background:#15803d !important}"  # Easy   (green)
+    ".stattxt,.nobold,.new-count,.review-count,.learn-count{color:#cfe2fb !important}"
+    "</style>"
+)
 
 # One cohesive "Deep Blue" theme (dark navy + white, blue->sky accents),
 # driven by CSS design tokens so the home banner and dashboard stay consistent.
