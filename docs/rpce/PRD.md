@@ -337,7 +337,7 @@ flowchart TB
 | **Core engine**             | Anki `rslib` (forked) + FSRS scheduler; our Points-at-Stake Queue                                                                               | **Rust**                     | Shared by both apps below the protobuf boundary; the spec requires a _real_ engine change here, and the hot scheduling path must hit the §10 speed targets. |
 | **Cross-language API**      | Protocol Buffers (`proto/`) → generated Rust/Python/TS bindings; `pylib/rsbridge` (PyO3)                                                        | **Protobuf / Rust / Python** | One typed contract drives all clients; a new message exposes the queue to Python (spec §7a).                                                                |
 | **Desktop shell**           | Anki `aqt` (PyQt6/Qt WebEngine)                                                                                                                 | **Python**                   | Reuses Anki's proven desktop host; embeds web dashboards.                                                                                                   |
-| **Desktop UI / dashboards** | Svelte + TypeScript webviews (3 scores, coverage map), served by Anki's `mediasrv`                                                              | **TypeScript / Svelte**      | Anki's native web stack; fast, reactive dashboards for the honesty panel.                                                                                   |
+| **Desktop UI / dashboards** | RPCE home banner + readiness dashboard rendered as **HTML/CSS** in Anki's web stack (deck-browser injection + an `AnkiWebView` window); RPCE tabs replace the deck toolbar | **Python / HTML / CSS**      | Ships today without a separate build step; Svelte/TS pages remain an option for richer future dashboards.                                                   |
 | **Mobile**                  | AnkiDroid (reuses shared Rust core via FFI)                                                                                                     | **Kotlin**                   | AGPL, open source, already runs the shared engine; MVP = Android first (iOS via Rust C-FFI is future).                                                      |
 | **Local storage**           | SQLite (`collection.anki2`) + our custom RPCE tables (§11b)                                                                                     | **SQL**                      | Anki's on-device store; our tables sync for free by living in the same DB.                                                                                  |
 | **Sync**                    | Self-hosted Anki sync server (HTTP)                                                                                                             | **Rust**                     | Reuses Anki's sync; documented higher-`usn` / last-writer conflict rule (spec §7b).                                                                         |
@@ -367,7 +367,14 @@ model** (enforced by the leakage check).
 fields); `revlog` (review log — raw material for the memory model + calibration); `col` / `graves`
 (config, deletions for sync).
 
-**New tables (our additions; live in the same collection DB so they sync):**
+> **Implementation note.** The shipping build stores the content model **sync-safely
+> using native Anki tags + collection config** (`rpce::domain::N`, `rpce::concept::N`,
+> `rpce::fmt::<rung>`, and config keys for weights / scenario counts / format tallies),
+> because Anki's sync protocol carries tags and config but not arbitrary tables. The
+> custom-table schema below is the **planned richer store** (per-attempt latency, AI
+> scores, readiness snapshots, leakage `split`); it is not created yet.
+
+**Planned tables (design; not yet created):**
 
 ```text
 domains
@@ -512,6 +519,36 @@ than inventing a new one. **Step-by-step build/run/test instructions live in
 | Test data leaks into training                                  | Automated leakage scanner; `split` column enforced; that score zeroes if violated.               |
 | Performance model just mirrors memory                          | Transfer Ladder + paraphrase test report the gap explicitly.                                     |
 | Copyrighted source material                                    | PDFs + generated MD/images excluded from version control; regenerated locally.                   |
+
+---
+
+## 16. Implementation Status
+
+Honest state of each PRD feature (see [`PLAN.md`](./PLAN.md) for milestones).
+**Done** = implemented + tested; **Partial** = core logic present, integration/data
+pending; **Planned** = designed, not built.
+
+| Feature (§) | Status | Where / gap |
+| --- | --- | --- |
+| Points-at-Stake Queue (§7.5) | **Done** | `rslib/.../points_at_stake.rs` + proto RPC; 6 Rust + 2 Py tests |
+| Content model: 7 domains, coverage (§11) | **Done** | `anki.rpce` via tags + config (not custom tables) |
+| Multi-format flashcards: cloze + MCQ (§7.1) | **Done** | `flashcards.py`; **advising** rung defined but not generated |
+| Transfer Ladder logic + reviewer tally (§7.1) | **Done** | `transfer_ladder.py` + `reviewer_did_answer_card` hook |
+| Dual-mode: Section I flashcards + Section II scenarios (§7.2) | **Done** | deck + `scenarios.py` + practice dialog |
+| AI Examiner: baseline + LLM + eval + leakage (§7.3, §9) | **Done** | `examiner.py`; UI uses the offline **placeholder** (no API calls yet) |
+| Honest readiness + abstain (§7.4, §8) | **Done** | `scores.py` + dashboard |
+| Learning-phase progression, timed practice | **Done** | `progression.py`, `timed.py` |
+| Calibration (Brier/log-loss) + paraphrase gap (§8, §9) | **Partial** | `metrics.py` functions done; not wired to real FSRS/held-out data |
+| Memory = FSRS-calibrated retrievability (§8) | **Partial** | current score is a heuristic recall estimate |
+| 3-build study experiment (§9) | **Partial** | `experiment.py` harness done; three real builds not run |
+| Gold-set eval from `data/` (§9) | **Partial** | harness done; real gold set not wired |
+| Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Planned** | not stored yet |
+| Custom SQLite schema (§11b) | **Planned** | superseded for now by tags + config |
+| Phone: shared engine on device (§6) | **Done** | `mobile/jni` + APK runs the engine on the emulator |
+| Phone: full review/sync UI (§6) | **Planned** | app shell only; review surface + sync pending |
+| Two-way sync + conflict rule (§13) | **Planned** | needs the phone app + sync server |
+| Desktop installer / crash test (§14, §7g) | **Partial** | `tools/build-installer` recipe exists; not run/automated |
+| `just bench` speed report (§13) | **Done** | `pylib/tools/rpce_bench.py` |
 
 ---
 
