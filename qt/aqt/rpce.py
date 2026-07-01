@@ -425,19 +425,33 @@ def _show_dashboard() -> None:
     from anki.rpce import scores
 
     # Record this computation to the audit trail + stamp last-updated (§7.4).
-    scores.record_readiness_snapshots(mw.col)
+    try:
+        scores.record_readiness_snapshots(mw.col)
+        html = _readiness_html(mw.col)
+    except Exception as exc:  # never blank the dashboard over a data error
+        print(f"RPCE dashboard error: {exc}")
+        html = (
+            f"{_theme_style()}<div class='rpce-root' style='padding:24px'>"
+            "<div class='rpce-h1'>RPCE readiness</div>"
+            f"<p class='rpce-sub'>Couldn't build the dashboard: {exc}</p></div>"
+        )
+
     dialog = QDialog(mw)
     dialog.setWindowTitle("RPCE readiness")
     dialog.resize(900, 760)
     dialog.setStyleSheet(_DIALOG_QSS)
     layout = QVBoxLayout(dialog)
     layout.setContentsMargins(0, 0, 0, 0)
-    web = AnkiWebView(title="rpce-dashboard")
-    web.stdHtml(_readiness_html(mw.col))
-    layout.addWidget(web)
+    # Parent the webview to the dialog and render after it's shown, so it always
+    # paints (a parentless AnkiWebView can come up blank).
+    web = AnkiWebView(parent=dialog, title="rpce-dashboard")
+    web.setMinimumSize(640, 520)
+    layout.addWidget(web, 1)
     close = QPushButton("Close")
     qconnect(close.clicked, dialog.accept)
     layout.addWidget(close)
+    dialog.show()
+    web.stdHtml(html)
     dialog.exec()
     web.cleanup()
 
