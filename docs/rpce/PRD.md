@@ -544,9 +544,11 @@ pending; **Planned** = designed, not built.
 | Gold-set eval from `data/` (§9) | **Partial** | harness done; real gold set not wired |
 | Readiness `last-updated` + `readiness_snapshots` audit (§7.4) | **Planned** | not stored yet |
 | Custom SQLite schema (§11b) | **Planned** | superseded for now by tags + config |
-| Phone: shared engine on device (§6) | **Done** | `mobile/jni` + APK runs the engine on the emulator |
-| Phone: full review/sync UI (§6) | **Planned** | app shell only; review surface + sync pending |
-| Two-way sync + conflict rule (§13) | **Planned** | needs the phone app + sync server |
+| Phone: shared engine on device (§6) | **Done** | `mobile/jni` drives the real protobuf backend on-device |
+| Phone: review loop (§6) | **Done** | JNI open/import/next/answer + Kotlin/WebView UI; verified on emulator |
+| Phone: three scores + give-up rule (§6) | **Done** | `scores_json` in `mobile/jni` (ported from `scores.py`) |
+| Phone: Section II practice (§7.3) | **Done** | bundled scenarios + offline placeholder examiner |
+| Two-way sync + conflict rule (§13) | **Done** | phone↔self-hosted server verified round-trip; last-writer/`usn` conflict rule (Anki's) |
 | Desktop installer / crash test (§14, §7g) | **Partial** | `tools/build-installer` recipe exists; not run/automated |
 | `just bench` speed report (§13) | **Done** | `pylib/tools/rpce_bench.py` |
 
