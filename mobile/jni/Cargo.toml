@@ -11,4 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 # rustls is the Android-appropriate TLS (avoids OpenSSL cross-compile pain).
 anki = { path = "../../rslib", features = ["rustls"] }
+anki_proto = { path = "../../rslib/proto" }
 jni = "0.21"
+prost = "0.13"
+serde_json = "1.0.140"

@@ -3,35 +3,85 @@
 
 package com.rpce.speedrun
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
+import java.io.File
+import kotlin.concurrent.thread
 
 /**
- * RPCE home screen. Renders the same deep-blue themed banner as the desktop app
- * (assets/home.html) in a WebView so the two apps look like one product. The
- * shared Rust engine is loaded via [NativeBridge]; its version/build hash proves
- * the "one engine" runs on device (spec §3). Live scores arrive with the
- * review/sync UI.
+ * RPCE companion. Renders the deep-blue themed UI (assets/app.html) in a WebView
+ * and drives the shared Rust engine through [NativeBridge]. The web layer calls
+ * the engine via the injected `Engine` JavaScript interface — the phone runs the
+ * same review loop / scheduler as the desktop (spec §3), not a reimplementation.
  */
 class MainActivity : AppCompatActivity() {
+    private lateinit var web: WebView
+
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val engine = try {
-            NativeBridge.engineInfo()
-        } catch (e: Throwable) {
-            "engine unavailable: ${e.message}"
-        }
-
-        val html = assets.open("home.html").bufferedReader().use { it.readText() }
-            .replace("{{ENGINE}}", engine)
-
-        val web = WebView(this)
-        // Match the page background so there's no white flash before load.
+        web = WebView(this)
         web.setBackgroundColor(Color.parseColor("#050c1c"))
-        web.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null)
+        web.settings.javaScriptEnabled = true
+        web.addJavascriptInterface(EngineBridge(), "Engine")
         setContentView(web)
+
+        // Open the collection + seed the deck off the UI thread, then load the UI.
+        thread {
+            val status = initEngine()
+            runOnUiThread {
+                web.loadUrl("file:///android_asset/app.html?status=$status")
+            }
+        }
+    }
+
+    /** Open (or create) the collection and ensure the RPCE deck is present. */
+    private fun initEngine(): String {
+        return try {
+            val colPath = File(filesDir, "collection.anki2").absolutePath
+            NativeBridge.openCollection(colPath)
+            // Seed the deck from the bundled .apkg the first time only.
+            if (!parseFound(NativeBridge.selectDeck("RPCE"))) {
+                val apkg = File(filesDir, "rpce_starter.apkg")
+                assets.open("rpce_starter.apkg").use { input ->
+                    apkg.outputStream().use { input.copyTo(it) }
+                }
+                NativeBridge.importPackage(apkg.absolutePath)
+                NativeBridge.selectDeck("RPCE")
+            }
+            "ready"
+        } catch (e: Throwable) {
+            "error"
+        }
+    }
+
+    private fun parseFound(json: String): Boolean =
+        json.contains("\"found\":true")
+
+    /** Bridge the web UI calls straight into the shared engine. */
+    inner class EngineBridge {
+        @JavascriptInterface fun engineInfo(): String = NativeBridge.engineInfo()
+
+        @JavascriptInterface fun deckCounts(): String = NativeBridge.deckCounts()
+
+        @JavascriptInterface fun nextCard(): String = NativeBridge.nextCard()
+
+        @JavascriptInterface fun answer(rating: Int): String = NativeBridge.answerCard(rating)
+
+        @JavascriptInterface
+        fun syncLogin(user: String, pass: String, endpoint: String): String =
+            NativeBridge.syncLogin(user, pass, endpoint)
+
+        @JavascriptInterface
+        fun syncCollection(hkey: String, endpoint: String): String =
+            NativeBridge.syncCollection(hkey, endpoint)
+
+        @JavascriptInterface
+        fun fullSync(hkey: String, endpoint: String, upload: Boolean): String =
+            NativeBridge.fullSync(hkey, endpoint, upload)
     }
 }

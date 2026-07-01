@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!-- RPCE companion UI. Deep-blue theme matching the desktop (docs/rpce/UI_DESIGN.md).
+     Calls the shared Rust engine through the injected `Engine` JS interface. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{
+  --ink:#f5f9ff;--ink2:#9ec3f0;--muted:#7dd3fc;
+  --ready:#4ade80;--mid:#60a5fa;--warn:#fbbf24;--again:#fb7185;
+  --surface2:#12294f;--track:#0a1c3d;--border:#1e3f77;--accent1:#1d4ed8;--accent2:#3b82f6;
+  --fs-display:40px;--fs-h1:27px;--fs-body:16px;--fs-small:14px;--fs-label:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;
+  background:radial-gradient(900px 560px at 12% -10%,rgba(29,78,216,.30),rgba(5,12,28,0) 60%),
+    linear-gradient(160deg,#050c1c 0%,#0a1a3a 55%,#050c1c 100%);
+  color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  font-size:var(--fs-body);-webkit-text-size-adjust:100%;}
+.wrap{padding:24px 18px 40px;max-width:640px;margin:0 auto}
+.head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.logo{width:58px;height:58px;border-radius:17px;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:23px;color:#fff;
+  background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.7)}
+.h1{font-size:var(--fs-h1);font-weight:800;margin:0}
+.h1 small{display:block;color:var(--ink2);font-weight:600;font-size:17px;margin-top:2px}
+.sub{color:var(--ink2);font-size:16px;max-width:44ch;margin:0 auto}
+.counts{display:flex;justify-content:center;gap:12px;margin:26px 0 20px}
+.count{flex:1;max-width:150px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;
+  padding:16px 8px;text-align:center}
+.count .n{font-size:30px;font-weight:800}
+.count .l{font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.7px;color:var(--ink2);margin-top:4px}
+.count.new .n{color:var(--mid)}.count.learn .n{color:var(--warn)}.count.due .n{color:var(--ready)}
+.btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;font-size:18px;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,var(--accent1),var(--accent2));margin-top:8px}
+.btn:active{opacity:.85}
+.btn.ghost{background:rgba(37,99,235,.18);border:1px solid var(--border);color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-small);color:var(--ready);
+  background:rgba(74,222,128,.16);border:1px solid rgba(74,222,128,.35);padding:8px 14px;border-radius:999px;margin-top:22px}
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:26px 22px;
+  min-height:180px;font-size:19px;line-height:1.5;color:var(--ink)}
+.card .cloze,.card b{color:var(--mid)}
+.card hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+.rate{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.rate button{border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;color:#fff}
+.rate .again{background:#9f1239}.rate .hard{background:#a16207}
+.rate .good{background:#1d4ed8}.rate .easy{background:#15803d}
+.muted{color:var(--ink2);text-align:center;font-size:var(--fs-small);margin-top:22px}
+.hidden{display:none}
+.done{text-align:center;padding:40px 10px}
+.done .big{font-size:54px}.done h2{font-size:22px;margin:12px 0 6px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.topbar a{color:var(--muted);font-size:15px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="head">
+      <div class="logo">RP</div>
+      <h1 class="h1">Speedrun<small>for the RPCE</small></h1>
+      <p class="sub">Review the same deck as the desktop, on the shared engine.</p>
+    </div>
+    <div class="counts">
+      <div class="count new"><div class="n" id="c-new">–</div><div class="l">New</div></div>
+      <div class="count learn"><div class="n" id="c-learn">–</div><div class="l">Learning</div></div>
+      <div class="count due"><div class="n" id="c-due">–</div><div class="l">To review</div></div>
+    </div>
+    <button class="btn" onclick="startStudy()">Study flashcards</button>
+    <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
+    <p class="muted" id="home-msg"></p>
+  </div>
+
+  <!-- REVIEW -->
+  <div id="review" class="hidden">
+    <div class="topbar">
+      <a onclick="goHome()">‹ Home</a>
+      <span class="muted" id="rev-count" style="margin:0"></span>
+    </div>
+    <div id="card" class="card"></div>
+    <button id="show-btn" class="btn" onclick="showAnswer()">Show answer</button>
+    <div id="rate" class="rate hidden">
+      <button class="again" onclick="rate(0)">Again</button>
+      <button class="hard" onclick="rate(1)">Hard</button>
+      <button class="good" onclick="rate(2)">Good</button>
+      <button class="easy" onclick="rate(3)">Easy</button>
+    </div>
+    <div id="done" class="done hidden">
+      <div class="big">✅</div>
+      <h2>All caught up</h2>
+      <p class="sub">No more cards due right now. Come back later or sync with the desktop.</p>
+      <button class="btn ghost" onclick="goHome()" style="margin-top:20px">Back to home</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function j(s){ try { return JSON.parse(s); } catch(e){ return {ok:false,error:String(e)}; } }
+var current = null;
+
+function refreshCounts(){
+  var c = j(Engine.deckCounts());
+  if (c.ok){
+    document.getElementById('c-new').textContent = c.new;
+    document.getElementById('c-learn').textContent = c.learning;
+    document.getElementById('c-due').textContent = c.review;
+  }
+}
+
+function initHome(){
+  try { document.getElementById('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
+  var p = new URLSearchParams(location.search);
+  if (p.get('status') === 'error'){
+    document.getElementById('home-msg').textContent = 'Engine failed to open the collection.';
+  }
+  refreshCounts();
+}
+
+function show(id){ ['home','review'].forEach(function(x){ document.getElementById(x).classList.toggle('hidden', x!==id); }); }
+function goHome(){ show('home'); refreshCounts(); }
+
+function startStudy(){ show('review'); loadCard(); }
+
+function loadCard(){
+  document.getElementById('rate').classList.add('hidden');
+  document.getElementById('show-btn').classList.remove('hidden');
+  document.getElementById('done').classList.add('hidden');
+  document.getElementById('card').classList.remove('hidden');
+  var r = j(Engine.nextCard());
+  if (!r.ok){ document.getElementById('card').textContent = r.error || 'error'; return; }
+  if (!r.hasCard){
+    document.getElementById('card').classList.add('hidden');
+    document.getElementById('show-btn').classList.add('hidden');
+    document.getElementById('done').classList.remove('hidden');
+    document.getElementById('rev-count').textContent = '';
+    return;
+  }
+  current = r;
+  document.getElementById('card').innerHTML = r.question;
+  var c = j(Engine.deckCounts());
+  if (c.ok) document.getElementById('rev-count').textContent = c.new + ' new · ' + c.learning + ' lrn · ' + c.review + ' due';
+}
+
+function showAnswer(){
+  if (!current) return;
+  document.getElementById('card').innerHTML = current.answer;
+  document.getElementById('show-btn').classList.add('hidden');
+  document.getElementById('rate').classList.remove('hidden');
+}
+
+function rate(r){
+  var res = j(Engine.answer(r));
+  if (!res.ok){ document.getElementById('card').textContent = res.error || 'answer failed'; return; }
+  loadCard();
+}
+
+window.onload = initHome;
+</script>
+</body>
+</html>

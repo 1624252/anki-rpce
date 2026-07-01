@@ -6104,7 +6104,10 @@ name = "speedrun_jni"
 version = "0.1.0"
 dependencies = [
  "anki",
+ "anki_proto",
  "jni",
+ "prost",
+ "serde_json",
 ]
 
 [[package]]
