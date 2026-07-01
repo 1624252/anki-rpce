@@ -192,6 +192,25 @@ def by_name(name: str) -> Motion:
     raise KeyError(name)
 
 
+# Names like "Adjourn" read fine as "the motion to Adjourn"; these do not
+# ("the motion to Main Motion"), so a question stem refers to them naturally.
+_PHRASE_OVERRIDE = {
+    "Main Motion": "a main motion",
+    "Previous Question": "the motion for the Previous Question",
+    "Point of Order": "a Point of Order",
+    "Appeal": "an Appeal",
+    "Object to the Consideration of a Question": (
+        "an Objection to the Consideration of a Question"
+    ),
+    "Division of the Assembly": "a Division of the Assembly",
+}
+
+
+def motion_phrase(name: str) -> str:
+    """How to refer to a motion inside a question stem, in natural English."""
+    return _PHRASE_OVERRIDE.get(name, f"the motion to {name}")
+
+
 def yn(value: bool) -> str:
     return "Yes" if value else "No"
 

@@ -131,7 +131,7 @@ QUESTION_NOTETYPE = "RPCE Q 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "5"
+RPCE_DECK_VERSION = "6"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
