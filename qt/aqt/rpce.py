@@ -667,10 +667,12 @@ _TOOLBAR_CSS = (
     "body{background:#050c1c !important}"
     ".header{background:linear-gradient(90deg,#081633,#0c2149) !important;"
     "border-bottom:1px solid #1e3f77 !important;padding:10px 8px !important}"
-    ".hitem{font-size:16px !important;font-weight:700 !important;color:#cfe2fb !important;"
+    ".hitem{font-size:16px !important;font-weight:800 !important;color:#ffffff !important;"
     "padding:10px 20px !important;margin:0 5px !important;border-radius:12px !important;text-decoration:none !important;"
-    "background:rgba(37,99,235,.16) !important;border:1px solid rgba(59,130,246,.28) !important}"
-    ".hitem:hover{background:#1d4ed8 !important;color:#fff !important;border-color:#3b82f6 !important}"
+    "background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;border:1px solid #3b82f6 !important;"
+    "box-shadow:0 4px 14px rgba(29,78,216,.45) !important}"
+    ".hitem:hover{background:linear-gradient(135deg,#2563eb,#60a5fa) !important;"
+    "color:#fff !important;border-color:#7dd3fc !important}"
     "</style>"
 )
 
