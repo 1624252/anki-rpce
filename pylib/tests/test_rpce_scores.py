@@ -37,6 +37,25 @@ def test_memory_score_uses_fsrs_or_falls_back():
     assert mem.low is not None and mem.high is not None
 
 
+def test_every_score_explains_itself():
+    """Spec §4: every score must show the main reasons behind the number."""
+    col = getEmptyCol()
+    _build_and_study(col, 7)
+    summary = scores.readiness_summary(col)
+    # Memory + performance carry a non-empty explanation.
+    assert len(summary["memory"].explanation) > 20
+    assert len(summary["performance"].explanation) > 20
+    # Readiness carries its evidence/reasons whether it abstains or not.
+    for sec in ("section_I", "section_II"):
+        assert len(summary[sec].evidence) > 20
+
+
+def test_empty_scores_still_explain_the_abstain():
+    col = getEmptyCol()
+    assert "study" in scores.memory_score(col).explanation.lower()
+    assert scores.performance_score(col).explanation
+
+
 def test_memory_calibration_none_or_well_formed():
     col = getEmptyCol()
     _build_and_study(col, 5)

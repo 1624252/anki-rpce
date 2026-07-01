@@ -194,6 +194,7 @@ _THEME_CSS = (
     ".rpce-label{font-size:var(--fs-label);font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}"
     ".rpce-val{font-size:var(--fs-display);font-weight:800;margin:14px 0 16px;line-height:1.02;letter-spacing:-.6px;color:var(--ink)}"
     ".rpce-pill{display:inline-block;font-size:var(--fs-label);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:5px 13px;border-radius:999px}"
+    ".rpce-reason{font-size:var(--fs-small);line-height:1.45;color:var(--ink2);margin-top:14px;text-align:left}"
     ".rpce-bar{height:9px;width:100%;border-radius:999px;background:var(--track);margin-top:18px;overflow:hidden}"
     ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
     ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(37,99,235,.12)}"
@@ -232,9 +233,14 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
 
 
 def _score_card(
-    label: str, value: str, confidence: str, fill: float | None = None
+    label: str,
+    value: str,
+    confidence: str,
+    fill: float | None = None,
+    reason: str = "",
 ) -> str:
-    """A themed score card: label, big value, confidence pill, optional bar."""
+    """A themed score card: label, big value, confidence pill, the main reasons
+    behind the number (spec §4), and an optional bar."""
     cf = f"rpce-cf-{confidence}"
     bar = ""
     if fill is not None:
@@ -242,13 +248,13 @@ def _score_card(
         bar = (
             f"<div class='rpce-bar'><i class='{cf}' style='width:{pct:.0f}%'></i></div>"
         )
-    # Centered, stacked card: label, big value, confidence pill, optional bar.
+    reason_html = f"<div class='rpce-reason'>{reason}</div>" if reason else ""
     return (
         "<div class='rpce-card'>"
         f"<div class='rpce-label'>{label}</div>"
         f"<div class='rpce-val'>{value}</div>"
         f"<span class='rpce-pill {cf}'>{confidence}</span>"
-        f"{bar}</div>"
+        f"{reason_html}{bar}</div>"
     )
 
 
@@ -283,25 +289,32 @@ def _banner_html(col) -> str:
     cards = "".join(
         [
             _score_card(
-                "Memory", _fmt_range(mem.point, None, None), mem.confidence, mem.point
+                "Memory",
+                _fmt_range(mem.point, mem.low, mem.high),
+                mem.confidence,
+                mem.point,
+                mem.explanation,
             ),
             _score_card(
                 "Performance",
-                _fmt_range(perf.point, None, None),
+                _fmt_range(perf.point, perf.low, perf.high),
                 perf.confidence,
                 perf.point,
+                perf.explanation,
             ),
             _score_card(
                 "Pass Section I",
                 section_value(sec1),
                 sec1.confidence,
                 None if sec1.abstained else sec1.p_pass,
+                sec1.evidence,
             ),
             _score_card(
                 "Pass Section II",
                 section_value(sec2),
                 sec2.confidence,
                 None if sec2.abstained else sec2.p_pass,
+                sec2.evidence,
             ),
         ]
     )

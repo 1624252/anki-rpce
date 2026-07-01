@@ -57,12 +57,14 @@ class GiveUpRule:
 
 @dataclass
 class ScoreRange:
-    """A point estimate with a likely range and a confidence label."""
+    """A point estimate with a likely range, a confidence label, and the main
+    reasons behind the number (spec §4: every score explains itself)."""
 
     point: float | None
     low: float | None
     high: float | None
     confidence: str  # abstain | low | medium | high
+    explanation: str = ""
 
 
 @dataclass
@@ -147,7 +149,24 @@ def record_scenario(col: Collection) -> None:
 
 def memory_score(col: Collection) -> ScoreRange:
     """P(recall a taught fact now), averaged over reviewed cards."""
-    return _range_from(_reviewed_recalls(col))
+    recalls = _reviewed_recalls(col)
+    sr = _range_from(recalls)
+    n = len(recalls)
+    if n == 0:
+        sr.explanation = (
+            "No reviewed cards yet — study some flashcards to build a memory estimate."
+        )
+    else:
+        method = (
+            "FSRS retrievability"
+            if col.get_config("fsrs", False)
+            else "a reps/lapses recall estimate (enable FSRS for calibrated recall)"
+        )
+        sr.explanation = (
+            f"Mean recall over {n} reviewed card(s) using {method}. The range is a "
+            "95% interval; confidence rises as you accumulate reviews."
+        )
+    return sr
 
 
 def _domain_recall(col: Collection, code: int) -> float | None:
@@ -164,24 +183,39 @@ def performance_score(col: Collection) -> ScoreRange:
     weights = topic_weights(col)
     total_weight = sum(weights.values()) or 1.0
     point = 0.0
-    seen_any = False
+    seen = 0
     for d in DOMAINS:
         recall = _domain_recall(col, d.code)
         w = weights[domain_tag(d.code)] / total_weight
         if recall is not None:
-            seen_any = True
+            seen += 1
             point += w * recall
         # unseen domain contributes 0, penalising incomplete coverage
-    if not seen_any:
-        return ScoreRange(None, None, None, CONFIDENCE_ABSTAIN)
+    if seen == 0:
+        return ScoreRange(
+            None,
+            None,
+            None,
+            CONFIDENCE_ABSTAIN,
+            "No domain has review history yet — this bridges memory to new "
+            "exam-style questions once you have practised.",
+        )
     cov = coverage_pct(col)
     # Wider band when coverage is low (less certain about unseen material).
     margin = 0.1 + 0.4 * (1.0 - cov)
+    weakest = best_next_topic(col)
+    explanation = (
+        f"Exam-weighted recall across the 7 domains; {seen}/{len(DOMAINS)} have "
+        f"review history and unseen domains count as 0 (so incomplete coverage "
+        f"lowers the score). Weakest area: {weakest}. The range widens when "
+        f"coverage is low ({cov:.0%} covered)."
+    )
     return ScoreRange(
         point,
         max(0.0, point - margin),
         min(1.0, point + margin),
         "high" if cov >= 0.8 else "medium" if cov >= 0.5 else "low",
+        explanation,
     )
 
 
@@ -260,6 +294,12 @@ def readiness(
     p_pass = _logistic_pass_probability(perf.point)
     low = _logistic_pass_probability(perf.low or perf.point)
     high = _logistic_pass_probability(perf.high or perf.point)
+    scen_note = f", {scenarios} graded scenarios" if section == "II" else ""
+    evidence = (
+        f"Maps a {perf.point:.0%} performance estimate through the 80% section "
+        f"bar to a pass probability. Evidence: {reviews} reviews across "
+        f"{cov:.0%} of domains{scen_note}. Focus next on {next_topic}."
+    )
     return ReadinessSnapshot(
         section=section,
         p_pass=p_pass,
@@ -269,7 +309,7 @@ def readiness(
         pct_covered=cov,
         graded_reviews=reviews,
         graded_scenarios=scenarios,
-        evidence=f"Based on {reviews} reviews across {cov:.0%} of domains.",
+        evidence=evidence,
         best_next_topic=next_topic,
         abstained=False,
     )

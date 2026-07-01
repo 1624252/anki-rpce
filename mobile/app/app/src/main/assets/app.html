@@ -53,6 +53,8 @@ html,body{margin:0;min-height:100%;
 .scard{background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:18px 12px;text-align:center}
 .scard .lab{font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.7px;color:var(--ink2)}
 .scard .val{font-size:32px;font-weight:800;margin:10px 0}
+.scard .srange{font-size:13px;color:var(--ink2);margin-top:6px}
+.scard .sreason{font-size:13px;line-height:1.4;color:var(--ink2);margin-top:8px;text-align:left}
 .pill{display:inline-block;font-size:var(--fs-label);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 11px;border-radius:999px}
 .pill.abstain{color:var(--muted);background:rgba(125,211,252,.18)}
 .pill.low{color:var(--warn);background:rgba(251,191,36,.2)}
@@ -118,10 +120,10 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <div id="scores" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Readiness</span></div>
     <div class="grid2">
-      <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span></div>
-      <div class="scard"><div class="lab">Performance</div><div class="val" id="s-perf">–</div><span class="pill" id="p-perf"></span></div>
-      <div class="scard"><div class="lab">Pass Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span></div>
-      <div class="scard"><div class="lab">Pass Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span></div>
+      <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span><div class="srange" id="r-mem"></div><div class="sreason" id="e-mem"></div></div>
+      <div class="scard"><div class="lab">Performance</div><div class="val" id="s-perf">–</div><span class="pill" id="p-perf"></span><div class="srange" id="r-perf"></div><div class="sreason" id="e-perf"></div></div>
+      <div class="scard"><div class="lab">Pass Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span><div class="srange" id="r-1"></div><div class="sreason" id="e-1"></div></div>
+      <div class="scard"><div class="lab">Pass Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span><div class="srange" id="r-2"></div><div class="sreason" id="e-2"></div></div>
     </div>
     <div class="covhead"><b>DOMAIN COVERAGE</b><span id="cov-txt"></span></div>
     <div class="cov"><i id="cov-bar" style="width:0%"></i></div>
@@ -206,21 +208,27 @@ function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
 
 /* ---- readiness ---- */
-function setScore(valId,pillId,pointOrPass,conf,abstained){
-  el(valId).textContent = abstained ? 'Abstain' : pct(pointOrPass);
-  var p=el(pillId); p.className='pill '+(conf||'abstain'); p.textContent=conf||'abstain';
+/* Every score shows point, range, confidence, and the main reasons (spec §4). */
+function setScore(ids, sc, abstained){
+  var point = (sc.point!=null) ? sc.point : sc.pPass;
+  el(ids.v).textContent = abstained ? 'Abstain' : pct(point);
+  var conf = sc.confidence || 'abstain';
+  var p=el(ids.p); p.className='pill '+conf; p.textContent=conf;
+  el(ids.r).textContent = (!abstained && sc.low!=null && sc.high!=null)
+    ? ('range '+Math.round(sc.low*100)+'–'+Math.round(sc.high*100)+'%') : '';
+  el(ids.e).textContent = sc.explanation || sc.evidence || '';
 }
 function openScores(){
   show('scores');
   var s=j(Engine.scores());
   if(!s.ok){ el('abstain-note').textContent=s.error||'error'; return; }
-  setScore('s-mem','p-mem', s.memory.point, s.memory.confidence, s.memory.point==null);
-  setScore('s-perf','p-perf', s.performance.point, s.performance.confidence, s.performance.point==null);
-  setScore('s-1','p-1', s.sectionI.pPass, s.sectionI.confidence, s.sectionI.abstained);
-  setScore('s-2','p-2', s.sectionII.pPass, s.sectionII.confidence, s.sectionII.abstained);
+  setScore({v:'s-mem',p:'p-mem',r:'r-mem',e:'e-mem'}, s.memory, s.memory.point==null);
+  setScore({v:'s-perf',p:'p-perf',r:'r-perf',e:'e-perf'}, s.performance, s.performance.point==null);
+  setScore({v:'s-1',p:'p-1',r:'r-1',e:'e-1'}, s.sectionI, s.sectionI.abstained);
+  setScore({v:'s-2',p:'p-2',r:'r-2',e:'e-2'}, s.sectionII, s.sectionII.abstained);
   el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of 7 domains';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
-  var note = s.sectionI.abstained ? s.sectionI.evidence : ('Based on '+s.reviews+' reviews.');
+  var note = s.sectionI.abstained ? s.sectionI.evidence : ('Based on '+s.reviews+' reviews across '+Math.round(s.coveragePct*100)+'% of domains.');
   el('abstain-note').textContent = '⚠ ' + note;
   el('best-next').textContent = s.bestNext ? ('🎯 Best next topic: '+s.bestNext) : '';
 }

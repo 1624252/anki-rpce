@@ -564,6 +564,7 @@ fn scores_json() -> String {
     let weight = 1.0 / DOMAINS.len() as f64; // equal default split
     let mut perf_point = 0.0;
     let mut seen_any = false;
+    let mut seen = 0;
     let mut covered = 0;
     let mut best: Option<(f64, &str)> = None;
     let mut coverage_arr = Vec::new();
@@ -576,6 +577,7 @@ fn scores_json() -> String {
         let recall = if rc.is_empty() { None } else { Some(mean(&rc)) };
         if let Some(r) = recall {
             seen_any = true;
+            seen += 1;
             perf_point += weight * r;
         }
         let gap = recall.map(|r| 1.0 - r).unwrap_or(1.0);
@@ -586,12 +588,25 @@ fn scores_json() -> String {
         coverage_arr.push(serde_json::json!({ "code": code, "name": name, "cards": cards }));
     }
     let cov_pct = covered as f64 / DOMAINS.len() as f64;
+    let best_next = best.map(|(_, n)| n).unwrap_or("");
+    let n_domains = DOMAINS.len();
 
-    // Memory.
-    let (mem_p, _mem_lo, _mem_hi, mem_conf) = range_from(&recalls(None));
+    // Memory (with the main reasons behind the number, spec §4).
+    let mem_recalls = recalls(None);
+    let mem_n = mem_recalls.len();
+    let (mem_p, mem_lo, mem_hi, mem_conf) = range_from(&mem_recalls);
+    let mem_explain = if mem_n == 0 {
+        "No reviewed cards yet — study some flashcards to build a memory estimate."
+            .to_string()
+    } else {
+        format!(
+            "Mean recall over {mem_n} reviewed card(s) using each card's recall \
+             estimate. The range is a 95% interval; confidence rises with more reviews."
+        )
+    };
 
-    // Performance.
-    let (perf_p, perf_conf) = if seen_any {
+    // Performance (exam-weighted recall; unseen domains count as 0).
+    let (perf_p, perf_lo, perf_hi, perf_conf, perf_explain) = if seen_any {
         let conf = if cov_pct >= 0.8 {
             "high"
         } else if cov_pct >= 0.5 {
@@ -599,16 +614,37 @@ fn scores_json() -> String {
         } else {
             "low"
         };
-        (Some(perf_point), conf)
+        let margin = 0.1 + 0.4 * (1.0 - cov_pct);
+        let explain = format!(
+            "Exam-weighted recall across the {n_domains} domains; {seen}/{n_domains} \
+             have review history and unseen domains count as 0 (so incomplete coverage \
+             lowers the score). Weakest area: {best_next}. The range widens when \
+             coverage is low ({:.0}% covered).",
+            cov_pct * 100.0
+        );
+        (
+            Some(perf_point),
+            Some((perf_point - margin).max(0.0)),
+            Some((perf_point + margin).min(1.0)),
+            conf,
+            explain,
+        )
     } else {
-        (None, "abstain")
+        (
+            None,
+            None,
+            None,
+            "abstain",
+            "No domain has review history yet — this bridges memory to new \
+             exam-style questions once you have practised."
+                .to_string(),
+        )
     };
 
     let reviews = scalar_i64("SELECT count() FROM revlog");
     let scenarios = scalar_i64(
         "SELECT CAST(val AS INTEGER) FROM config WHERE key = 'rpce:graded_scenarios'",
     );
-    let best_next = best.map(|(_, n)| n).unwrap_or("");
 
     // Readiness per section with the give-up rule.
     let section = |needs_scenarios: bool| -> serde_json::Value {
@@ -634,18 +670,31 @@ fn scores_json() -> String {
             });
         }
         let p = perf_p.unwrap_or(0.0);
+        let scen_note = if needs_scenarios {
+            format!(", {scenarios} graded scenarios")
+        } else {
+            String::new()
+        };
         serde_json::json!({
             "abstained": false,
             "pPass": logistic_pass(p),
+            "low": logistic_pass(perf_lo.unwrap_or(p)),
+            "high": logistic_pass(perf_hi.unwrap_or(p)),
             "confidence": perf_conf,
-            "evidence": format!("Based on {reviews} reviews across {:.0}% of domains.", cov_pct * 100.0),
+            "evidence": format!(
+                "Maps a {:.0}% performance estimate through the 80% section bar to a \
+                 pass probability. Evidence: {reviews} reviews across {:.0}% of \
+                 domains{scen_note}. Focus next on {best_next}.",
+                p * 100.0,
+                cov_pct * 100.0
+            ),
         })
     };
 
     serde_json::json!({
         "ok": true,
-        "memory": { "point": mem_p, "confidence": mem_conf },
-        "performance": { "point": perf_p, "confidence": perf_conf },
+        "memory": { "point": mem_p, "low": mem_lo, "high": mem_hi, "confidence": mem_conf, "explanation": mem_explain },
+        "performance": { "point": perf_p, "low": perf_lo, "high": perf_hi, "confidence": perf_conf, "explanation": perf_explain },
         "sectionI": section(false),
         "sectionII": section(true),
         "coveragePct": cov_pct,
