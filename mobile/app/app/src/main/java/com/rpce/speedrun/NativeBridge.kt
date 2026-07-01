@@ -37,6 +37,12 @@ object NativeBridge {
     /** Answer the current card. rating: 0=Again 1=Hard 2=Good 3=Easy. */
     external fun answerCard(rating: Int): String
 
+    /** The three RPCE scores + coverage + abstain payload, computed on-device. */
+    external fun scores(): String
+
+    /** Increment the graded Section II scenario counter (feeds the give-up rule). */
+    external fun recordScenario(): String
+
     /** Log in to a sync server; returns {hkey, endpoint}. */
     external fun syncLogin(username: String, password: String, endpoint: String): String
 

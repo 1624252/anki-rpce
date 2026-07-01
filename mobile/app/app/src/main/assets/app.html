@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- RPCE companion UI. Deep-blue theme matching the desktop (docs/rpce/UI_DESIGN.md).
-     Calls the shared Rust engine through the injected `Engine` JS interface. -->
+     Calls the shared Rust engine through the injected `Engine` JS interface:
+     review loop, the three scores + give-up rule, Section II practice, and sync. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -8,9 +9,9 @@
 <style>
 :root{
   --ink:#f5f9ff;--ink2:#9ec3f0;--muted:#7dd3fc;
-  --ready:#4ade80;--mid:#60a5fa;--warn:#fbbf24;--again:#fb7185;
+  --ready:#4ade80;--mid:#60a5fa;--warn:#fbbf24;
   --surface2:#12294f;--track:#0a1c3d;--border:#1e3f77;--accent1:#1d4ed8;--accent2:#3b82f6;
-  --fs-display:40px;--fs-h1:27px;--fs-body:16px;--fs-small:14px;--fs-label:12px;
+  --fs-h1:27px;--fs-body:16px;--fs-small:14px;--fs-label:12px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;
@@ -26,32 +27,46 @@ html,body{margin:0;min-height:100%;
 .h1{font-size:var(--fs-h1);font-weight:800;margin:0}
 .h1 small{display:block;color:var(--ink2);font-weight:600;font-size:17px;margin-top:2px}
 .sub{color:var(--ink2);font-size:16px;max-width:44ch;margin:0 auto}
-.counts{display:flex;justify-content:center;gap:12px;margin:26px 0 20px}
-.count{flex:1;max-width:150px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;
-  padding:16px 8px;text-align:center}
+.counts{display:flex;justify-content:center;gap:12px;margin:24px 0 18px}
+.count{flex:1;max-width:150px;background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:16px 8px;text-align:center}
 .count .n{font-size:30px;font-weight:800}
 .count .l{font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.7px;color:var(--ink2);margin-top:4px}
 .count.new .n{color:var(--mid)}.count.learn .n{color:var(--warn)}.count.due .n{color:var(--ready)}
-.btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;font-size:18px;font-weight:800;
-  color:#fff;background:linear-gradient(135deg,var(--accent1),var(--accent2));margin-top:8px}
+.btn{display:block;width:100%;border:none;border-radius:14px;padding:15px;font-size:17px;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,var(--accent1),var(--accent2));margin-top:10px}
 .btn:active{opacity:.85}
 .btn.ghost{background:rgba(37,99,235,.18);border:1px solid var(--border);color:var(--ink)}
 .chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-small);color:var(--ready);
-  background:rgba(74,222,128,.16);border:1px solid rgba(74,222,128,.35);padding:8px 14px;border-radius:999px;margin-top:22px}
-.card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:26px 22px;
-  min-height:180px;font-size:19px;line-height:1.5;color:var(--ink)}
+  background:rgba(74,222,128,.16);border:1px solid rgba(74,222,128,.35);padding:8px 14px;border-radius:999px;margin-top:20px}
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:24px 20px;
+  min-height:150px;font-size:19px;line-height:1.5;color:var(--ink)}
 .card .cloze,.card b{color:var(--mid)}
 .card hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .rate{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
 .rate button{border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;color:#fff}
-.rate .again{background:#9f1239}.rate .hard{background:#a16207}
-.rate .good{background:#1d4ed8}.rate .easy{background:#15803d}
-.muted{color:var(--ink2);text-align:center;font-size:var(--fs-small);margin-top:22px}
+.rate .again{background:#9f1239}.rate .hard{background:#a16207}.rate .good{background:#1d4ed8}.rate .easy{background:#15803d}
+.muted{color:var(--ink2);text-align:center;font-size:var(--fs-small);margin-top:20px}
 .hidden{display:none}
-.done{text-align:center;padding:40px 10px}
-.done .big{font-size:54px}.done h2{font-size:22px;margin:12px 0 6px}
+.done{text-align:center;padding:36px 10px}.done .big{font-size:52px}.done h2{font-size:22px;margin:12px 0 6px}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.topbar a{color:var(--muted);font-size:15px;text-decoration:none}
+.topbar a{color:var(--muted);font-size:15px;text-decoration:none}.topbar span{margin:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+.scard{background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:18px 12px;text-align:center}
+.scard .lab{font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.7px;color:var(--ink2)}
+.scard .val{font-size:32px;font-weight:800;margin:10px 0}
+.pill{display:inline-block;font-size:var(--fs-label);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 11px;border-radius:999px}
+.pill.abstain{color:var(--muted);background:rgba(125,211,252,.18)}
+.pill.low{color:var(--warn);background:rgba(251,191,36,.2)}
+.pill.medium{color:var(--mid);background:rgba(96,165,250,.22)}
+.pill.high{color:var(--ready);background:rgba(74,222,128,.2)}
+.covhead{display:flex;justify-content:space-between;font-size:var(--fs-small);color:var(--ink2);margin:20px 0 8px}
+.cov{height:13px;border-radius:999px;background:var(--track);overflow:hidden}
+.cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}
+.note{margin-top:18px;font-size:15px;color:#fcd34d;background:rgba(29,78,216,.16);border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:12px;padding:13px 15px}
+textarea{width:100%;min-height:120px;background:var(--track);color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:14px;font-size:16px;font-family:inherit;margin-top:12px}
+input{width:100%;background:var(--track);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:16px;margin-top:10px}
+label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
+.feedback{background:var(--track);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;font-size:16px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -70,16 +85,16 @@ html,body{margin:0;min-height:100%;
       <div class="count due"><div class="n" id="c-due">–</div><div class="l">To review</div></div>
     </div>
     <button class="btn" onclick="startStudy()">Study flashcards</button>
+    <button class="btn ghost" onclick="openSection2()">Section II practice</button>
+    <button class="btn ghost" onclick="openScores()">Readiness</button>
+    <button class="btn ghost" onclick="show('sync')">Sync with desktop</button>
     <div style="text-align:center"><span class="chip" id="engine">engine…</span></div>
     <p class="muted" id="home-msg"></p>
   </div>
 
   <!-- REVIEW -->
   <div id="review" class="hidden">
-    <div class="topbar">
-      <a onclick="goHome()">‹ Home</a>
-      <span class="muted" id="rev-count" style="margin:0"></span>
-    </div>
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="rev-count"></span></div>
     <div id="card" class="card"></div>
     <button id="show-btn" class="btn" onclick="showAnswer()">Show answer</button>
     <div id="rate" class="rate hidden">
@@ -89,10 +104,51 @@ html,body{margin:0;min-height:100%;
       <button class="easy" onclick="rate(3)">Easy</button>
     </div>
     <div id="done" class="done hidden">
-      <div class="big">✅</div>
-      <h2>All caught up</h2>
-      <p class="sub">No more cards due right now. Come back later or sync with the desktop.</p>
+      <div class="big">✅</div><h2>All caught up</h2>
+      <p class="sub">No more cards due right now.</p>
       <button class="btn ghost" onclick="goHome()" style="margin-top:20px">Back to home</button>
+    </div>
+  </div>
+
+  <!-- READINESS -->
+  <div id="scores" class="hidden">
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Readiness</span></div>
+    <div class="grid2">
+      <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span></div>
+      <div class="scard"><div class="lab">Performance</div><div class="val" id="s-perf">–</div><span class="pill" id="p-perf"></span></div>
+      <div class="scard"><div class="lab">Pass Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span></div>
+      <div class="scard"><div class="lab">Pass Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span></div>
+    </div>
+    <div class="covhead"><b>DOMAIN COVERAGE</b><span id="cov-txt"></span></div>
+    <div class="cov"><i id="cov-bar" style="width:0%"></i></div>
+    <div class="note" id="abstain-note"></div>
+    <p class="muted" id="best-next"></p>
+  </div>
+
+  <!-- SECTION II -->
+  <div id="section2" class="hidden">
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="s2-domain"></span></div>
+    <div class="card" id="s2-prompt" style="font-size:17px"></div>
+    <textarea id="s2-answer" placeholder="Your ruling & reasoning (no RONR citation required)…"></textarea>
+    <button class="btn" onclick="gradeS2()">Grade my answer</button>
+    <div class="feedback hidden" id="s2-feedback"></div>
+    <button class="btn ghost" onclick="nextS2()" style="margin-top:12px">Next scenario ›</button>
+  </div>
+
+  <!-- SYNC -->
+  <div id="sync" class="hidden">
+    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted">Sync</span></div>
+    <p class="sub" style="text-align:left">Two-way sync with the same server the desktop uses. Reviews flow both ways; a normal sync merges automatically.</p>
+    <label>Sync server endpoint (e.g. http://10.0.2.2:8080/)</label>
+    <input id="sy-endpoint" value="http://10.0.2.2:8080/" autocapitalize="off" autocorrect="off">
+    <label>Username</label><input id="sy-user" autocapitalize="off" autocorrect="off">
+    <label>Password</label><input id="sy-pass" type="password">
+    <button class="btn" onclick="doSync()" style="margin-top:16px">Log in &amp; sync</button>
+    <div class="feedback hidden" id="sy-status"></div>
+    <div id="sy-full" class="hidden">
+      <p class="note">Server and phone differ — choose once:</p>
+      <button class="btn ghost" onclick="doFull(false)">Download from server (replace phone)</button>
+      <button class="btn ghost" onclick="doFull(true)">Upload phone to server (replace server)</button>
     </div>
   </div>
 
@@ -100,65 +156,124 @@ html,body{margin:0;min-height:100%;
 
 <script>
 function j(s){ try { return JSON.parse(s); } catch(e){ return {ok:false,error:String(e)}; } }
-var current = null;
+function el(id){ return document.getElementById(id); }
+function show(id){
+  ['home','review','scores','section2','sync'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
+}
+function pct(x){ return (x==null) ? '—' : Math.round(x*100)+'%'; }
 
+/* ---- home + counts ---- */
 function refreshCounts(){
   var c = j(Engine.deckCounts());
-  if (c.ok){
-    document.getElementById('c-new').textContent = c.new;
-    document.getElementById('c-learn').textContent = c.learning;
-    document.getElementById('c-due').textContent = c.review;
-  }
+  if (c.ok){ el('c-new').textContent=c.new; el('c-learn').textContent=c.learning; el('c-due').textContent=c.review; }
 }
-
 function initHome(){
-  try { document.getElementById('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
-  var p = new URLSearchParams(location.search);
-  if (p.get('status') === 'error'){
-    document.getElementById('home-msg').textContent = 'Engine failed to open the collection.';
-  }
+  try { el('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
+  if (new URLSearchParams(location.search).get('status')==='error')
+    el('home-msg').textContent = 'Engine failed to open the collection.';
   refreshCounts();
 }
-
-function show(id){ ['home','review'].forEach(function(x){ document.getElementById(x).classList.toggle('hidden', x!==id); }); }
 function goHome(){ show('home'); refreshCounts(); }
 
+/* ---- review loop ---- */
+var current=null;
 function startStudy(){ show('review'); loadCard(); }
-
 function loadCard(){
-  document.getElementById('rate').classList.add('hidden');
-  document.getElementById('show-btn').classList.remove('hidden');
-  document.getElementById('done').classList.add('hidden');
-  document.getElementById('card').classList.remove('hidden');
-  var r = j(Engine.nextCard());
-  if (!r.ok){ document.getElementById('card').textContent = r.error || 'error'; return; }
-  if (!r.hasCard){
-    document.getElementById('card').classList.add('hidden');
-    document.getElementById('show-btn').classList.add('hidden');
-    document.getElementById('done').classList.remove('hidden');
-    document.getElementById('rev-count').textContent = '';
-    return;
-  }
-  current = r;
-  document.getElementById('card').innerHTML = r.question;
-  var c = j(Engine.deckCounts());
-  if (c.ok) document.getElementById('rev-count').textContent = c.new + ' new · ' + c.learning + ' lrn · ' + c.review + ' due';
+  el('rate').classList.add('hidden'); el('show-btn').classList.remove('hidden');
+  el('done').classList.add('hidden'); el('card').classList.remove('hidden');
+  var r=j(Engine.nextCard());
+  if(!r.ok){ el('card').textContent=r.error||'error'; return; }
+  if(!r.hasCard){ el('card').classList.add('hidden'); el('show-btn').classList.add('hidden');
+    el('done').classList.remove('hidden'); el('rev-count').textContent=''; return; }
+  current=r; el('card').innerHTML=r.question;
+  var c=j(Engine.deckCounts());
+  if(c.ok) el('rev-count').textContent=c.new+' new · '+c.learning+' lrn · '+c.review+' due';
+}
+function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
+  el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
+function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; } loadCard(); }
+
+/* ---- readiness ---- */
+function setScore(valId,pillId,pointOrPass,conf,abstained){
+  el(valId).textContent = abstained ? 'Abstain' : pct(pointOrPass);
+  var p=el(pillId); p.className='pill '+(conf||'abstain'); p.textContent=conf||'abstain';
+}
+function openScores(){
+  show('scores');
+  var s=j(Engine.scores());
+  if(!s.ok){ el('abstain-note').textContent=s.error||'error'; return; }
+  setScore('s-mem','p-mem', s.memory.point, s.memory.confidence, s.memory.point==null);
+  setScore('s-perf','p-perf', s.performance.point, s.performance.confidence, s.performance.point==null);
+  setScore('s-1','p-1', s.sectionI.pPass, s.sectionI.confidence, s.sectionI.abstained);
+  setScore('s-2','p-2', s.sectionII.pPass, s.sectionII.confidence, s.sectionII.abstained);
+  el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of 7 domains';
+  el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
+  var note = s.sectionI.abstained ? s.sectionI.evidence : ('Based on '+s.reviews+' reviews.');
+  el('abstain-note').textContent = '⚠ ' + note;
+  el('best-next').textContent = s.bestNext ? ('🎯 Best next topic: '+s.bestNext) : '';
 }
 
-function showAnswer(){
-  if (!current) return;
-  document.getElementById('card').innerHTML = current.answer;
-  document.getElementById('show-btn').classList.add('hidden');
-  document.getElementById('rate').classList.remove('hidden');
+/* ---- Section II (offline placeholder examiner: keyword overlap) ---- */
+var SCEN=[], sIdx=0;
+var STOP=new Set(('the and for with not are was its has had about here from this that into out any all you your but can may will shall '+
+  'must have which when what who how why where a an in of to is it on or no be by as at').split(' '));
+function toks(t){ var s=new Set(); (t.toLowerCase().match(/[a-z0-9]+/g)||[]).forEach(function(w){ if(w.length>=3&&!STOP.has(w)) s.add(w); }); return s; }
+function inter(a,b){ var n=0; a.forEach(function(x){ if(b.has(x)) n++; }); return n; }
+function openSection2(){
+  if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }
+  sIdx=0; show('section2'); loadS2();
+}
+function loadS2(){
+  var s=SCEN[sIdx]; if(!s) return;
+  el('s2-domain').textContent='Domain '+s.domain;
+  el('s2-prompt').textContent=s.prompt;
+  el('s2-answer').value=''; el('s2-feedback').classList.add('hidden');
+}
+function gradeS2(){
+  var s=SCEN[sIdx]; var ans=el('s2-answer').value.trim(); if(!ans) return;
+  var gold=toks(s.gold); var overlap=gold.size? inter(toks(ans),gold)/gold.size : 0;
+  var score=Math.round(5*overlap*100)/100; var passed=score>=3;
+  Engine.recordScenario();
+  var fb=el('s2-feedback'); fb.classList.remove('hidden');
+  fb.innerHTML='<b>Score:</b> '+score.toFixed(1)+'/5 ('+(passed?'pass':'keep practicing')+')<br>'+
+    '<b>Feedback:</b> Your answer '+(passed?'matches':'misses key points from')+' the model ruling. '+
+    'Debrief: compare your ruling to the model below. <i>(Placeholder examiner — AI grading is not enabled yet.)</i>'+
+    '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">'+
+    '<b>Model ruling:</b> '+s.gold;
+}
+function nextS2(){ sIdx=(sIdx+1)%SCEN.length; loadS2(); }
+
+/* ---- sync (runs off the UI thread via the JS bridge) ---- */
+var auth={hkey:'',endpoint:''};
+function syStatus(msg){ var s=el('sy-status'); s.classList.remove('hidden'); s.textContent=msg; }
+function doSync(){
+  el('sy-full').classList.add('hidden');
+  syStatus('Logging in…');
+  setTimeout(function(){
+    var ep=el('sy-endpoint').value.trim();
+    var login=j(Engine.syncLogin(el('sy-user').value.trim(), el('sy-pass').value, ep));
+    if(!login.ok){ syStatus('Login failed: '+(login.error||'')); return; }
+    auth.hkey=login.hkey; auth.endpoint=login.endpoint||ep;
+    syStatus('Syncing…');
+    setTimeout(function(){
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      if(!r.ok){ syStatus('Sync failed: '+(r.error||'')); return; }
+      if(r.required>=2){ syStatus('A full sync is required.'); el('sy-full').classList.remove('hidden'); }
+      else { syStatus('✓ Synced. Reviews now match the desktop.'); refreshCounts(); }
+    },50);
+  },50);
+}
+function doFull(upload){
+  el('sy-full').classList.add('hidden');
+  syStatus(upload?'Uploading to server…':'Downloading from server…');
+  setTimeout(function(){
+    var r=j(Engine.fullSync(auth.hkey, auth.endpoint, upload));
+    syStatus(r.ok ? '✓ Full sync complete.' : ('Full sync failed: '+(r.error||'')));
+    if(r.ok) refreshCounts();
+  },50);
 }
 
-function rate(r){
-  var res = j(Engine.answer(r));
-  if (!res.ok){ document.getElementById('card').textContent = res.error || 'answer failed'; return; }
-  loadCard();
-}
-
-window.onload = initHome;
+window.onload=initHome;
 </script>
 </body>
 </html>

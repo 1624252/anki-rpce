@@ -72,6 +72,15 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface fun answer(rating: Int): String = NativeBridge.answerCard(rating)
 
+        @JavascriptInterface fun scores(): String = NativeBridge.scores()
+
+        @JavascriptInterface fun recordScenario(): String = NativeBridge.recordScenario()
+
+        /** The bundled Section II scenarios (mirrors anki.rpce.scenarios). */
+        @JavascriptInterface
+        fun scenarios(): String =
+            assets.open("scenarios.json").bufferedReader().use { it.readText() }
+
         @JavascriptInterface
         fun syncLogin(user: String, pass: String, endpoint: String): String =
             NativeBridge.syncLogin(user, pass, endpoint)

@@ -417,6 +417,286 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_fullSync(
     }
 }
 
+// ---------------------------------------------------------------------------
+// The three RPCE scores (memory / performance / readiness) + give-up rule.
+// Ported from pylib/anki/rpce/scores.py so the phone shows the SAME honest
+// payload as the desktop, computed on-device from the shared collection.
+// ---------------------------------------------------------------------------
+
+/// The seven Performance-Expectation domains (code, name). Weights default to an
+/// equal 1/7 split, matching the desktop default (anki.rpce.DOMAINS).
+const DOMAINS: [(i64, &str); 7] = [
+    (1, "Motions in General and Main Motions"),
+    (2, "Subsidiary and Privileged Motions"),
+    (3, "Incidental Motions and Motions that Bring a Question Again Before the Assembly"),
+    (4, "Organization and Conduct of Meetings"),
+    (5, "Voting, Nominations, and Elections"),
+    (6, "Being and Serving as a Professional Parliamentarian and Teaching Parliamentary Procedure"),
+    (7, "Boards and Committees, and Writing and Interpreting Bylaws"),
+];
+
+const MIN_REVIEWS: i64 = 200;
+const MIN_COVERAGE: f64 = 0.5;
+const MIN_SCENARIOS: i64 = 10;
+
+/// Run a read-only SQL query through the shared backend's db command.
+fn db_query(sql: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
+    let payload = serde_json::json!({
+        "kind": "query", "sql": sql, "args": args, "first_row_only": false,
+    });
+    let bytes = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    let guard = BACKEND.lock().map_err(|_| "backend lock poisoned".to_string())?;
+    let backend = guard.as_ref().ok_or_else(|| "collection not open".to_string())?;
+    let out = backend
+        .run_db_command_bytes(&bytes)
+        .map_err(|e| String::from_utf8_lossy(&e).into_owned())?;
+    serde_json::from_slice(&out).map_err(|e| e.to_string())
+}
+
+fn recall_estimate(reps: i64, lapses: i64) -> f64 {
+    (reps - lapses + 1) as f64 / (reps + 2) as f64
+}
+
+/// Recall estimates for cards matching an optional tag pattern (reps > 0).
+fn recalls(tag_like: Option<&str>) -> Vec<f64> {
+    let (sql, args) = match tag_like {
+        Some(pat) => (
+            "SELECT c.reps, c.lapses FROM cards c JOIN notes n ON c.nid = n.id \
+             WHERE c.reps > 0 AND n.tags LIKE ?1"
+                .to_string(),
+            serde_json::json!([pat]),
+        ),
+        None => (
+            "SELECT reps, lapses FROM cards WHERE reps > 0".to_string(),
+            serde_json::json!([]),
+        ),
+    };
+    let rows = match db_query(&sql, args) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    rows.as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|r| {
+                    let a = r.as_array()?;
+                    let reps = a.first()?.as_i64()?;
+                    let lapses = a.get(1)?.as_i64()?;
+                    Some(recall_estimate(reps, lapses))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn mean(v: &[f64]) -> f64 {
+    if v.is_empty() {
+        0.0
+    } else {
+        v.iter().sum::<f64>() / v.len() as f64
+    }
+}
+
+fn pstdev(v: &[f64]) -> f64 {
+    if v.len() < 2 {
+        return 0.0;
+    }
+    let m = mean(v);
+    (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / v.len() as f64).sqrt()
+}
+
+fn confidence_for_n(n: usize) -> &'static str {
+    if n >= 200 {
+        "high"
+    } else if n >= 50 {
+        "medium"
+    } else {
+        "low"
+    }
+}
+
+/// Mean with a 95% interval and sample-size confidence (scores.py `_range_from`).
+fn range_from(v: &[f64]) -> (Option<f64>, Option<f64>, Option<f64>, &'static str) {
+    if v.is_empty() {
+        return (None, None, None, "abstain");
+    }
+    let point = mean(v);
+    let n = v.len();
+    let se = if n > 1 { pstdev(v) / (n as f64).sqrt() } else { 0.5 };
+    let margin = 1.96 * se;
+    (
+        Some(point),
+        Some((point - margin).max(0.0)),
+        Some((point + margin).min(1.0)),
+        confidence_for_n(n),
+    )
+}
+
+fn domain_pattern(code: i64) -> String {
+    format!("%rpce::domain::{code}%")
+}
+
+fn card_count(tag_like: &str) -> i64 {
+    db_query(
+        "SELECT count() FROM cards c JOIN notes n ON c.nid = n.id WHERE n.tags LIKE ?1",
+        serde_json::json!([tag_like]),
+    )
+    .ok()
+    .and_then(|v| v.as_array()?.first()?.as_array()?.first()?.as_i64())
+    .unwrap_or(0)
+}
+
+fn scalar_i64(sql: &str) -> i64 {
+    db_query(sql, serde_json::json!([]))
+        .ok()
+        .and_then(|v| v.as_array()?.first()?.as_array()?.first()?.as_i64())
+        .unwrap_or(0)
+}
+
+fn logistic_pass(performance: f64) -> f64 {
+    let k = 12.0;
+    1.0 / (1.0 + (-k * (performance - 0.8)).exp())
+}
+
+/// The whole honest readiness payload as JSON (mirrors readiness_summary).
+fn scores_json() -> String {
+    // Per-domain recall + coverage.
+    let weight = 1.0 / DOMAINS.len() as f64; // equal default split
+    let mut perf_point = 0.0;
+    let mut seen_any = false;
+    let mut covered = 0;
+    let mut best: Option<(f64, &str)> = None;
+    let mut coverage_arr = Vec::new();
+    for (code, name) in DOMAINS {
+        let rc = recalls(Some(&domain_pattern(code)));
+        let cards = card_count(&domain_pattern(code));
+        if cards > 0 {
+            covered += 1;
+        }
+        let recall = if rc.is_empty() { None } else { Some(mean(&rc)) };
+        if let Some(r) = recall {
+            seen_any = true;
+            perf_point += weight * r;
+        }
+        let gap = recall.map(|r| 1.0 - r).unwrap_or(1.0);
+        let value = weight * gap;
+        if best.map(|(bv, _)| value > bv).unwrap_or(true) {
+            best = Some((value, name));
+        }
+        coverage_arr.push(serde_json::json!({ "code": code, "name": name, "cards": cards }));
+    }
+    let cov_pct = covered as f64 / DOMAINS.len() as f64;
+
+    // Memory.
+    let (mem_p, _mem_lo, _mem_hi, mem_conf) = range_from(&recalls(None));
+
+    // Performance.
+    let (perf_p, perf_conf) = if seen_any {
+        let conf = if cov_pct >= 0.8 {
+            "high"
+        } else if cov_pct >= 0.5 {
+            "medium"
+        } else {
+            "low"
+        };
+        (Some(perf_point), conf)
+    } else {
+        (None, "abstain")
+    };
+
+    let reviews = scalar_i64("SELECT count() FROM revlog");
+    let scenarios = scalar_i64(
+        "SELECT CAST(val AS INTEGER) FROM config WHERE key = 'rpce:graded_scenarios'",
+    );
+    let best_next = best.map(|(_, n)| n).unwrap_or("");
+
+    // Readiness per section with the give-up rule.
+    let section = |needs_scenarios: bool| -> serde_json::Value {
+        let mut missing: Vec<String> = Vec::new();
+        if reviews < MIN_REVIEWS {
+            missing.push(format!("{reviews}/{MIN_REVIEWS} graded reviews"));
+        }
+        if cov_pct < MIN_COVERAGE {
+            missing.push(format!(
+                "{:.0}%/{:.0}% domain coverage",
+                cov_pct * 100.0,
+                MIN_COVERAGE * 100.0
+            ));
+        }
+        if needs_scenarios && scenarios < MIN_SCENARIOS {
+            missing.push(format!("{scenarios}/{MIN_SCENARIOS} graded scenarios"));
+        }
+        if !missing.is_empty() {
+            return serde_json::json!({
+                "abstained": true,
+                "confidence": "abstain",
+                "evidence": format!("Not enough data: {}", missing.join("; ")),
+            });
+        }
+        let p = perf_p.unwrap_or(0.0);
+        serde_json::json!({
+            "abstained": false,
+            "pPass": logistic_pass(p),
+            "confidence": perf_conf,
+            "evidence": format!("Based on {reviews} reviews across {:.0}% of domains.", cov_pct * 100.0),
+        })
+    };
+
+    serde_json::json!({
+        "ok": true,
+        "memory": { "point": mem_p, "confidence": mem_conf },
+        "performance": { "point": perf_p, "confidence": perf_conf },
+        "sectionI": section(false),
+        "sectionII": section(true),
+        "coveragePct": cov_pct,
+        "reviews": reviews,
+        "scenarios": scenarios,
+        "bestNext": best_next,
+        "coverage": coverage_arr,
+    })
+    .to_string()
+}
+
+/// Compute the three RPCE scores on-device from the shared collection.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_scores(
+    env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    reply(env, scores_json())
+}
+
+/// Increment the graded-scenario counter (Section II) via the syncing config,
+/// mirroring desktop `scores.record_scenario`. Feeds the give-up rule.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_recordScenario(
+    env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    const KEY: &str = "rpce:graded_scenarios";
+    // Read current count (missing key -> 0).
+    let current = {
+        let req = anki_proto::generic::String { val: KEY.to_string() };
+        match run(9, 0, req.encode_to_vec()) {
+            Ok(bytes) => anki_proto::generic::Json::decode(bytes.as_slice())
+                .ok()
+                .and_then(|j| serde_json::from_slice::<i64>(&j.json).ok())
+                .unwrap_or(0),
+            Err(_) => 0, // key not set yet
+        }
+    };
+    let next = current + 1;
+    let req = anki_proto::config::SetConfigJsonRequest {
+        key: KEY.to_string(),
+        value_json: next.to_string().into_bytes(),
+        undoable: false,
+    };
+    match run(9, 1, req.encode_to_vec()) {
+        Ok(_) => reply(env, serde_json::json!({ "ok": true, "count": next }).to_string()),
+        Err(e) => reply(env, err(&e)),
+    }
+}
+
 /// Sanity self-check callable from host tests: confirms engine symbols link.
 pub fn engine_info() -> String {
     format!("anki {} ({})", anki::version::version(), anki::version::buildhash())
