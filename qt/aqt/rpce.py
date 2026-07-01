@@ -629,10 +629,61 @@ def _is_transfer_card(card) -> bool:
         return False
 
 
+_MCQ_CSS = (
+    "<style>"
+    "#rpce-opts{display:flex;flex-direction:column;gap:10px;max-width:640px;margin:18px auto 0}"
+    ".rpce-opt{text-align:left;font-size:18px;line-height:1.4;padding:13px 16px;border-radius:12px;"
+    "border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font-family:inherit}"
+    ".rpce-opt:hover{border-color:#1d4ed8;background:#e8f0ff}"
+    ".rpce-opt.ok{background:#dcfce7;border-color:#15803d;color:#14532d;font-weight:700}"
+    ".rpce-opt.no{background:#fee2e2;border-color:#be123c;color:#7f1d1d;font-weight:700}"
+    ".rpce-opt:disabled{cursor:default}"
+    ".rpce-fb{margin-top:16px;font-size:17px;font-weight:700;min-height:22px}"
+    "</style>"
+)
+
+
+def _mcq_html(note, label: str, answer_side: bool) -> str:
+    """Interactive multiple choice: clickable options with immediate correct/
+    incorrect feedback (not a flip-to-reveal flashcard)."""
+    from anki.rpce import MCQ_OPTION_SEP
+
+    stem = note["MCQQ"]
+    options = [o for o in note["MCQOptions"].split(MCQ_OPTION_SEP) if o]
+    try:
+        correct = int(note["MCQIdx"] or 0)
+    except ValueError:
+        correct = 0
+    letters = "ABCDEFGH"
+    buttons = "".join(
+        f"<button class='rpce-opt' data-i='{i}' onclick='rpcePick({i})'>"
+        f"{letters[i]}) {opt}</button>"
+        for i, opt in enumerate(options)
+    )
+    stem_html = f"<div style='font-size:20px;line-height:1.5'>{stem}</div>"
+    opts_html = (
+        f"<div id='rpce-opts'>{buttons}</div><div id='rpce-fb' class='rpce-fb'></div>"
+    )
+    script = (
+        "<script>function rpcePick(i){var o=document.querySelectorAll('.rpce-opt');"
+        f"var c={correct};o.forEach(function(b,j){{b.disabled=true;"
+        "if(j===c)b.classList.add('ok');else if(j===i)b.classList.add('no');});"
+        "document.getElementById('rpce-fb').innerHTML=(i===c)"
+        "?\"<span style='color:#15803d'>\\u2713 Correct</span>\""
+        ":\"<span style='color:#be123c'>\\u2717 Not quite \\u2014 the correct answer is highlighted.</span>\";}"
+        "</script>"
+    )
+    if answer_side:
+        # Reveal the correct option automatically on the answer side.
+        script += "<script>rpcePick(" + str(correct) + ");</script>"
+    return _MCQ_CSS + label + stem_html + opts_html + script
+
+
 def _on_card_will_show(text: str, card, kind: str) -> str:
     """Rotate which format of a concept is shown each repetition, so the same
     problem resurfaces in a different shape while keeping one FSRS schedule
-    (Transfer Ladder, spec §7.1). Non-RPCE cards are untouched."""
+    (Transfer Ladder, spec §7.1). MCQ rungs are interactive multiple choice;
+    non-RPCE cards are untouched."""
     try:
         if not _is_transfer_card(card):
             return text
@@ -640,15 +691,13 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
 
         rung = transfer_ladder.rung_for_reps(card.reps)
         note = card.note()
-        if rung == "mcq":
-            question, answer = note["MCQQ"], note["MCQA"]
-        else:
-            question, answer = note["ClozeQ"], note["ClozeA"]
         label = (
             "<div style='font-size:13px;letter-spacing:.7px;text-transform:uppercase;"
             f"color:#1d4ed8;margin-bottom:14px'>{rung} · same concept</div>"
         )
-        body = f"<div style='font-size:20px;line-height:1.5'>{question}</div>"
+        if rung == "mcq":
+            return _mcq_html(note, label, answer_side="Answer" in kind)
+        body = f"<div style='font-size:20px;line-height:1.5'>{note['ClozeQ']}</div>"
         if "Question" in kind:
             return label + body
         if "Answer" in kind:
@@ -656,7 +705,7 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
                 label
                 + body
                 + "<hr id=answer>"
-                + f"<div style='font-size:20px;line-height:1.5;color:#15803d'>{answer}</div>"
+                + f"<div style='font-size:20px;line-height:1.5;color:#15803d'>{note['ClozeA']}</div>"
             )
         return text
     except Exception as exc:  # never break reviewing over rendering

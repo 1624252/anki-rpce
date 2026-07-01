@@ -120,7 +120,11 @@ def coverage_pct(col: Collection) -> float:
 
 
 #: Name of the notetype that carries every format of one concept in one note.
-TRANSFER_NOTETYPE = "RPCE Transfer"
+#: (Versioned: bumping the name triggers a clean deck rebuild on profile open.)
+TRANSFER_NOTETYPE = "RPCE Concept"
+
+#: Delimiter separating the individual MCQ options within the MCQOptions field.
+MCQ_OPTION_SEP = "||"
 
 
 def _transfer_notetype(col: Collection):
@@ -138,7 +142,18 @@ def _transfer_notetype(col: Collection):
     if existing is not None:
         return existing
     m = mm.new(TRANSFER_NOTETYPE)
-    for field in ("Concept", "Domain", "ClozeQ", "ClozeA", "MCQQ", "MCQA"):
+    # MCQQ = stem; MCQA = correct-answer text; MCQOptions = the options joined by
+    # MCQ_OPTION_SEP; MCQIdx = index of the correct option (for interactive MCQ).
+    for field in (
+        "Concept",
+        "Domain",
+        "ClozeQ",
+        "ClozeA",
+        "MCQQ",
+        "MCQA",
+        "MCQOptions",
+        "MCQIdx",
+    ):
         mm.add_field(m, mm.new_field(field))
     tmpl = mm.new_template("Concept")
     # Default rendering (used where the desktop format-rotation hook is absent,
@@ -173,8 +188,10 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
         note["Domain"] = str(card.domain_code)
         note["ClozeQ"] = flashcards.cloze_question(card)
         note["ClozeA"] = flashcards.cloze_answer(card)
-        note["MCQQ"] = flashcards.mcq_front(card).replace("\n", "<br>")
+        note["MCQQ"] = card.mcq_question
         note["MCQA"] = flashcards.mcq_back(card)
+        note["MCQOptions"] = MCQ_OPTION_SEP.join(card.mcq_options)
+        note["MCQIdx"] = str(card.mcq_answer_index)
         note.tags = [domain_tag(card.domain_code), concept_tag(card.concept_id)]
         col.add_note(note, deck_id)
 
