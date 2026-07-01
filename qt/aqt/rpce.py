@@ -59,57 +59,57 @@ _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans
 # See docs/rpce/UI_DESIGN.md.
 _THEME_CSS = (
     ":root{"
-    "--ink:#f8fbff;--ink2:#a9c7ee;--muted:#93c5fd;"
-    "--ready:#4ade80;--mid:#38bdf8;--warn:#fbbf24;"
-    "--surface:rgba(96,165,250,.08);--surface2:rgba(96,165,250,.13);"
-    "--border:rgba(96,165,250,.30);--accent1:#2563eb;--accent2:#38bdf8;"
+    "--ink:#f5f9ff;--ink2:#9ec3f0;--muted:#7dd3fc;"
+    "--ready:#4ade80;--mid:#60a5fa;--warn:#fbbf24;"
+    "--surface:#0e2144;--surface2:#12294f;--track:#0a1c3d;"
+    "--border:#1e3f77;--accent1:#1d4ed8;--accent2:#3b82f6;"
     "--fs-display:42px;--fs-h1:30px;--fs-h2:22px;--fs-lead:18px;"
     "--fs-body:17px;--fs-small:15px;--fs-label:13px}"
-    # Full-page dark-navy background so the whole screen is designed.
+    # Full-page darker-navy background (solid blues, no gray).
     "html,body{background:"
-    "radial-gradient(1200px 760px at 12% -12%,rgba(37,99,235,.32),rgba(10,22,40,0) 60%),"
-    "linear-gradient(160deg,#0a1628 0%,#0f2447 55%,#0a1628 100%) !important;"
+    "radial-gradient(1200px 760px at 12% -12%,rgba(29,78,216,.30),rgba(5,12,28,0) 60%),"
+    "linear-gradient(160deg,#050c1c 0%,#0a1a3a 55%,#050c1c 100%) !important;"
     "color:var(--ink) !important}"
     ".rpce-root{font-family:" + _FONT + ";color:var(--ink);font-size:var(--fs-body)}"
     ".rpce-hero{max-width:1060px;margin:44px auto 18px;padding:42px 46px;border-radius:26px;"
-    "border:1px solid var(--border);box-shadow:0 24px 64px rgba(2,20,48,.60);"
-    "background:radial-gradient(120% 140% at 0% 0%,rgba(37,99,235,.32),rgba(56,189,248,.12) 52%,rgba(10,22,40,0) 100%),"
+    "border:1px solid var(--border);box-shadow:0 24px 64px rgba(2,8,24,.75);"
+    "background:radial-gradient(120% 140% at 0% 0%,rgba(29,78,216,.34),rgba(59,130,246,.10) 52%,rgba(8,18,40,0) 100%),"
     "var(--surface)}"
     ".rpce-head{display:flex;align-items:center;gap:18px}"
     ".rpce-logo{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;"
     "justify-content:center;font-weight:800;font-size:24px;color:#fff;"
-    "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(37,99,235,.6)}"
+    "background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 10px 26px rgba(29,78,216,.7)}"
     ".rpce-h1{font-size:var(--fs-h1);font-weight:800;letter-spacing:-.4px;color:var(--ink)}"
     ".rpce-h1 small{color:var(--ink2);font-weight:600;font-size:var(--fs-lead)}"
     ".rpce-sub{color:var(--ink2);font-size:var(--fs-lead)}"
     ".rpce-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:28px}"
     ".rpce-card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;"
-    "padding:24px 26px;box-shadow:0 6px 22px rgba(2,20,48,.45)}"
+    "padding:24px 26px;box-shadow:0 6px 22px rgba(2,8,24,.5)}"
     ".rpce-row{display:flex;justify-content:space-between;align-items:center;gap:8px}"
     ".rpce-label{font-size:var(--fs-label);font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}"
     ".rpce-val{font-size:var(--fs-display);font-weight:800;margin-top:12px;line-height:1.02;letter-spacing:-.6px;color:var(--ink)}"
     ".rpce-pill{font-size:var(--fs-label);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 11px;border-radius:999px}"
-    ".rpce-bar{height:9px;border-radius:999px;background:rgba(255,255,255,.14);margin-top:18px;overflow:hidden}"
+    ".rpce-bar{height:9px;border-radius:999px;background:var(--track);margin-top:18px;overflow:hidden}"
     ".rpce-bar>i{display:block;height:100%;border-radius:999px;background:currentColor}"
-    ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(147,197,253,.20)}"
-    ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.22)}"
-    ".rpce-cf-medium{color:var(--mid)}.rpce-pill.rpce-cf-medium{background:rgba(56,189,248,.22)}"
-    ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(74,222,128,.22)}"
+    ".rpce-cf-abstain{color:var(--muted)}.rpce-pill.rpce-cf-abstain{background:rgba(125,211,252,.18)}"
+    ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(251,191,36,.20)}"
+    ".rpce-cf-medium{color:var(--mid)}.rpce-pill.rpce-cf-medium{background:rgba(96,165,250,.22)}"
+    ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(74,222,128,.20)}"
     ".rpce-covhead{display:flex;justify-content:space-between;font-size:var(--fs-small);margin:28px 0 10px;color:var(--ink2)}"
     ".rpce-covhead b{font-weight:700;letter-spacing:.4px;text-transform:uppercase}"
-    ".rpce-cov{height:14px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}"
+    ".rpce-cov{height:14px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
     ".rpce-chips{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}"
     ".rpce-chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-body);color:var(--ink);"
-    "background:rgba(56,189,248,.14);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
-    ".rpce-note{margin-top:22px;font-size:var(--fs-body);color:#fde68a;background:rgba(251,191,36,.12);"
-    "border:1px solid rgba(251,191,36,.34);border-radius:14px;padding:15px 18px}"
+    "background:rgba(37,99,235,.20);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
+    ".rpce-note{margin-top:22px;font-size:var(--fs-body);color:#fcd34d;background:rgba(29,78,216,.16);"
+    "border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:12px;padding:15px 18px}"
     ".rpce-foot{margin-top:24px;font-size:var(--fs-small);color:var(--ink2)}.rpce-foot b{color:var(--ink)}"
     ".rpce-tbl{border-collapse:collapse;width:100%;font-size:var(--fs-body)}"
     ".rpce-tbl th{color:var(--ink2);font-size:var(--fs-label);text-transform:uppercase;letter-spacing:.5px;"
     "text-align:left;padding:12px 14px;border-bottom:2px solid var(--border)}"
-    ".rpce-tbl td{padding:13px 14px;border-bottom:1px solid rgba(96,165,250,.18)}"
-    ".rpce-colbar{height:9px;width:150px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}"
+    ".rpce-tbl td{padding:13px 14px;border-bottom:1px solid rgba(30,63,119,.7)}"
+    ".rpce-colbar{height:9px;width:150px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-colbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
 )
 
@@ -517,8 +517,25 @@ def _on_deck_browser_content(deck_browser, content) -> None:
     try:
         content.tree = _banner_html(mw.col)
         content.stats = ""
+        # Hide Anki's gray deck-browser bottom bar (Get Shared / Create Deck /
+        # Import File) — not part of the RPCE flow.
+        mw.bottomWeb.hide()
     except Exception as exc:  # never break the deck browser over the banner
         print(f"RPCE home error: {exc}")
+
+
+def _on_state_change(new_state, old_state) -> None:
+    """Hide the bottom bar on the home screen; restore it for study/review."""
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        if new_state == "deckBrowser":
+            mw.bottomWeb.hide()
+        else:
+            mw.bottomWeb.show()
+    except Exception as exc:
+        print(f"RPCE bottom-bar error: {exc}")
 
 
 # Toolbar tabs
@@ -565,12 +582,13 @@ def _tab_timed() -> None:
 
 _TOOLBAR_CSS = (
     "<style>"
-    "body{background:#0a1628 !important}"
-    ".header{background:linear-gradient(90deg,#0f2447,#12325f) !important;"
-    "border-bottom:1px solid rgba(96,165,250,.32) !important;padding:8px 6px !important}"
+    "body{background:#050c1c !important}"
+    ".header{background:linear-gradient(90deg,#081633,#0c2149) !important;"
+    "border-bottom:1px solid #1e3f77 !important;padding:10px 8px !important}"
     ".hitem{font-size:16px !important;font-weight:700 !important;color:#cfe2fb !important;"
-    "padding:10px 20px !important;margin:0 4px !important;border-radius:11px !important;text-decoration:none !important}"
-    ".hitem:hover{background:rgba(56,189,248,.26) !important;color:#fff !important}"
+    "padding:10px 20px !important;margin:0 5px !important;border-radius:12px !important;text-decoration:none !important;"
+    "background:rgba(37,99,235,.16) !important;border:1px solid rgba(59,130,246,.28) !important}"
+    ".hitem:hover{background:#1d4ed8 !important;color:#fff !important;border-color:#3b82f6 !important}"
     "</style>"
 )
 
@@ -627,3 +645,4 @@ def setup() -> None:
     gui_hooks.deck_browser_will_render_content.append(_on_deck_browser_content)
     gui_hooks.reviewer_did_answer_card.append(_on_answer_card)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
+    gui_hooks.state_did_change.append(_on_state_change)
