@@ -54,6 +54,17 @@ APP_TITLE = "Speedrun for the RPCE"
 
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
 
+# Qt stylesheet for RPCE dialogs, matching the Deep Blue web theme (no gray).
+_DIALOG_QSS = (
+    "QDialog{background:#0a1a3a}"
+    "QLabel{color:#cfe2fb;font-size:17px}"
+    "QTextBrowser,QTextEdit{background:#0a1c3d;color:#f5f9ff;border:1px solid #1e3f77;"
+    "border-radius:12px;font-size:17px;padding:12px}"
+    "QPushButton{background:#1d4ed8;color:#fff;border:none;border-radius:12px;"
+    "padding:12px 20px;font-size:16px;font-weight:700}"
+    "QPushButton:hover{background:#3b82f6}"
+)
+
 # One cohesive "Deep Blue" theme (dark navy + white, blue->sky accents),
 # driven by CSS design tokens so the home banner and dashboard stay consistent.
 # See docs/rpce/UI_DESIGN.md.
@@ -331,6 +342,7 @@ def _show_dashboard() -> None:
     dialog = QDialog(mw)
     dialog.setWindowTitle("RPCE readiness")
     dialog.resize(900, 760)
+    dialog.setStyleSheet(_DIALOG_QSS)
     layout = QVBoxLayout(dialog)
     layout.setContentsMargins(0, 0, 0, 0)
     web = AnkiWebView(title="rpce-dashboard")
@@ -358,20 +370,12 @@ class ScenarioDialog(QDialog):
 
         self.setWindowTitle("RPCE — Section II scenario practice")
         self.resize(720, 660)
-        self.setStyleSheet(
-            "QDialog{background:#0f2447}"
-            "QLabel{color:#cfe2fb;font-size:17px}"
-            "QTextBrowser,QTextEdit{background:#0a1628;color:#f8fbff;border:1px solid rgba(96,165,250,.35);"
-            "border-radius:12px;font-size:17px;padding:12px}"
-            "QPushButton{background:#2563eb;color:#fff;border:none;border-radius:12px;"
-            "padding:12px 20px;font-size:16px;font-weight:700}"
-            "QPushButton:hover{background:#3b82f6}"
-        )
+        self.setStyleSheet(_DIALOG_QSS)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 22, 22, 22)
         layout.setSpacing(14)
         heading = QLabel("Section II — performance scenario")
-        heading.setStyleSheet("font-size:24px;font-weight:800;color:#f8fbff")
+        heading.setStyleSheet("font-size:24px;font-weight:800;color:#f5f9ff")
         layout.addWidget(heading)
         self._domain = QLabel()
         layout.addWidget(self._domain)
