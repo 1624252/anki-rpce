@@ -82,7 +82,7 @@ impl Collection {
     }
 
     /// Marks the cards as modified.
-    fn bury_or_suspend_cards_inner(
+    pub(crate) fn bury_or_suspend_cards_inner(
         &mut self,
         cards: Vec<Card>,
         mode: BuryOrSuspendMode,

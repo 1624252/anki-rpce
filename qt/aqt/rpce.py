@@ -925,6 +925,16 @@ def _on_profile_open() -> None:
         deck = mw.col.decks.by_name("RPCE")
         if deck is not None:
             mw.col.decks.set_current(deck["id"])
+            # Lift the daily cap on the existing deck too (build sets it for new
+            # ones); idempotent so it's cheap on every open.
+            try:
+                conf = mw.col.decks.config_dict_for_deck_id(deck["id"])
+                if conf.get("new", {}).get("perDay", 0) < 9999:
+                    conf["new"]["perDay"] = 9999
+                    conf["rev"]["perDay"] = 9999
+                    mw.col.decks.update_config(conf)
+            except Exception:
+                pass
     except Exception as exc:
         print(f"RPCE deck migration error: {exc}")
 
@@ -949,6 +959,14 @@ def _on_answer_card(reviewer, card, ease) -> None:
             transfer_ladder.record_rung(mw.col, rung)
     except Exception as exc:  # never break reviewing over the tally
         print(f"RPCE format-tally error: {exc}")
+    # Concept grouping (our Rust engine change): bury the other cards of this
+    # concept so a concept isn't shown again today across question types — the
+    # same idea as sibling burying, keyed on the rpce::concept tag (spec §7/§14).
+    try:
+        if _is_rpce_card(card):
+            mw.col._backend.bury_concept_siblings(card_id=card.id)
+    except Exception as exc:  # never break reviewing over concept burying
+        print(f"RPCE concept-bury error: {exc}")
 
 
 def _is_rpce_card(card) -> bool:

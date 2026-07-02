@@ -271,6 +271,13 @@ impl crate::services::SchedulerService for Collection {
         })
     }
 
+    fn bury_concept_siblings(
+        &mut self,
+        input: scheduler::BuryConceptSiblingsRequest,
+    ) -> Result<anki_proto::collection::OpChangesWithCount> {
+        Collection::bury_concept_siblings(self, CardId(input.card_id)).map(Into::into)
+    }
+
     fn custom_study(
         &mut self,
         input: scheduler::CustomStudyRequest,

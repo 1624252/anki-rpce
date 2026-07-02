@@ -20,6 +20,11 @@ service SchedulerService {
   // highest-value cards come first. Read-only; does not modify the collection.
   rpc GetPointsAtStakeQueue(PointsAtStakeQueueRequest)
       returns (PointsAtStakeQueue);
+  // RPCE: bury the other cards sharing the given card's `rpce::concept::<id>`
+  // tag, so a concept is seen once per day even across different notes/types.
+  // Undoable; returns the number of cards buried.
+  rpc BuryConceptSiblings(BuryConceptSiblingsRequest)
+      returns (collection.OpChangesWithCount);
   rpc AnswerCard(CardAnswer) returns (collection.OpChanges);
   rpc SchedTimingToday(generic.Empty) returns (SchedTimingTodayResponse);
   rpc StudiedToday(generic.Empty) returns (generic.String);
@@ -184,6 +189,13 @@ message PointsAtStakeQueue {
   }
 
   repeated Entry entries = 1;
+}
+
+// RPCE "concept grouping": bury the sibling cards of a studied card's concept.
+message BuryConceptSiblingsRequest {
+  // The card that was just studied; its `rpce::concept::<id>` tag identifies
+  // the concept whose other cards should be buried.
+  int64 card_id = 1;
 }
 
 message SchedTimingTodayResponse {
