@@ -99,7 +99,7 @@ RENDER_JS = r"""
       if(m){ var i=+m[1]; var b=p.blanks[i]||{a:'',h:''};
         total++;
         var span=el('span','rpce-blank');
-        span.textContent=b.h?('? '+b.h):'?';
+        span.textContent='?';            // no give-away hint on the blank
         span.title='Tap to reveal';
         span.dataset.a=b.a;
         wrap.appendChild(span); blanks.push(span);
