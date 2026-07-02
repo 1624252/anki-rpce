@@ -43,6 +43,12 @@ object NativeBridge {
     /** Increment the graded Section II scenario counter (feeds the give-up rule). */
     external fun recordScenario(): String
 
+    /** Increment a synced integer config counter by 1; returns {ok, count}. */
+    external fun incrConfig(key: String): String
+
+    /** Read a synced integer config value; returns {ok, value}. */
+    external fun configInt(key: String): String
+
     /** Log in to a sync server; returns {hkey, endpoint}. */
     external fun syncLogin(username: String, password: String, endpoint: String): String
 

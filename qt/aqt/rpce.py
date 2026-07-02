@@ -845,6 +845,9 @@ def _on_webview_message(handled, message: str, context):
     if message == "rpce:simnext":
         _sim_next()
         return (True, None)
+    if message == "rpce:simai":
+        _sim_ai()
+        return (True, None)
     return handled
 
 
@@ -861,9 +864,13 @@ function rpceRespondSim(){
 
 
 def _sim_current():
-    """The Simulation currently on screen (wraps ``_SIM['sim_idx']``)."""
+    """The Simulation currently on screen. For an AI-generated scenario this is
+    the ``Simulation`` built in ``_sim_ai`` and stashed in ``_SIM['sim']``;
+    otherwise it wraps the scripted ``_SIM['sim_idx']``."""
     from anki.rpce import simulations
 
+    if _SIM and _SIM.get("ai") and _SIM.get("sim") is not None:
+        return _SIM["sim"]
     sims = simulations.all_simulations()
     return sims[_SIM["sim_idx"] % len(sims)]
 
@@ -876,10 +883,12 @@ def _sim_play() -> None:
     sim = _sim_current()
     while _SIM["turn"] < len(sim.turns):
         turn = sim.turns[_SIM["turn"]]
-        _SIM["log"].append(
-            "<p style='margin:10px 0'>"
-            f"<b style='color:#1d4ed8'>{turn.speaker}:</b> {turn.line}</p>"
-        )
+        # AI-generated decision turns carry no spoken line; only echo real lines.
+        if turn.line:
+            _SIM["log"].append(
+                "<p style='margin:10px 0'>"
+                f"<b style='color:#1d4ed8'>{turn.speaker}:</b> {turn.line}</p>"
+            )
         if turn.needs_response:
             _SIM["pending"] = turn
             _SIM["turn"] += 1
@@ -901,10 +910,46 @@ def _simulate_html(col) -> str:
     meeting plays out turn by turn; at each decision point the candidate responds
     as the parliamentarian and the response is graded for accuracy (async, with a
     spinner). No RONR citation is required of the candidate."""
+    from anki.rpce import ai
+
     if _SIM is None:
         _sim_reset()
     sim = _sim_current()
     transcript = "".join(_SIM["log"])
+    # AI scenario controls: a Generate button, a "generating…" state, and any
+    # last-generation error. Only shown when a key is set and AI is enabled;
+    # scripted simulations are always available regardless.
+    ai_html = ""
+    if ai.ai_configured() and ai.ai_enabled():
+        if _SIM.get("generating"):
+            ai_html = (
+                "<div style='margin-top:18px;color:var(--accent1);font-weight:800'>"
+                "🤖 Generating a scenario…</div>"
+            )
+        else:
+            err = _SIM.get("ai_error")
+            err_html = (
+                "<div style='margin-top:10px;color:#b45309;font-weight:700'>"
+                f"{err}</div>"
+                if err
+                else ""
+            )
+            ai_html = (
+                "<div style='margin-top:18px;border-top:1px solid var(--border);"
+                "padding-top:16px'>"
+                "<button onclick=\"pycmd('rpce:simai');return false;\" "
+                "style='background:var(--surface);color:var(--accent1);"
+                "border:1px solid var(--border);border-radius:14px;padding:11px 22px;"
+                "font-size:var(--fs-body);font-weight:800;cursor:pointer'>"
+                "🤖 Generate AI scenario</button>"
+                f"{err_html}</div>"
+            )
+    ai_tag = (
+        "<span class='rpce-pill' style='background:rgba(21,128,61,.14);"
+        "color:#15803d;margin-left:8px'>🤖 AI-generated</span>"
+        if _SIM.get("ai")
+        else ""
+    )
     if _SIM["done"]:
         controls = (
             "<div style='margin-top:18px;font-size:20px;font-weight:800;"
@@ -939,12 +984,13 @@ def _simulate_html(col) -> str:
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
     {_ai_toggle_html()}
   </div>
-  <div class="rpce-h1">{sim.title}</div>
+  <div class="rpce-h1">{sim.title}{ai_tag}</div>
   <div class="rpce-sub"><i>{sim.setting}</i></div>
   <div style="margin-top:20px;padding:16px 20px;background:var(--surface2);
     border:1px solid var(--border);border-radius:16px;text-align:left;
     font-size:var(--fs-body);line-height:1.5">{transcript}</div>
   {controls}
+  {ai_html}
 </div></div>
 """
 
@@ -970,6 +1016,8 @@ def _sim_respond(answer_b64: str) -> None:
     corpus = _load_corpus() or pending.gold
     rubric = getattr(pending, "rubric", None)
     gold = pending.gold
+    # AI examiner ONLY for AI-generated scenarios; scripted sims stay OFFLINE.
+    is_ai = bool(_SIM.get("ai"))
     # Echo the response into the transcript before grading.
     _SIM["log"].append(
         f"<p style='margin:10px 0'><b>You (parliamentarian):</b> {answer}</p>"
@@ -977,9 +1025,13 @@ def _sim_respond(answer_b64: str) -> None:
 
     def op():
         # Runs OFF the UI thread.
-        ex = examiner.make_examiner()
-        result = ex.grade(answer, gold, corpus, rubric)
-        return result, getattr(ex, "used", "offline")
+        if is_ai:
+            ex = examiner.make_examiner()
+            result = ex.grade(answer, gold, corpus, rubric)
+            return result, getattr(ex, "used", "offline")
+        # Scripted scenario: deterministic offline grader, no AI, no badge.
+        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
+        return result, None
 
     def on_done(future) -> None:
         # Runs back on the main thread.
@@ -1007,7 +1059,7 @@ def _sim_respond(answer_b64: str) -> None:
             "<div style='font-weight:800;color:var(--ink)'>"
             f"Examiner: {result.score:.1f}/5 ({verdict})</div>"
             f"<div style='margin-top:6px;color:var(--ink)'>{result.feedback}</div>"
-            + _examiner_badge(used)
+            + (_examiner_badge(used) if used else "")
             + f"<div style='margin-top:8px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
             + ref_html
             + "</div>"
@@ -1033,6 +1085,129 @@ def _sim_next() -> None:
     _SIM = {"sim_idx": idx, "turn": 0, "pending": None, "log": [], "done": False}
     _sim_play()
     mw.moveToState("deckBrowser")
+
+
+def _corpus_slice(corpus: str, size: int) -> str:
+    """A bounded chunk of the RONR corpus to keep the generation prompt small.
+    Picks a random window so repeated generations draw on different sections."""
+    corpus = corpus or ""
+    if len(corpus) <= size:
+        return corpus
+    import random
+
+    start = random.randint(0, len(corpus) - size)
+    return corpus[start:start + size]
+
+
+def _build_ai_simulation(data):
+    """Turn the AI JSON into a ``Simulation`` in the SAME shape the scripted flow
+    expects. Decision turns carry ``gold``/``cite``/``quote`` (as a ``refs.Ref``)
+    so grading + the citation block work exactly like scripted ones. AI text is
+    HTML-escaped so a stray tag can't break the page. Returns ``None`` if the
+    JSON has no usable decision point (so the UI falls back)."""
+    import html
+
+    from anki.rpce import refs, simulations
+
+    if not isinstance(data, dict):
+        return None
+    turns = data.get("turns")
+    if not isinstance(turns, list):
+        return None
+
+    def esc(v) -> str:
+        return html.escape(str(v or "").strip())
+
+    built = []
+    has_decision = False
+    for t in turns:
+        if not isinstance(t, dict):
+            continue
+        if t.get("decision") and t.get("gold"):
+            cite = esc(t.get("cite"))
+            quote = esc(t.get("quote"))
+            ref = refs.Ref(cite, quote) if cite else None
+            built.append(
+                simulations.SimTurn(
+                    speaker="",
+                    line="",
+                    prompt=esc(t.get("decision")),
+                    gold=esc(t.get("gold")),
+                    ref=ref,
+                )
+            )
+            has_decision = True
+        elif t.get("line"):
+            built.append(
+                simulations.SimTurn(
+                    speaker=esc(t.get("speaker")) or "Member",
+                    line=esc(t.get("line")),
+                )
+            )
+    if not built or not has_decision:
+        return None
+    return simulations.Simulation(
+        id=0,
+        domain_code=0,
+        title=esc(data.get("title")) or "AI-generated meeting",
+        setting=esc(data.get("setting")),
+        turns=tuple(built),
+    )
+
+
+def _sim_ai() -> None:
+    """Generate an AI meeting scenario grounded in the RONR corpus, OFF the UI
+    thread, and load it into ``_SIM`` in the scripted shape. Shows a
+    "generating…" state first; on any failure it shows a small message and stays
+    on the current scenario, so the page never breaks."""
+    global _SIM
+    from anki.rpce import ai
+
+    mw = aqt.mw
+    if mw is None or mw.col is None or _SIM is None:
+        return
+    # Render the "🤖 Generating a scenario…" state immediately.
+    _SIM["generating"] = True
+    _SIM["ai_error"] = None
+    mw.moveToState("deckBrowser")
+
+    def op():
+        # Runs OFF the UI thread. Bound the prompt to a corpus slice.
+        context = _corpus_slice(_load_corpus(), 12000)
+        return ai.generate_simulation(context)
+
+    def on_done(future) -> None:
+        global _SIM
+        try:
+            data = future.result()
+        except Exception:
+            data = None
+        if _SIM is None:
+            return
+        _SIM["generating"] = False
+        sim = _build_ai_simulation(data) if data else None
+        if sim is None:
+            _SIM["ai_error"] = (
+                "Couldn't generate a scenario (offline or unavailable) — "
+                "try a scripted one."
+            )
+            mw.moveToState("deckBrowser")
+            return
+        # Load into the scripted shape, flag it AI-generated, and play to the
+        # first decision point.
+        _SIM = {
+            "sim_idx": 0,
+            "sim": sim,
+            "ai": True,
+            "turn": 0,
+            "pending": None,
+            "log": [],
+            "done": False,
+        }
+        _sim_play()
+        mw.moveToState("deckBrowser")
+
+    mw.taskman.run_in_background(op, on_done)
 
 
 def _show_simulation() -> None:

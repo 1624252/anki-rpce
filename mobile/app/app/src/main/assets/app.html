@@ -286,6 +286,8 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){
 /* Persisted activity tallies. bump() adds 1 and returns the new total. */
 function bump(k){ var n=(parseInt(localStorage.getItem(k),10)||0)+1; localStorage.setItem(k,n); return n; }
 function activityCount(k){ return parseInt(localStorage.getItem(k),10)||0; }
+/* Read a SYNCED integer config counter (combines across devices via sync). */
+function cfgInt(k){ try{ var r=j(Engine.configInt(k)); return (r&&r.ok)?r.value:0; }catch(e){ return 0; } }
 /* "Your activity" block: prefer the engine's revlog total (reflects synced,
    combined reviews) for reviews; Section II / simulation are local tallies. */
 function refreshActivity(){
@@ -294,8 +296,8 @@ function refreshActivity(){
   try{ var s=j(Engine.scores()); reviews=(s.ok && s.reviews!=null) ? s.reviews : activityCount("rpce_reviews_count"); }
   catch(e){ reviews=activityCount("rpce_reviews_count"); }
   a.innerHTML="<b>Your activity</b><br>Reviews done: "+reviews+
-    "<br>Section II answers: "+activityCount("rpce_section2_count")+
-    "<br>Simulation responses: "+activityCount("rpce_sim_count");
+    "<br>Section II answers: "+cfgInt("rpce:section2_graded")+
+    "<br>Simulation responses: "+cfgInt("rpce:sim_responses");
 }
 function refreshCounts(){
   var c = j(Engine.deckCounts());
@@ -520,7 +522,7 @@ function gradeS2(){
     ? " Your answer didn’t mention: <b>"+missing.slice(0,6).join(", ")+"</b>."
     : "";
   Engine.recordScenario();
-  bump("rpce_section2_count");               // tally graded Section II answers
+  try{ Engine.incrConfig("rpce:section2_graded"); }catch(e){}  // synced tally (combines across devices)
   var fb=el('s2-feedback'); fb.classList.remove('hidden');
   fb.innerHTML='<b>Score:</b> '+score.toFixed(1)+'/5 ('+(passed?'pass':'keep practicing')+')<br>'+
     '<b>Feedback:</b> Your answer '+(passed?'matches':'misses key points from')+' the model ruling.'+ missNote +
@@ -558,7 +560,7 @@ function simRespond(){
   var gold=toks(simPending.gold); var overlap=gold.size? inter(toks(ans),gold)/gold.size : 0;
   var score=Math.round(5*overlap*100)/100; var passed=score>=3;
   Engine.recordScenario();
-  bump("rpce_sim_count");                    // tally graded simulation responses
+  try{ Engine.incrConfig("rpce:sim_responses"); }catch(e){}   // synced tally (combines across devices)
   simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
     "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
     "your answer "+(passed?'matches':'misses key points from')+" the model ruling.<br>"+

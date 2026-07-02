@@ -746,6 +746,50 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_recordScenario(
     }
 }
 
+/// Read an integer config value (missing key -> 0), via the syncing config.
+fn config_int(key: &str) -> i64 {
+    let req = anki_proto::generic::String { val: key.to_string() };
+    match run(9, 0, req.encode_to_vec()) {
+        Ok(bytes) => anki_proto::generic::Json::decode(bytes.as_slice())
+            .ok()
+            .and_then(|j| serde_json::from_slice::<i64>(&j.json).ok())
+            .unwrap_or(0),
+        Err(_) => 0,
+    }
+}
+
+/// Increment an integer config counter by 1 and persist it via the SYNCING
+/// config, so counts (e.g. Section II answers graded) combine across devices.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_incrConfig(
+    mut env: JNIEnv,
+    _class: JClass,
+    key: JString,
+) -> jstring {
+    let key = jstr(&mut env, &key);
+    let next = config_int(&key) + 1;
+    let req = anki_proto::config::SetConfigJsonRequest {
+        key,
+        value_json: next.to_string().into_bytes(),
+        undoable: false,
+    };
+    match run(9, 1, req.encode_to_vec()) {
+        Ok(_) => reply(env, serde_json::json!({ "ok": true, "count": next }).to_string()),
+        Err(e) => reply(env, err(&e)),
+    }
+}
+
+/// Read an integer config value (for display); returns {ok, value}.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configInt(
+    mut env: JNIEnv,
+    _class: JClass,
+    key: JString,
+) -> jstring {
+    let key = jstr(&mut env, &key);
+    reply(env, serde_json::json!({ "ok": true, "value": config_int(&key) }).to_string())
+}
+
 /// Sanity self-check callable from host tests: confirms engine symbols link.
 pub fn engine_info() -> String {
     format!("anki {} ({})", anki::version::version(), anki::version::buildhash())

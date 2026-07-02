@@ -147,6 +147,22 @@ def write_web_assets(assets_dir: Path) -> None:
     (assets_dir / "reference.json").write_text(
         json.dumps(knowledge.reference_tables(), indent=1), encoding="utf-8"
     )
+    # Section II scenarios for the phone (mirrors anki.rpce.scenarios: the curated
+    # set + the authored sample-style bank), in the shape app.html expects.
+    from anki.rpce import scenarios as _scen
+
+    scen_json = [
+        {
+            "domain": s.domain_code,
+            "prompt": s.prompt,
+            "gold": s.gold_answer,
+            "ref": {"section": s.ref.section, "quote": s.ref.quote},
+        }
+        for s in _scen.all_scenarios()
+    ]
+    (assets_dir / "scenarios.json").write_text(
+        json.dumps(scen_json, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
 
 
 def main(out_path: str, count: int) -> None:
