@@ -23,8 +23,11 @@ def test_scenarios_have_prompt_and_gold_answer():
 def test_every_scenario_cites_ronr_with_a_quote():
     import re
 
+    # RONR citations are section:paragraph, allowing a sub-item "(4)" or a
+    # range "15-16" (e.g. "10:26(4)", "6:15-16").
+    pat = re.compile(r"\d+:\d+(?:-\d+)?(?:\(\d+\))?")
     for s in scenarios.all_scenarios():
-        assert re.fullmatch(r"\d+:\d+", s.ref.section), s.ref.section
+        assert pat.fullmatch(s.ref.section), s.ref.section
         assert len(s.ref.quote.strip()) > 20, s.ref.section
 
 

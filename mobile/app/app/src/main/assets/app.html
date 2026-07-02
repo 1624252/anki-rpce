@@ -51,6 +51,11 @@ html,body{margin:0;min-height:100%;
   color:#fff;background:linear-gradient(135deg,var(--accent1),var(--accent2));margin-top:10px}
 .btn:active{opacity:.85}
 .btn.ghost{background:rgba(37,99,235,.18);border:1px solid var(--border);color:var(--ink)}
+/* Session-length setting: a clear, tappable control (not a muted link) */
+.setting-btn{display:block;width:100%;border:1px dashed var(--border);border-radius:12px;
+  padding:11px;font-size:15px;font-weight:700;color:var(--ink);background:var(--surface2);
+  margin-top:8px;text-align:center}
+.setting-btn:active{opacity:.85}
 .chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-small);color:var(--ready);
   background:rgba(21,128,61,.10);border:1px solid rgba(21,128,61,.35);padding:8px 14px;border-radius:999px;margin-top:20px}
 .card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:24px 20px;
@@ -161,11 +166,9 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     </div>
     <button class="btn" onclick="openScores()">📊 Readiness dashboard</button>
     <button class="btn" onclick="startStudy()">Review session</button>
+    <button class="setting-btn" onclick="setSessionLength()">⚙️ Review session: <span id="sess-len">20</span> questions</button>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
-    <p class="muted" style="text-align:center;margin-top:14px">Review session:
-      <a onclick="setSessionLength()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer"><span id="sess-len">20</span> questions</a>
-    </p>
     <div style="text-align:center;margin-top:8px"><span class="chip" id="engine">engine…</span></div>
     <div id="activity" class="muted" style="margin-top:14px;line-height:1.7"></div>
     <p class="muted" id="home-msg"></p>

@@ -798,6 +798,42 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configInt(
     reply(env, serde_json::json!({ "ok": true, "value": config_int(&key) }).to_string())
 }
 
+/// Ensure the RPCE deck has NO daily new-card cap and keeps the add-order.
+/// The apkg import maps the deck to the Default deck config (Anki's 20-new/day
+/// limit + template order), so without this the same ~20 cards recycle every
+/// session. Idempotent — safe to call on every launch. Sets the Default config
+/// (the deck the import assigns) to perDay 9999 + NO_SORT.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configureDeck(
+    env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    // DeckConfig service = 11: get legacy = method 3, add/update legacy = 0.
+    let getreq = anki_proto::deck_config::DeckConfigId { dcid: 1 };
+    let json = match run(11, 3, getreq.encode_to_vec()) {
+        Ok(b) => match anki_proto::generic::Json::decode(b.as_slice()) {
+            Ok(j) => j.json,
+            Err(_) => return reply(env, err("decode deck config")),
+        },
+        Err(e) => return reply(env, err(&e)),
+    };
+    let mut v: serde_json::Value = match serde_json::from_slice(&json) {
+        Ok(v) => v,
+        Err(_) => return reply(env, err("parse deck config")),
+    };
+    v["new"]["perDay"] = serde_json::json!(9999);
+    v["rev"]["perDay"] = serde_json::json!(9999);
+    v["newSortOrder"] = serde_json::json!(1); // NEW_CARD_SORT_ORDER_NO_SORT
+    let out = match serde_json::to_vec(&v) {
+        Ok(b) => b,
+        Err(_) => return reply(env, err("encode deck config")),
+    };
+    match run(11, 0, anki_proto::generic::Json { json: out }.encode_to_vec()) {
+        Ok(_) => reply(env, ok()),
+        Err(e) => reply(env, err(&e)),
+    }
+}
+
 /// Sanity self-check callable from host tests: confirms engine symbols link.
 pub fn engine_info() -> String {
     format!("anki {} ({})", anki::version::version(), anki::version::buildhash())

@@ -64,6 +64,10 @@ class MainActivity : AppCompatActivity() {
                 NativeBridge.importPackage(apkg.absolutePath)
                 NativeBridge.selectDeck("RPCE")
             }
+            // Import maps the deck to the Default config (20-new/day + template
+            // order), so lift the cap + set add-order every launch (idempotent),
+            // otherwise the same ~20 cards recycle.
+            NativeBridge.configureDeck()
             "ready"
         } catch (e: Throwable) {
             "error"

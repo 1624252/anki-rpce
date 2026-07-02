@@ -454,10 +454,18 @@ def _banner_html(col) -> str:
         f"Section II answers graded: <b>{sec2_graded}</b> · "
         f"Simulation responses: <b>{sim_responses}</b></div>"
     )
+    # Prominent settings control (spec: make the review-session length obvious).
+    # A big gear pill-button near the top of the dashboard, not tiny muted text.
     session_html = (
-        "<div class='rpce-foot' style='margin-top:10px'>Review session: "
-        f"<b>{_session_limit()}</b> questions · "
-        "<a href='#' onclick=\"pycmd('rpce:session_length');return false;\">change</a></div>"
+        "<div style='text-align:center;margin-top:26px'>"
+        "<a href='#' onclick=\"pycmd('rpce:session_length');return false;\" "
+        "style='display:inline-flex;align-items:center;gap:10px;"
+        "background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;"
+        "font-weight:800;font-size:var(--fs-body);text-decoration:none;"
+        "padding:13px 24px;border-radius:999px;"
+        "box-shadow:0 6px 18px rgba(29,78,216,.28)'>"
+        f"⚙️ Review session length: <b>{_session_limit()}</b> questions "
+        "<span style='opacity:.85;font-weight:700'>(change)</span></a></div>"
     )
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
@@ -468,6 +476,7 @@ def _banner_html(col) -> str:
       <div class="rpce-sub">Registered Parliamentarian Credentialing Exam · pass each section ≥ 80%</div>
     </div>
   </div>
+  {session_html}
   <div class="rpce-grid">{cards}</div>
   <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
@@ -475,7 +484,6 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   {activity_html}
-  {session_html}
   {logout_html}
   <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
@@ -830,7 +838,10 @@ def _on_webview_message(handled, message: str, context):
         _set_session_length()
         return (True, None)
     if message == "rpce:home":
-        _show_dashboard()
+        _show_dashboard()  # resets _RPCE_VIEW to "dashboard"
+        return (True, None)
+    if message == "rpce:newsession":
+        _start_new_session()
         return (True, None)
     if message == "rpce:aitoggle":
         from anki.rpce import ai
@@ -1352,6 +1363,108 @@ def _show_simulation() -> None:
     mw.moveToState("deckBrowser")
 
 
+# Object names of Anki menu actions that manage decks/collections or edit
+# content — all irrelevant to the RPCE study flow, so hide them (hiding an action
+# also disables its keyboard shortcut). Matched by objectName, which is stable
+# across languages. Found by inspecting qt/aqt/forms/main.ui.
+_HIDE_ACTION_NAMES = {
+    "actionSwitchProfile",  # File: switch profile
+    "actionImport",  # File: import (also enforced separately below)
+    "actionExport",  # File: export collection
+    "action_create_backup",  # File: create backup
+    "action_open_backup",  # File: restore backup (could replace the deck)
+    "actionStudyDeck",  # Tools: study deck
+    "actionCreateFiltered",  # Tools: create filtered deck
+    "actionFullDatabaseCheck",  # Tools: check database
+    "actionCheckMediaDatabase",  # Tools: check media
+    "actionEmptyCards",  # Tools: empty cards
+    "actionAdd_ons",  # Tools: add-ons
+    "actionNoteTypes",  # Tools: manage note types
+    "action_check_for_updates",  # Tools: check for add-on updates
+    "actionDocumentation",  # Help: Anki manual (confusing for RPCE users)
+    "actionDonate",  # Help: donate to Anki
+}
+
+# Fallback English text substrings (lowercase) for any equivalent item added
+# under a different objectName. The kept items (Exit/Quit, Preferences,
+# Undo/Redo, About, zoom, full screen, and the RPCE-added Tools actions) match
+# none of these.
+_HIDE_ACTION_TEXT = (
+    "import",
+    "export",
+    "switch profile",
+    "note type",
+    "manage note",
+    "add-on",
+    "addon",
+    "check media",
+    "check database",
+    "study deck",
+    "filtered deck",
+    "empty cards",
+    "backup",
+    "browse",
+    "check for updates",
+    "get shared",
+    "preferences",
+)
+
+
+def _declutter_menus(mw) -> None:
+    """Hide Anki menu items that manage decks/collections or edit content, so the
+    menu bar only offers what's useful for RPCE study: sync (top-right button),
+    Exit, Undo/Redo, and the RPCE Tools actions. Matches each action by
+    objectName first, then a small English text fallback. Fully guarded so a
+    menu-shape change upstream never blocks startup."""
+    # Actual menu attribute names, from qt/aqt/forms/main.ui (File is "menuCol";
+    # the View menu is "menuqt_accel_view", not "menuView").
+    for menu_name in (
+        "menuCol",
+        "menuEdit",
+        "menuqt_accel_view",
+        "menuTools",
+        "menuHelp",
+    ):
+        try:
+            menu = getattr(mw.form, menu_name, None)
+            if menu is None:
+                continue
+            for act in menu.actions():
+                try:
+                    if act.isSeparator():
+                        continue
+                    name = act.objectName()
+                    text = act.text().replace("&", "").lower()
+                    if name in _HIDE_ACTION_NAMES or any(
+                        s in text for s in _HIDE_ACTION_TEXT
+                    ):
+                        act.setVisible(False)
+                        act.setEnabled(False)
+                except Exception:
+                    continue
+        except Exception as exc:  # never block startup over decluttering
+            print(f"RPCE menu-declutter error ({menu_name}): {exc}")
+
+
+def _disable_editing(mw) -> None:
+    """Enforce read-only study: neutralize the card/note editor and the browser
+    entry points (reviewer 'e' key + Edit button, the 'b' browse shortcut, and
+    Add Card) so no editing UI can open. The RPCE deck is generated for the
+    candidate; editing it would desync from the phone. Shows a tooltip instead."""
+    from aqt.utils import tooltip
+
+    def _blocked(*_args, **_kwargs) -> None:
+        tooltip("Editing is disabled in Speedrun for the RPCE.")
+
+    # These bound methods funnel every edit/browse entry point through
+    # aqt.dialogs.open(...); shadowing them on the instance blocks all of them.
+    for attr in ("onEditCurrent", "onBrowse", "onAddCard"):
+        try:
+            setattr(mw, attr, _blocked)
+        except Exception as exc:
+            print(f"RPCE edit-disable error ({attr}): {exc}")
+
+
 def _brand_main_window() -> None:
     """Brand the window (title + logo icon). All RPCE actions live on the top
     toolbar tabs (Review session / Section II / Simulate / Dashboard), so there is no
@@ -1403,6 +1516,10 @@ def _brand_main_window() -> None:
         mw.setAcceptDrops(False)
     except Exception as exc:
         print(f"RPCE import-disable error: {exc}")
+    # Declutter the menu bar (hide deck/collection-management + editing items) and
+    # enforce read-only study (no editor/browser can open). Both are guarded.
+    _declutter_menus(mw)
+    _disable_editing(mw)
 
 
 def _apply_light_theme() -> None:
@@ -1564,6 +1681,17 @@ def _on_profile_open() -> None:
             if did_reseed or checked != RPCE_DECK_VERSION:
                 mw.col.fix_integrity()
                 mw.col.set_config("rpce:integrity_version", RPCE_DECK_VERSION)
+            # A re-seed (bulk remove + apkg import) diverges the collection from
+            # AnkiWeb, so the next NORMAL incremental sync fails its sanity check
+            # ("Please use the Check Database function, then sync again"). fix_integrity
+            # alone doesn't clear it. Mark the schema modified so the next sync is a
+            # FULL (one-way) sync, which _auto_full_sync auto-resolves by uploading
+            # the authoritative desktop deck. Only on an actual re-seed.
+            if did_reseed:
+                try:
+                    mw.col.mod_schema(check=False)
+                except Exception as exc:
+                    print(f"RPCE schema-mark error: {exc}")
         except Exception as exc:
             print(f"RPCE integrity check failed: {exc}")
     except Exception as exc:
@@ -1779,20 +1907,53 @@ def _session_progress_html() -> str:
     )
 
 
-def _end_session() -> None:
-    """End the review session at the cap and return home so the user can start a
-    fresh one from the Review session button."""
-    global _session_done
+def _session_done_html(col) -> str:
+    """The end-of-session completion page, rendered in-window through the
+    deck-browser content hook (the same mechanism as the Section II / Simulate
+    pages, switched by ``_RPCE_VIEW``): a checkmark heading, the count reviewed,
+    a prominent 'Start new session' button, and a link back to the dashboard."""
     limit = _session_limit()
+    return f"""{_theme_style()}
+<div class="rpce-root"><div class="rpce-hero">
+  <div class="rpce-head" style="gap:18px">
+    <div class="rpce-h1" style="font-size:var(--fs-display)">✅ Session complete</div>
+    <div class="rpce-sub">You reviewed <b>{limit}</b> questions. Nice work.</div>
+  </div>
+  <div style="text-align:center;margin-top:30px">
+    <button onclick="pycmd('rpce:newsession');return false;"
+      style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;
+      border-radius:14px;padding:15px 30px;font-size:var(--fs-lead);font-weight:800;
+      cursor:pointer;box-shadow:0 6px 18px rgba(29,78,216,.28)">
+      Start new session</button>
+  </div>
+  <div style="text-align:center;margin-top:18px">
+    <a href="#" onclick="pycmd('rpce:home');return false;"
+       style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Dashboard</a>
+  </div>
+</div></div>
+"""
+
+
+def _start_new_session() -> None:
+    """Start a fresh review session from the completion page (reset the counter,
+    then begin reviewing the RPCE deck)."""
+    global _session_done
+    _session_done = 0
+    _tab_study()  # sets _RPCE_VIEW="dashboard" and moves to the reviewer
+
+
+def _end_session() -> None:
+    """End the review session at the cap and show an in-window 'Session complete'
+    page (via the deck-browser content hook, like Section II / Simulate) so the
+    user can start a fresh session or return to the dashboard."""
+    global _session_done, _RPCE_VIEW
     _session_done = 0
     mw = aqt.mw
     if mw is None:
         return
     try:
-        mw.moveToState("deckBrowser")
-        from aqt.utils import tooltip
-
-        tooltip(f"Session complete — {limit} questions. Tap Review session for another.")
+        _RPCE_VIEW = "session_done"
+        mw.moveToState("deckBrowser")  # the content hook renders the done page
     except Exception as exc:
         print(f"RPCE end-session error: {exc}")
 
@@ -1852,6 +2013,8 @@ def _on_deck_browser_content(deck_browser, content) -> None:
             content.tree = _section2_html(mw.col)
         elif _RPCE_VIEW == "simulate":
             content.tree = _simulate_html(mw.col)
+        elif _RPCE_VIEW == "session_done":
+            content.tree = _session_done_html(mw.col)
         else:
             content.tree = _banner_html(mw.col)
         content.stats = ""

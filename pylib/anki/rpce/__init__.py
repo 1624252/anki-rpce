@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "15"
+RPCE_DECK_VERSION = "16"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -457,17 +457,23 @@ def build_starter_deck(
     assert deck_id is not None
     # FSRS on so the memory score uses real retrievability (spec §8).
     col.set_config("fsrs", True)
-    # No daily study cap — a candidate should be able to drill every due card,
-    # not hit Anki's default 20-new/200-review/day limit. Syncs via deck config.
+    # Give the RPCE deck its OWN deck config, not the shared default. Importing
+    # the apkg into a fresh collection does NOT overwrite that collection's
+    # default config, so a deck on the default config kept Anki's 20-new/day
+    # limit + template order after import — recycling the same ~20 cards every
+    # session. A dedicated named config ships in the apkg and applies on import,
+    # so the no-cap limits + type-interleave order actually reach both apps.
     try:
-        conf = col.decks.config_dict_for_deck_id(deck_id)
-        conf["new"]["perDay"] = 9999
+        cid = col.decks.add_config_returning_id("RPCE")
+        deck = col.decks.get(deck_id)
+        if deck is not None:
+            col.decks.set_config_id_for_deck_dict(deck, cid)
+            col.decks.save(deck)
+        conf = col.decks.get_config(cid) or col.decks.config_dict_for_deck_id(deck_id)
+        conf["new"]["perDay"] = 9999   # no daily new-card cap (drill freely)
         conf["rev"]["perDay"] = 9999
-        # NO_SORT: keep the deck's built-in add-order, which the exporter lays out
-        # round-robin by question type. A uniform RANDOM_CARD order over-showed the
-        # most common type (too many MCQs); add-order interleaving gives each type
-        # a roughly equal chance early in a session while staying sync-stable
-        # (positions come from add-order on import, identical on every device).
+        # NO_SORT keeps the add-order the exporter lays out round-robin by type
+        # (a uniform RANDOM_CARD order over-showed MCQs); sync-stable positions.
         conf["newSortOrder"] = 1  # NEW_CARD_SORT_ORDER_NO_SORT
         col.decks.update_config(conf)
     except Exception as exc:  # never block deck build over limits

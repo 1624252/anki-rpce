@@ -1,5 +1,5 @@
 /* Generated from anki.rpce.render_js — do not edit by hand. */
-var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-hint{font-size:13px;color:#35548c;font-style:italic}\n.rpce-blank{display:inline-block;min-width:64px;text-align:center;border:none;\n  border-bottom:2px dashed #1d4ed8;background:rgba(37,99,235,.08);color:#1d4ed8;\n  border-radius:6px 6px 0 0;padding:1px 8px;margin:0 2px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-blank.revealed{border-bottom-color:#15803d;background:rgba(21,128,61,.12);\n  color:#15803d;cursor:default}\n.rpce-controls{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}\n.rpce-btn{border:1px solid #caddf7;background:#f4f8ff;color:#1d4ed8;border-radius:12px;\n  padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-opts{display:flex;flex-direction:column;gap:4px;margin-top:14px}\n.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:7px 16px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font:inherit}\n.rpce-opt .k{font-weight:800;color:#35548c;margin-right:8px}\n.rpce-opt .mark{float:right;font-weight:800}\n.rpce-opt.ok{background:rgba(21,128,61,.14);border-color:#15803d;color:#14532d;font-weight:700}\n.rpce-opt.no{background:rgba(190,18,60,.10);border-color:#be123c;color:#7f1d1d;font-weight:700}\n.rpce-opt:disabled{cursor:default}\n.rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}\n.rpce-chip{padding:12px 16px;border-radius:12px;border:1px solid #caddf7;background:#f4f8ff;\n  color:#0a1f44;cursor:pointer;font:inherit;font-size:16px;position:relative}\n.rpce-chip .pos{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;\n  border-radius:50%;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;margin-right:8px}\n.rpce-chip.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-chip.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-fb{margin-top:14px;font-size:16px;font-weight:700;min-height:20px}\n.rpce-answer{margin-top:14px;font-size:17px;line-height:1.5;color:#0a1f44}\n.rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;background:#eef4ff;\n  border-radius:10px;text-align:left}\n.rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}\n.rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}\n/* multi-select */\n.rpce-opt.sel{background:#dbeafe;border-color:#1d4ed8;font-weight:700}\n.rpce-opt .box{display:inline-block;width:18px;height:18px;border:2px solid #94a3b8;border-radius:5px;margin-right:10px;vertical-align:-3px}\n.rpce-opt.sel .box{background:#1d4ed8;border-color:#1d4ed8}\n/* ordering (vertical; top = higher precedence) */\n.rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}\n.rpce-dest{display:flex;flex-direction:column;gap:8px;min-height:8px;\n  border-left:3px solid #caddf7;padding-left:12px;margin:6px 0}\n.rpce-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px}\n.rpce-slot .n{min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;\n  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}\n.rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}\n/* drag-to-reorder ordering list */\n.rpce-order .rpce-slot{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}\n.rpce-order .rpce-slot.drag{opacity:.6;box-shadow:0 4px 12px rgba(0,0,0,.18)}\n.rpce-order .rpce-slot .lbl{flex:1}\n.rpce-grip{color:#94a3b8;font-size:18px;cursor:grab;line-height:1}\n.rpce-moves{display:flex;flex-direction:column;gap:2px}\n.rpce-move{border:1px solid #caddf7;background:#fff;color:#1d4ed8;border-radius:6px;\n  width:28px;height:18px;line-height:1;font-size:11px;font-weight:800;cursor:pointer;padding:0}\n.rpce-move:disabled{opacity:.4;cursor:default}\n";
+var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-hint{font-size:13px;color:#35548c;font-style:italic}\n.rpce-blank{display:inline-block;min-width:64px;text-align:center;border:none;\n  border-bottom:2px dashed #1d4ed8;background:rgba(37,99,235,.08);color:#1d4ed8;\n  border-radius:6px 6px 0 0;padding:1px 8px;margin:0 2px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-blank.revealed{border-bottom-color:#15803d;background:rgba(21,128,61,.12);\n  color:#15803d;cursor:default}\n.rpce-controls{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}\n.rpce-btn{border:1px solid #caddf7;background:#f4f8ff;color:#1d4ed8;border-radius:12px;\n  padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-opts{display:flex;flex-direction:column;gap:4px;margin-top:14px}\n.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:7px 16px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font:inherit}\n.rpce-opt .k{font-weight:800;color:#35548c;margin-right:8px}\n.rpce-opt .mark{float:right;font-weight:800}\n.rpce-opt.ok{background:rgba(21,128,61,.14);border-color:#15803d;color:#14532d;font-weight:700}\n.rpce-opt.no{background:rgba(190,18,60,.10);border-color:#be123c;color:#7f1d1d;font-weight:700}\n.rpce-opt:disabled{cursor:default}\n.rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}\n.rpce-chip{padding:12px 16px;border-radius:12px;border:1px solid #caddf7;background:#f4f8ff;\n  color:#0a1f44;cursor:pointer;font:inherit;font-size:16px;position:relative}\n.rpce-chip .pos{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;\n  border-radius:50%;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;margin-right:8px}\n.rpce-chip.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-chip.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-fb{margin-top:14px;font-size:16px;font-weight:700;min-height:20px}\n.rpce-answer{margin-top:14px;font-size:17px;line-height:1.5;color:#0a1f44}\n.rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;background:#eef4ff;\n  border-radius:10px;text-align:left}\n.rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}\n.rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}\n/* multi-select */\n.rpce-opt.sel{background:#dbeafe;border-color:#1d4ed8;font-weight:700}\n.rpce-opt .box{display:inline-block;width:18px;height:18px;border:2px solid #94a3b8;border-radius:5px;margin-right:10px;vertical-align:-3px}\n.rpce-opt.sel .box{background:#1d4ed8;border-color:#1d4ed8}\n/* ordering (vertical; top = higher precedence) */\n.rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}\n.rpce-dest{display:flex;flex-direction:column;gap:4px;min-height:8px;\n  border-left:3px solid #caddf7;padding-left:12px;margin:4px 0}\n.rpce-slot{display:flex;align-items:center;gap:10px;padding:4px 12px;border-radius:10px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px;line-height:1.3}\n.rpce-slot .n{min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;\n  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}\n.rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}\n/* drag-to-reorder ordering list */\n.rpce-order .rpce-slot{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}\n.rpce-order .rpce-slot.drag{opacity:.6;box-shadow:0 4px 12px rgba(0,0,0,.18)}\n.rpce-order .rpce-slot .lbl{flex:1}\n.rpce-slot .rpce-omark{margin-left:8px;font-weight:800;font-size:13px;white-space:nowrap}\n.rpce-grip{color:#94a3b8;font-size:18px;cursor:grab;line-height:1}\n.rpce-moves{display:flex;flex-direction:column;gap:2px}\n.rpce-move{border:1px solid #caddf7;background:#fff;color:#1d4ed8;border-radius:6px;\n  width:28px;height:18px;line-height:1;font-size:11px;font-weight:800;cursor:pointer;padding:0}\n.rpce-move:disabled{opacity:.4;cursor:default}\n";
 
 (function(){
   function el(tag, cls, html){ var e=document.createElement(tag);
@@ -157,23 +157,38 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       }
       return best;
     }
+    // Drag-to-reorder via Pointer Events: ONE code path that works with a mouse
+    // (QtWebEngine desktop) AND touch (Android WebView). We avoid native HTML5
+    // drag-and-drop because touch DnD is unreliable in WebViews. touch-action:none
+    // (see CSS) hands us the gesture instead of scrolling; setPointerCapture keeps
+    // pointermove flowing to the row even as it slides past its neighbours. We
+    // physically move the row element in the DOM as the pointer moves. The ▲/▼
+    // buttons stay as an accessible fallback.
     function attachDrag(row){
-      var dragging=false;
+      var active=false, startY=0, moved=false;
       row.addEventListener('pointerdown',function(ev){
-        if(graded || ev.target.classList.contains('rpce-move')) return; // let buttons work
-        dragging=true; row.classList.add('drag');
+        if(graded) return;
+        // Let the ▲/▼ buttons handle their own taps.
+        if(ev.target && ev.target.classList && ev.target.classList.contains('rpce-move')) return;
+        active=true; moved=false; startY=ev.clientY;
         try{ row.setPointerCapture(ev.pointerId); }catch(e){}
       });
       row.addEventListener('pointermove',function(ev){
-        if(!dragging) return; ev.preventDefault();
+        if(!active) return;
+        // Small threshold so a plain tap isn't treated as a drag.
+        if(!moved){ if(Math.abs(ev.clientY-startY)<4) return; moved=true; row.classList.add('drag'); }
+        ev.preventDefault();                               // stop text selection / scroll
         var after=afterRow(ev.clientY);
         if(after==null) list.appendChild(row); else list.insertBefore(row,after);
         renumber();
       });
-      function end(ev){ if(!dragging) return; dragging=false; row.classList.remove('drag');
-        try{ row.releasePointerCapture(ev.pointerId); }catch(e){} }
+      function end(ev){
+        if(!active) return; active=false; row.classList.remove('drag');
+        try{ row.releasePointerCapture(ev.pointerId); }catch(e){}
+      }
       row.addEventListener('pointerup',end);
       row.addEventListener('pointercancel',end);
+      row.addEventListener('lostpointercapture',end);
     }
     function makeRow(label){
       var row=el('div','rpce-slot'); row.dataset.label=label;
@@ -189,16 +204,23 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
     }
     function submit(){
       if(graded) return; graded=true;
+      // Rows stay in the user's submitted arrangement; mark each position right
+      // or wrong so the user sees THEIR OWN answer graded, not just the key.
       var got=currentOrder(), rows=list.querySelectorAll('.rpce-slot'), allRight=true;
       for(var i=0;i<rows.length;i++){
-        if(got[i]===order[i]) rows[i].classList.add('ok');
-        else { rows[i].classList.add('no'); allRight=false; }
+        var mv=rows[i].querySelector('.rpce-moves'), mk=el('span','rpce-omark');
+        if(got[i]===order[i]){ rows[i].classList.add('ok'); mk.style.color='#15803d';
+          mk.textContent='✓'; }
+        else { rows[i].classList.add('no'); mk.style.color='#be123c'; allRight=false;
+          // Show where this item actually belongs (its rank in the key).
+          mk.textContent='✗ goes #'+(order.indexOf(got[i])+1); }
+        rows[i].insertBefore(mk,mv);
         var mb=rows[i].querySelectorAll('.rpce-move');
         for(var k=0;k<mb.length;k++) mb[k].disabled=true;   // stop nudging
       }
       fb.style.color=allRight?'#15803d':'#be123c';
-      fb.innerHTML=allRight?'✓ Correct order.'
-        :'✗ Not quite — the correct order (highest → lowest) is: <b>'+order.join(' → ')+'</b>';
+      fb.innerHTML=allRight?'✓ Correct — your order matches.'
+        :'✗ Not quite — your order is graded above. The correct order (highest → lowest) is: <b>'+order.join(' → ')+'</b>';
       done(host,p,opts);
     }
 
