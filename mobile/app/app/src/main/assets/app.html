@@ -603,11 +603,24 @@ function signup(){
 var auth={hkey:'',endpoint:'',lastSync:0};
 // Last sync-required code seen (NORMAL=1, FULL_SYNC=2, FULL_DOWNLOAD=3, FULL_UPLOAD=4).
 var LAST_REQUIRED=0;
+// AnkiWeb shards accounts across hosts and routes FULL sync to sync{N}.ankiweb.net,
+// while meta/normal sync answers on the base host. syncCollection reports the host
+// number; a full sync sent to the base host fails with HTTP 400 "missing original
+// size". Remember the host and send full syncs to the right shard (the desktop
+// does the same via new_endpoint / set_host_number).
+var LAST_HOST=0;
+function noteHost(r){ if(r && r.hostNumber>0) LAST_HOST=r.hostNumber; }
+function fullEndpoint(){
+  var e=auth.endpoint||"";
+  if(LAST_HOST>0 && (e==="" || e.indexOf("ankiweb.net")>=0))
+    return "https://sync"+LAST_HOST+".ankiweb.net/";
+  return e;                                   // custom server: use it as-is
+}
 // Auto-resolve a required full sync: adopt the desktop account (download) unless
 // the server is empty/behind (FULL_UPLOAD=4). Never clobber the desktop account.
 function resolveFull(){                       // returns true on success
   var up = (LAST_REQUIRED===4);               // 4 => upload; 2/3 => download
-  var f=j(Engine.fullSync(auth.hkey, auth.endpoint, up));
+  var f=j(Engine.fullSync(auth.hkey, fullEndpoint(), up));
   if(f.ok){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); return true; }
   return false;
 }
@@ -654,7 +667,7 @@ function syncNow(){
   if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
     try{
-      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
       if(!r.ok){
         if(isAuthError(r.error)){ clearSession(); show('sync');
           popup('Please sign in again', 'Your saved AnkiWeb session has expired. Sign in to sync.', '🔒'); }
@@ -683,7 +696,7 @@ function autoSync(){
   if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
     try{
-      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
       if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); }
       else if(r.ok && r.required>=2){          // adopt desktop / combine automatically
         LAST_REQUIRED=r.required; resolveFull(); }
@@ -710,7 +723,7 @@ function doSync(){
     var bar=el('syncbar'), sbt=el('syncbar-txt');         // amber pill while syncing
     if(bar) bar.className='warn'; if(sbt) sbt.textContent='🟠 Syncing…';
     setTimeout(function(){
-      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
       if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden'); updateNetStatus();
         popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
       if(r.required>=2){
@@ -731,7 +744,7 @@ function doFull(upload){
   el('sy-full').classList.add('hidden');
   syStatus(upload?'Uploading to server…':'Downloading from server…');
   setTimeout(function(){
-    var r=j(Engine.fullSync(auth.hkey, auth.endpoint, upload));
+    var r=j(Engine.fullSync(auth.hkey, fullEndpoint(), upload));
     if(r.ok){ auth.lastSync=Date.now(); saveAuth(); syStatus('✓ Full sync complete.');
       refreshCounts(); updateNetStatus(); }
     else { syStatus(''); el('sy-status').classList.add('hidden');
