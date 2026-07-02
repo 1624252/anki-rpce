@@ -643,6 +643,7 @@ def _section2_html(col) -> str:
       padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer">
       Submit for grading</button>
   </div>
+  <div style="margin-top:10px;text-align:left">{_ai_toggle_html()}</div>
   <div id="s2fb"></div>
   <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
     <button onclick="pycmd('rpce:s2next');return false;"
@@ -694,15 +695,17 @@ def _s2_grade(answer_b64: str) -> None:
     gold = s.gold_answer
 
     def op():
-        # Section II uses the deterministic offline keyword/rubric grader only —
-        # no AI here (AI is reserved for AI-generated Simulate scenarios).
-        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
-        return result, "offline"
+        # Grade with the AI examiner when a key is set AND AI grading is on;
+        # otherwise the deterministic offline keyword/rubric grader. AutoExaminer
+        # handles the fallback and records which grader ran (.used) for the badge.
+        ex = examiner.AutoExaminer()
+        result = ex.grade(answer, gold, corpus, rubric)
+        return result, ex.used
 
     def on_done(future) -> None:
         # Runs back on the main thread.
         try:
-            result, _used = future.result()
+            result, used = future.result()
         except Exception as exc:
             _s2_inject(
                 "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
@@ -716,6 +719,20 @@ def _s2_grade(answer_b64: str) -> None:
                 "rpce:section2_graded",
                 int(col.get_config("rpce:section2_graded", 0)) + 1,
             )
+        # Which key points the answer hit vs missed (the "words you have / are
+        # missing" display), regardless of which grader scored it.
+        matched, missing = examiner.keyword_report(answer, gold, rubric)
+        kw_html = ""
+        if matched:
+            kw_html += (
+                "<div style='margin-top:10px;color:#15803d;font-weight:700'>"
+                "✓ You covered: " + ", ".join(matched) + "</div>"
+            )
+        if missing:
+            kw_html += (
+                "<div style='margin-top:4px;color:#be123c;font-weight:700'>"
+                "Still missing: " + ", ".join(missing) + "</div>"
+            )
         verdict = "pass" if result.passed else "keep practicing"
         html = (
             "<div style='margin-top:16px;padding:16px 18px;background:var(--surface2);"
@@ -724,8 +741,10 @@ def _s2_grade(answer_b64: str) -> None:
             f"Score: {result.score:.1f}/5 "
             f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span></div>"
             f"<div style='margin-top:8px;color:var(--ink)'>{result.feedback}</div>"
+            + kw_html
             + f"<div style='margin-top:10px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
             + _ref_block(s.ref.section, s.ref.quote)
+            + _examiner_badge(used)
             + "</div>"
         )
         _s2_inject(html)

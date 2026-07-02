@@ -386,6 +386,26 @@ def derive_rubric(gold_answer: str) -> Rubric | None:
     return Rubric(tuple(els)) if els else None
 
 
+def keyword_report(
+    answer: str, gold_answer: str, rubric: "Rubric | None" = None
+) -> tuple[list[str], list[str]]:
+    """Which key points the answer HIT vs MISSED, as human-readable labels — for
+    the 'words you have / words you're missing' display. Uses the authored rubric
+    when present, else one derived from the gold ruling. Empty lists when the
+    ruling has no structured key points to check."""
+    rubric = rubric or derive_rubric(gold_answer)
+    if not rubric or not rubric.elements:
+        return [], []
+    seq = _canon_seq(answer)
+    matched: list[str] = []
+    missing: list[str] = []
+    for el in rubric.elements:
+        label = el.expects or el.name
+        hit = any(_phrase_matches(a, seq) for a in el.accepted)
+        (matched if hit else missing).append(label)
+    return matched, missing
+
+
 @dataclass
 class Passage:
     text: str
