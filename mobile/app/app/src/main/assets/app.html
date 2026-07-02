@@ -498,7 +498,7 @@ function refBlock(r){ if(!r||!r.section) return '';
 function examinerMode(){ try{ if(window.Engine && Engine.examinerMode) return Engine.examinerMode(); }catch(e){} return 'offline'; }
 function examinerBadge(){
   return examinerMode()==='ai'
-    ? '<div style="margin-top:8px;color:var(--ready);font-weight:700">🤖 Online AI examiner — graded for accuracy with detailed feedback.</div>'
+    ? '<div style="margin-top:8px;color:var(--ready);font-weight:700">🤖 AI examiner</div>'
     : '<div style="margin-top:8px;color:var(--warn);font-weight:700">🔌 Offline examiner. Connect online for AI feedback.</div>'; }
 function openSection2(){
   if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }

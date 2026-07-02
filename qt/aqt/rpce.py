@@ -297,13 +297,29 @@ def _examiner_badge(used: str = "offline") -> str:
     if used == "ai":
         return (
             "<div style='margin-top:8px;color:#15803d;font-weight:700'>"
-            "🤖 AI examiner — graded for accuracy, grounded in the cited RONR "
-            "passage.</div>"
+            "🤖 AI examiner</div>"
         )
     return (
         "<div style='margin-top:8px;color:#b45309;font-weight:700'>"
         "🔌 Offline examiner. Set an AI examiner key (Tools menu) for "
         "richer feedback when online.</div>"
+    )
+
+
+def _ai_toggle_html() -> str:
+    """A small in-page AI on/off control for the Section II / Simulate pages, so
+    the switch is visible where grading happens (also on Tools ▸ AI examiner)."""
+    from anki.rpce import ai
+
+    if not ai.ai_configured():
+        return ("<span style='color:var(--ink2);font-size:13px'>Offline examiner "
+                "(no AI key)</span>")
+    on = ai.ai_enabled()
+    color = "#15803d" if on else "#b45309"
+    return (
+        f"<a href='#' onclick=\"pycmd('rpce:aitoggle');return false;\" "
+        f"style='color:{color};font-weight:700;font-size:13px;text-decoration:none'>"
+        f"🤖 AI grading: {'ON' if on else 'OFF'} · turn {'off' if on else 'on'}</a>"
     )
 
 
@@ -524,15 +540,16 @@ def _section2_html(col) -> str:
     """Section II performance practice as an IN-WINDOW page (mirrors the
     dashboard): domain label, prompt, answer box, Submit (async graded), a
     feedback slot, Next scenario, and a Home link."""
-    from anki.rpce import domain_by_code
+    from anki.rpce import ai, domain_by_code
 
     s, i, total = _s2_scenario()
     d = domain_by_code(s.domain_code)
     return f"""{_theme_style()}{_S2_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
-  <div style="text-align:left;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <a href="#" onclick="pycmd('rpce:home');return false;"
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
+    {_ai_toggle_html()}
   </div>
   <div class="rpce-h1">Section II <small>performance scenario</small></div>
   <div class="rpce-sub">Domain {d.code}: {d.name} · scenario {i + 1} of {total}</div>
@@ -811,6 +828,12 @@ def _on_webview_message(handled, message: str, context):
     if message == "rpce:home":
         _show_dashboard()
         return (True, None)
+    if message == "rpce:aitoggle":
+        from anki.rpce import ai
+
+        ai.set_ai_enabled(not ai.ai_enabled())
+        aqt.mw.moveToState("deckBrowser")  # re-render the current page with new state
+        return (True, None)
     # Section II performance practice.
     if message.startswith("rpce:s2grade:"):
         _s2_grade(message[len("rpce:s2grade:"):])
@@ -914,9 +937,10 @@ def _simulate_html(col) -> str:
         )
     return f"""{_theme_style()}{_SIM_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
-  <div style="text-align:left;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <a href="#" onclick="pycmd('rpce:home');return false;"
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
+    {_ai_toggle_html()}
   </div>
   <div class="rpce-h1">{sim.title}</div>
   <div class="rpce-sub"><i>{sim.setting}</i></div>
