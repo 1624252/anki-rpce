@@ -957,7 +957,13 @@ def _simulate_html(col) -> str:
         if _SIM.get("ai")
         else ""
     )
-    if _SIM["done"]:
+    if _SIM.get("continuing"):
+        # AI meeting is mid-turn: the model is generating the next situation.
+        controls = (
+            "<div style='margin-top:18px;color:var(--accent1);font-weight:800'>"
+            "🤖 The meeting continues…</div>"
+        )
+    elif _SIM["done"]:
         controls = (
             "<div style='margin-top:18px;font-size:20px;font-weight:800;"
             "color:var(--ready)'>✅ Meeting adjourned. Well done.</div>"
@@ -1071,9 +1077,114 @@ def _sim_respond(answer_b64: str) -> None:
             + ref_html
             + "</div>"
         )
-        # Advance to the next decision point (or adjourn) and re-render.
+        # Advance through any remaining pre-generated turns to the next decision
+        # point (or the end of the fixed script) and re-render.
         _SIM["pending"] = None
         _sim_play()
+        # AI sims: don't stop at the end of the fixed script — continue the
+        # meeting dynamically, reacting to the ruling just graded. Scripted sims
+        # keep their existing fixed-script behavior (they simply adjourn here).
+        if is_ai and _SIM.get("done") and not _SIM.get("pending"):
+            _SIM["done"] = False  # not truly finished — ask the AI to continue
+            _sim_continue_ai(answer)
+            return
+        mw.moveToState("deckBrowser")
+
+    mw.taskman.run_in_background(op, on_done)
+
+
+#: Safety cap: an AI meeting continues for at most this many extra decision
+#: rounds (each one an ``ai.continue_simulation`` call) so the conversation can
+#: never run forever. Tracked in ``_SIM['ai_rounds']``.
+_SIM_AI_MAX_ROUNDS = 5
+
+
+def _sim_transcript_text() -> str:
+    """A compact PLAIN-TEXT transcript of the meeting so far, for the AI
+    continuation prompt (strips the accumulated HTML from ``_SIM['log']``)."""
+    import html
+    import re
+
+    parts = []
+    for chunk in (_SIM["log"] if _SIM else []):
+        text = re.sub(r"<[^>]+>", " ", str(chunk))
+        text = html.unescape(re.sub(r"\s+", " ", text)).strip()
+        if text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _sim_continue_ai(last_ruling: str) -> None:
+    """AI sims ONLY: after a decision is graded and the pre-generated turns are
+    exhausted, ask the model to CONTINUE the meeting — reacting to the ruling and
+    presenting the next situation/decision — instead of ending on the fixed
+    script. Runs OFF the UI thread with a "the meeting continues…" spinner state,
+    is bounded by ``_SIM_AI_MAX_ROUNDS``, and ends the meeting gracefully with a
+    note if the continuation is unavailable (offline/error)."""
+    from anki.rpce import ai, simulations
+
+    mw = aqt.mw
+    if mw is None or mw.col is None or _SIM is None:
+        return
+
+    def adjourn(note: str) -> None:
+        _SIM["log"].append(
+            "<p style='margin:10px 0;color:var(--ink2)'><i>" + note + "</i></p>"
+        )
+        _SIM["pending"] = None
+        _SIM["continuing"] = False
+        _SIM["done"] = True
+        mw.moveToState("deckBrowser")
+
+    # Safety cap: never let the conversation run forever.
+    rounds = int(_SIM.get("ai_rounds", 0))
+    if rounds >= _SIM_AI_MAX_ROUNDS:
+        adjourn("The chair moves to adjourn; the practice meeting ends here.")
+        return
+    # Show the "meeting continues…" spinner state while the model responds.
+    _SIM["continuing"] = True
+    history = _sim_transcript_text()
+    mw.moveToState("deckBrowser")
+
+    def op():
+        # Runs OFF the UI thread. Bound the prompt to a corpus slice (DATA).
+        context = _corpus_slice(_load_corpus(), 12000)
+        return ai.continue_simulation(history, last_ruling, context)
+
+    def on_done(future) -> None:
+        if _SIM is None:
+            return
+        try:
+            data = future.result()
+        except Exception:
+            data = None
+        if not data:
+            # Offline / error / malformed → end the meeting gracefully.
+            adjourn(
+                "The meeting cannot continue right now (offline or "
+                "unavailable). Adjourned."
+            )
+            return
+        _SIM["continuing"] = False
+        _SIM["ai_rounds"] = rounds + 1
+        new_turns, has_decision = _ai_turns_from_json(data.get("turns"))
+        sim = _SIM.get("sim")
+        if sim is not None and new_turns:
+            # Extend the frozen Simulation's turns so _sim_play drives the new
+            # lines exactly like the pre-generated ones.
+            _SIM["sim"] = simulations.Simulation(
+                id=sim.id,
+                domain_code=sim.domain_code,
+                title=sim.title,
+                setting=sim.setting,
+                turns=sim.turns + tuple(new_turns),
+            )
+        # Play the new spoken lines; stop at the next decision if one was given.
+        _sim_play()
+        if data.get("adjourned") or not has_decision:
+            # The model closed the meeting (or offered no next decision).
+            _SIM["pending"] = None
+            _SIM["done"] = True
         mw.moveToState("deckBrowser")
 
     mw.taskman.run_in_background(op, on_done)
@@ -1106,28 +1217,22 @@ def _corpus_slice(corpus: str, size: int) -> str:
     return corpus[start:start + size]
 
 
-def _build_ai_simulation(data):
-    """Turn the AI JSON into a ``Simulation`` in the SAME shape the scripted flow
-    expects. Decision turns carry ``gold``/``cite``/``quote`` (as a ``refs.Ref``)
-    so grading + the citation block work exactly like scripted ones. AI text is
-    HTML-escaped so a stray tag can't break the page. Returns ``None`` if the
-    JSON has no usable decision point (so the UI falls back)."""
+def _ai_turns_from_json(turns):
+    """Convert a list of AI turn dicts into ``SimTurn``s (shared by the initial
+    ``generate_simulation`` and the dynamic ``continue_simulation`` flows). All
+    text is HTML-escaped so a stray tag can't break the page. Decision turns carry
+    ``gold``/``cite``/``quote`` (as a ``refs.Ref``) so grading + the citation
+    block work exactly like scripted ones. Returns ``(built, has_decision)``."""
     import html
 
     from anki.rpce import refs, simulations
-
-    if not isinstance(data, dict):
-        return None
-    turns = data.get("turns")
-    if not isinstance(turns, list):
-        return None
 
     def esc(v) -> str:
         return html.escape(str(v or "").strip())
 
     built = []
     has_decision = False
-    for t in turns:
+    for t in turns if isinstance(turns, list) else []:
         if not isinstance(t, dict):
             continue
         if t.get("decision") and t.get("gold"):
@@ -1151,6 +1256,24 @@ def _build_ai_simulation(data):
                     line=esc(t.get("line")),
                 )
             )
+    return built, has_decision
+
+
+def _build_ai_simulation(data):
+    """Turn the AI JSON into a ``Simulation`` in the SAME shape the scripted flow
+    expects. AI text is HTML-escaped. Returns ``None`` if the JSON has no usable
+    decision point (so the UI falls back)."""
+    import html
+
+    from anki.rpce import simulations
+
+    if not isinstance(data, dict):
+        return None
+
+    def esc(v) -> str:
+        return html.escape(str(v or "").strip())
+
+    built, has_decision = _ai_turns_from_json(data.get("turns"))
     if not built or not has_decision:
         return None
     return simulations.Simulation(
