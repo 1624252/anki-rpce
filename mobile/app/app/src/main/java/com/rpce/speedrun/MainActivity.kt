@@ -117,13 +117,18 @@ class MainActivity : AppCompatActivity() {
         fun reference(): String =
             assets.open("reference.json").bufferedReader().use { it.readText() }
 
-        /** Real device connectivity (navigator.onLine is unreliable in a WebView). */
+        /** Real device connectivity (navigator.onLine is unreliable in a WebView).
+         *  Checks ANY network for INTERNET capability, not just the active default:
+         *  on the emulator the default network can lack the INTERNET flag while
+         *  cellular/Wi-Fi actually carries traffic, which wrongly read as offline. */
         @JavascriptInterface
         fun online(): Boolean {
             return try {
                 val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-                caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                cm.allNetworks.any { n ->
+                    cm.getNetworkCapabilities(n)
+                        ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                }
             } catch (e: Throwable) {
                 true // assume online if we can't tell
             }

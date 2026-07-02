@@ -672,9 +672,9 @@ function logout(){
 function syncNow(){
   if(!auth.hkey){ show('sync'); return; }            // need to log in first
   if(_syncing) return;
-  syncBackOnline();                                  // manual tap: try now, reset backoff
-  if(!online()){ updateNetStatus(); return; }        // offline: status shows it, no popup
-  _syncing=true;
+  syncBackOnline();                                  // manual tap: always try now, reset backoff
+  _syncing=true;                                     // (attempt even if online() is unsure — the
+                                                     //  result decides; failure -> gray, no popup)
   var bar=el('syncbar'), txt=el('syncbar-txt');           // amber pill while syncing
   if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
