@@ -126,10 +126,14 @@ def _fsrs_retrievability(col: Collection, cid: int) -> float | None:
 
 
 def _card_recall(col: Collection, cid: int, card) -> float:
-    """Per-card recall probability: real FSRS retrievability when available,
-    otherwise the transparent reps/lapses heuristic (spec §8 upgrade path)."""
-    r = _fsrs_retrievability(col, cid)
-    return r if r is not None else _recall_estimate(card.reps, card.lapses)
+    """Per-card recall probability, from the transparent reps/lapses heuristic.
+
+    Deliberately NOT FSRS retrievability: the phone engine has no FSRS, so using
+    the same heuristic on both platforms keeps the Memory/Performance/readiness
+    SCORES identical across devices (they read the same synced card fields). FSRS
+    retrievability is still surfaced separately as the calibration readout
+    (``memory_calibration``), where its accuracy is the point."""
+    return _recall_estimate(card.reps, card.lapses)
 
 
 def _reviewed_recalls(col: Collection) -> list[float]:
