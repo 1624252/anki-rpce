@@ -159,8 +159,15 @@ def _range_from(values: list[float]) -> ScoreRange:
 
 
 def graded_reviews(col: Collection) -> int:
-    """Number of logged reviews (the raw material for the memory model)."""
-    return col.db.scalar("select count() from revlog") or 0
+    """Number of logged reviews of cards that still exist (the raw material for
+    the memory model). Reviews of deleted cards (a deck re-seed can leave orphaned
+    revlog rows) are excluded so this count agrees with the performance estimate,
+    which is computed from current cards — otherwise the readiness gate could look
+    satisfied while performance still has no data to score."""
+    return (
+        col.db.scalar("select count() from revlog where cid in (select id from cards)")
+        or 0
+    )
 
 
 def graded_scenarios(col: Collection) -> int:

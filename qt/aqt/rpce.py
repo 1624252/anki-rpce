@@ -266,9 +266,12 @@ def _score_card(
     confidence: str,
     fill: float | None = None,
     reason: str = "",
+    abstaining: bool = False,
 ) -> str:
     """A themed score card: label, big value, confidence pill, the main reasons
-    behind the number (spec §4), and an optional bar."""
+    behind the number (spec §4), and an optional bar. When ``abstaining`` we show
+    the reason (the data still required) openly in a callout instead of hiding it
+    behind a dropdown, so the candidate can see what to do to unlock the score."""
     cf = f"rpce-cf-{confidence}"
     bar = ""
     if fill is not None:
@@ -276,14 +279,23 @@ def _score_card(
         bar = (
             f"<div class='rpce-bar'><i class='{cf}' style='width:{pct:.0f}%'></i></div>"
         )
-    reason_html = (
-        "<details style='margin-top:10px'>"
-        "<summary style='cursor:pointer;font-size:13px;font-weight:700;"
-        "color:var(--accent1);list-style:none'>ℹ️ Why this score</summary>"
-        f"<div class='rpce-reason' style='margin-top:6px'>{reason}</div></details>"
-        if reason
-        else ""
-    )
+    if reason and abstaining:
+        # Visible "data needed" callout (amber), not tucked away in a dropdown.
+        reason_html = (
+            "<div style='margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;"
+            "border-radius:12px;padding:10px 14px;color:#9a3412;font-size:13px;"
+            "line-height:1.5;text-align:left'><b>📋 Data needed to show this "
+            f"score:</b>{reason}</div>"
+        )
+    elif reason:
+        reason_html = (
+            "<details style='margin-top:10px'>"
+            "<summary style='cursor:pointer;font-size:13px;font-weight:700;"
+            "color:var(--accent1);list-style:none'>ℹ️ Why this score</summary>"
+            f"<div class='rpce-reason' style='margin-top:6px'>{reason}</div></details>"
+        )
+    else:
+        reason_html = ""
     return (
         "<div class='rpce-card'>"
         f"<div class='rpce-label'>{label}</div>"
@@ -396,6 +408,42 @@ def _banner_html(col) -> str:
             else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
         )
 
+    def section_needs(snap) -> str:
+        """The concrete requirement text for an abstaining section: the give-up
+        checklist ('N more graded reviews (x/y)' …) as a bulleted list."""
+        ev = (snap.evidence or "").strip()
+        prefix = "Not enough data: "
+        if ev.startswith(prefix):
+            items = [x.strip() for x in ev[len(prefix) :].split(";") if x.strip()]
+            return (
+                "<ul style='margin:6px 0 0;padding-left:18px'>"
+                + "".join(f"<li>{i}</li>" for i in items)
+                + "</ul>"
+            )
+        return f"<div style='margin-top:6px'>{ev}</div>"
+
+    # Memory/Performance abstain when there's no review history yet. Wrap their
+    # prose as a requirement and append the concrete graded-review target (the
+    # same one the sections use) so every "Data needed" note has a number.
+    from anki.rpce.scores import GiveUpRule, graded_reviews
+
+    _rule = GiveUpRule()
+    _reviews = graded_reviews(col)
+    _more = max(0, _rule.min_graded_reviews - _reviews)
+    _review_need = (
+        "<ul style='margin:6px 0 0;padding-left:18px'>"
+        f"<li>{_more} more graded reviews needed "
+        f"({_reviews}/{_rule.min_graded_reviews})</li></ul>"
+        if _more > 0
+        else ""
+    )
+
+    def prose_needs(text: str) -> str:
+        prose = f"<div style='margin-top:6px'>{text}</div>" if text else ""
+        return prose + _review_need
+
+    mem_abstain = mem.point is None
+    perf_abstain = perf.point is None
     cards = "".join(
         [
             _score_card(
@@ -403,28 +451,36 @@ def _banner_html(col) -> str:
                 _fmt_range(mem.point, mem.low, mem.high),
                 mem.confidence,
                 mem.point,
-                mem.elaboration or mem.explanation,
+                prose_needs(mem.elaboration or mem.explanation)
+                if mem_abstain
+                else (mem.elaboration or mem.explanation),
+                abstaining=mem_abstain,
             ),
             _score_card(
                 "Performance",
                 _fmt_range(perf.point, perf.low, perf.high),
                 perf.confidence,
                 perf.point,
-                perf.elaboration or perf.explanation,
+                prose_needs(perf.elaboration or perf.explanation)
+                if perf_abstain
+                else (perf.elaboration or perf.explanation),
+                abstaining=perf_abstain,
             ),
             _score_card(
                 "Pass Section I",
                 section_value(sec1),
                 sec1.confidence,
                 None if sec1.abstained else sec1.p_pass,
-                sec1.elaboration or sec1.evidence,
+                section_needs(sec1) if sec1.abstained else sec1.elaboration,
+                abstaining=sec1.abstained,
             ),
             _score_card(
                 "Pass Section II",
                 section_value(sec2),
                 sec2.confidence,
                 None if sec2.abstained else sec2.p_pass,
-                sec2.elaboration or sec2.evidence,
+                section_needs(sec2) if sec2.abstained else sec2.elaboration,
+                abstaining=sec2.abstained,
             ),
         ]
     )
