@@ -28,12 +28,27 @@ Then start **Speedrun for the RPCE**; it builds the RPCE deck on first launch.
 > Windows (Briefcase packages for the host OS), so build those on a Mac / Linux
 > box and attach them to the release — see below.
 
+## Install on phone (Android)
+
+Download the app from the
+[latest release](https://github.com/1624252/anki-rpce/releases/latest):
+`speedrun-rpce-26.05-android.apk`. On the phone, open it — Android will ask you
+to **allow installing from this source** the first time (tap *Settings → allow*,
+then back and *Install*). Open **Speedrun for the RPCE**; sign in with the same
+AnkiWeb account as the desktop to sync the same deck.
+
+> Direct link: <https://github.com/1624252/anki-rpce/releases/latest/download/speedrun-rpce-26.05-android.apk>
+>
+> iPhone isn't available — an iOS build needs a Mac and an Apple developer
+> account, which this project doesn't set up.
+
 ## Uninstall
 
 - **Windows** — Settings → Apps → Installed apps → **Anki** → Uninstall
   (or `msiexec /x anki-<ver>-win-x64.msi`).
 - **macOS** — drag the app from Applications to the Trash.
 - **Linux** — delete the unzipped folder.
+- **Android** — long-press the app icon → Uninstall (or Settings → Apps).
 
 ## Build the installers from source
 
