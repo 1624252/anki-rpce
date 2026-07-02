@@ -593,13 +593,28 @@ fn scores_json() -> String {
     let best_next = best.map(|(_, n)| n).unwrap_or("");
     let n_domains = DOMAINS.len();
 
+    // Reviews of cards that still exist (a re-seed can leave orphaned revlog rows;
+    // excluding them keeps this in step with the performance estimate) + the
+    // concrete graded-review target shown on abstaining cards.
+    let reviews = scalar_i64("SELECT count() FROM revlog WHERE cid IN (SELECT id FROM cards)");
+    let review_need = if reviews < MIN_REVIEWS {
+        format!(
+            " {} more graded reviews needed ({reviews}/{MIN_REVIEWS}).",
+            MIN_REVIEWS - reviews
+        )
+    } else {
+        String::new()
+    };
+
     // Memory (with the main reasons behind the number, spec §4).
     let mem_recalls = recalls(None);
     let mem_n = mem_recalls.len();
     let (mem_p, mem_lo, mem_hi, mem_conf) = range_from(&mem_recalls);
     let mem_explain = if mem_n == 0 {
-        "No reviewed cards yet — study some flashcards to build a memory estimate."
-            .to_string()
+        format!(
+            "No reviewed cards yet — study some flashcards to build a memory \
+             estimate.{review_need}"
+        )
     } else {
         format!(
             "Mean recall over {mem_n} reviewed card(s) using each card's recall \
@@ -637,13 +652,13 @@ fn scores_json() -> String {
             Some(0.0),  // full-uncertainty abstain range (0-100%)
             Some(1.0),
             "abstain",
-            "No domain has review history yet — this bridges memory to new \
-             exam-style questions once you have practised."
-                .to_string(),
+            format!(
+                "No domain has review history yet — this bridges memory to new \
+                 exam-style questions once you have practised.{review_need}"
+            ),
         )
     };
 
-    let reviews = scalar_i64("SELECT count() FROM revlog");
     let scenarios = scalar_i64(
         "SELECT CAST(val AS INTEGER) FROM config WHERE key = 'rpce:graded_scenarios'",
     );

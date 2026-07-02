@@ -93,6 +93,7 @@ html,body{margin:0;min-height:100%;
 .scard .sreason{font-size:13px;line-height:1.4;color:var(--ink2);margin-top:8px;text-align:left}
 .pill{display:inline-block;font-size:var(--fs-label);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 11px;border-radius:999px}
 .pill.abstain{color:var(--muted);background:rgba(125,211,252,.18)}
+.needbox{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:9px 12px;color:#9a3412;font-size:13px;line-height:1.45;text-align:left}
 .pill.low{color:var(--warn);background:rgba(251,191,36,.2)}
 .pill.medium{color:var(--mid);background:rgba(96,165,250,.22)}
 .pill.high{color:var(--ready);background:rgba(74,222,128,.2)}
@@ -468,12 +469,23 @@ function setScore(ids, sc, abstained){
   // (full-uncertainty) range for memory/performance.
   el(ids.r).textContent = (sc.low!=null && sc.high!=null)
     ? ('range '+Math.round(sc.low*100)+'–'+Math.round(sc.high*100)+'%') : '';
-  // Preparedness prose goes in a collapsible dropdown so the grid stays tidy.
-  var elab = sc.elaboration || sc.explanation || sc.evidence || '';
-  el(ids.e).innerHTML = elab
-    ? '<details class="elab"><summary>Why this score</summary>'+
-      '<div class="elab-body">'+escapeHtml(elab)+'</div></details>'
-    : '';
+  // When abstaining, surface the data still needed openly (the section evidence
+  // carries concrete counts, e.g. "132 more graded reviews needed (68/200)");
+  // otherwise tuck the preparedness prose into a dropdown so the grid stays tidy.
+  if(abstained){
+    var need = sc.evidence || sc.explanation || sc.elaboration || '';
+    need = need.replace(/^Not enough data:\s*/,'');
+    el(ids.e).innerHTML = need
+      ? '<div class="needbox"><b>📋 Data needed to show this score:</b> '+
+        escapeHtml(need)+'</div>'
+      : '';
+  } else {
+    var elab = sc.elaboration || sc.explanation || sc.evidence || '';
+    el(ids.e).innerHTML = elab
+      ? '<details class="elab"><summary>Why this score</summary>'+
+        '<div class="elab-body">'+escapeHtml(elab)+'</div></details>'
+      : '';
+  }
 }
 function openScores(){
   show('scores');
