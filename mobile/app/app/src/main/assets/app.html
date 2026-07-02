@@ -445,16 +445,15 @@ function openScores(){
   show('scores');
   var s=j(Engine.scores());
   if(!s.ok){ el('abstain-note').textContent=s.error||'error'; return; }
-  el('phase').textContent = phaseNudge(s.reviews, s.coveragePct, s.scenarios);
+  el('phase').textContent = '';   // decluttered: no phase/next nudge
   setScore({v:'s-mem',p:'p-mem',r:'r-mem',e:'e-mem'}, s.memory, s.memory.point==null);
   setScore({v:'s-perf',p:'p-perf',r:'r-perf',e:'e-perf'}, s.performance, s.performance.point==null);
   setScore({v:'s-1',p:'p-1',r:'r-1',e:'e-1'}, s.sectionI, s.sectionI.abstained);
   setScore({v:'s-2',p:'p-2',r:'r-2',e:'e-2'}, s.sectionII, s.sectionII.abstained);
   el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of 7 domains';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
-  var note = s.sectionI.abstained ? s.sectionI.evidence : ('Based on '+s.reviews+' reviews across '+Math.round(s.coveragePct*100)+'% of domains.');
-  el('abstain-note').textContent = '⚠ ' + note;
-  el('best-next').textContent = s.bestNext ? ('🎯 Best next topic: '+s.bestNext) : '';
+  el('abstain-note').textContent = '';   // no 'readiness hidden / not enough data' note
+  el('best-next').textContent = '';       // no 'best next topic'
 }
 
 /* ---- Section II (offline placeholder examiner: keyword overlap) ---- */
