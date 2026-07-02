@@ -319,8 +319,10 @@ def _ai_toggle_html() -> str:
     from anki.rpce import ai
 
     if not ai.ai_configured():
-        return ("<span style='color:var(--ink2);font-size:13px'>Offline examiner "
-                "(no AI key)</span>")
+        return (
+            "<span style='color:var(--ink2);font-size:13px'>Offline examiner "
+            "(no AI key)</span>"
+        )
     on = ai.ai_enabled()
     color = "#15803d" if on else "#b45309"
     return (
@@ -851,14 +853,14 @@ def _on_webview_message(handled, message: str, context):
         return (True, None)
     # Section II performance practice.
     if message.startswith("rpce:s2grade:"):
-        _s2_grade(message[len("rpce:s2grade:"):])
+        _s2_grade(message[len("rpce:s2grade:") :])
         return (True, None)
     if message == "rpce:s2next":
         _s2_next()
         return (True, None)
     # Simulation mode.
     if message.startswith("rpce:simrespond:"):
-        _sim_respond(message[len("rpce:simrespond:"):])
+        _sim_respond(message[len("rpce:simrespond:") :])
         return (True, None)
     if message == "rpce:simnext":
         _sim_next()
@@ -995,7 +997,7 @@ def _simulate_html(col) -> str:
             f"font-size:var(--fs-body);font-family:{_FONT};box-sizing:border-box;"
             "resize:vertical'></textarea>"
             "<div style='margin-top:14px'>"
-            "<button onclick=\"rpceRespondSim();return false;\" "
+            '<button onclick="rpceRespondSim();return false;" '
             "style='background:var(--accent1);color:#fff;border:none;border-radius:14px;"
             "padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer'>"
             "Respond</button></div>"
@@ -1062,9 +1064,7 @@ def _sim_respond(answer_b64: str) -> None:
         try:
             result, used = future.result()
         except Exception as exc:
-            _SIM["log"].append(
-                f"<p style='color:#b45309'>Grading failed: {exc}</p>"
-            )
+            _SIM["log"].append(f"<p style='color:#b45309'>Grading failed: {exc}</p>")
             mw.moveToState("deckBrowser")
             return
         col = mw.col
@@ -1117,7 +1117,7 @@ def _sim_transcript_text() -> str:
     import re
 
     parts = []
-    for chunk in (_SIM["log"] if _SIM else []):
+    for chunk in _SIM["log"] if _SIM else []:
         text = re.sub(r"<[^>]+>", " ", str(chunk))
         text = html.unescape(re.sub(r"\s+", " ", text)).strip()
         if text:
@@ -1225,7 +1225,7 @@ def _corpus_slice(corpus: str, size: int) -> str:
     import random
 
     start = random.randint(0, len(corpus) - size)
-    return corpus[start:start + size]
+    return corpus[start : start + size]
 
 
 def _ai_turns_from_json(turns):
@@ -1585,8 +1585,14 @@ def _rpce_starter_apkg() -> str | None:
 
 
 def _build_or_import_rpce_deck(mw) -> None:
-    """Seed the RPCE deck: import the shared starter deck (same questions as the
-    phone) if available, otherwise build the curated seven-domain deck."""
+    """Seed (or update in place) the RPCE deck from the shared starter deck.
+
+    Notes carry stable GUIDs, so the importer matches existing notes by GUID and
+    updates their content in place — critically with ``with_scheduling=false`` so
+    each card KEEPS its review progress across deck-version bumps. Genuinely new
+    questions arrive as fresh new cards. Previously we wiped + re-imported, which
+    reset every card to "new" (in fixed insertion order), so the candidate saw
+    the exact same first questions again after every content update."""
     from anki.rpce import build_starter_deck
 
     apkg = _rpce_starter_apkg()
@@ -1594,7 +1600,15 @@ def _build_or_import_rpce_deck(mw) -> None:
         try:
             import anki.import_export_pb2 as ie
 
-            mw.col.import_anki_package(ie.ImportAnkiPackageRequest(package_path=apkg))
+            opts = ie.ImportAnkiPackageOptions(
+                merge_notetypes=True,  # keep one notetype; apply template/CSS updates
+                update_notes=ie.IMPORT_ANKI_PACKAGE_UPDATE_CONDITION_ALWAYS,
+                update_notetypes=ie.IMPORT_ANKI_PACKAGE_UPDATE_CONDITION_ALWAYS,
+                with_scheduling=False,  # preserve the candidate's existing progress
+            )
+            mw.col.import_anki_package(
+                ie.ImportAnkiPackageRequest(package_path=apkg, options=opts)
+            )
             return
         except Exception as exc:  # fall back to the curated deck
             print(f"RPCE starter-deck import failed ({exc}); building curated deck")
@@ -1626,10 +1640,11 @@ def _on_profile_open() -> None:
         if deck is not None:
             mw.col.decks.set_current(deck["id"])
         return
-    # Keep the desktop deck in step with the shared starter deck. Re-seed when the
-    # deck content version changes (new question types/hints) or the notetype was
-    # bumped, so the desktop always matches the phone. Safe: the RPCE deck is
-    # generated for the candidate (no user-authored notes to lose).
+    # Keep the desktop deck in step with the shared starter deck. On a content
+    # version bump we RE-IMPORT IN PLACE (match by GUID, with_scheduling=false) so
+    # question text/hints/templates update while every card KEEPS its review
+    # progress — we no longer wipe the deck first, which used to reset all cards
+    # to "new" and re-show the same questions in fixed order every session.
     try:
         stale = mw.col.find_notes(
             f'deck:RPCE -note:"{QUESTION_NOTETYPE}" -note:"{CONCEPT_NOTETYPE}"'
@@ -1639,9 +1654,7 @@ def _on_profile_open() -> None:
         current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
         did_reseed = False
         if _rpce_starter_apkg() and not current:
-            notes = mw.col.find_notes("deck:RPCE")
-            if notes:
-                mw.col.remove_notes(notes)
+            # In-place update: no remove_notes() here — that wiped scheduling.
             _build_or_import_rpce_deck(mw)
             did_reseed = True
         elif not mw.col.find_cards(
@@ -1783,7 +1796,9 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
         else "{reveal:false,onComplete:function(){try{pycmd('ans');}catch(e){}}}"
     )
     return (
-        "<style>" + render_js.RENDER_CSS + "</style>"
+        "<style>"
+        + render_js.RENDER_CSS
+        + "</style>"
         + _session_progress_html()
         + "<div id='rpce-host'></div>"
         "<script>"
@@ -1824,8 +1839,13 @@ def _set_session_length() -> None:
     if mw is None or mw.col is None:
         return
     n, ok = QInputDialog.getInt(
-        mw, "Review session length", "Questions per review session:",
-        _session_limit(), 1, 500, 1,
+        mw,
+        "Review session length",
+        "Questions per review session:",
+        _session_limit(),
+        1,
+        500,
+        1,
     )
     if ok:
         mw.col.set_config("rpce:session_limit", int(n))
@@ -1846,17 +1866,22 @@ def _set_ai_key() -> None:
         return
     current = "•••• (set)" if ai.ai_configured() else ""
     key, ok = QInputDialog.getText(
-        mw, "AI examiner key",
+        mw,
+        "AI examiner key",
         "OpenAI API key (leave blank to clear and use the offline examiner):",
-        QLineEdit.EchoMode.Password, current,
+        QLineEdit.EchoMode.Password,
+        current,
     )
     if not ok or key.strip() == "••••  (set)".strip():
         return  # unchanged
     if key.strip().startswith("••"):
         return  # user left the masked placeholder untouched
     ai.set_openai_key(key.strip())
-    tooltip("AI examiner enabled — online grading with offline fallback."
-            if key.strip() else "AI key cleared — using the offline examiner.")
+    tooltip(
+        "AI examiner enabled — online grading with offline fallback."
+        if key.strip()
+        else "AI key cleared — using the offline examiner."
+    )
 
 
 def _toggle_ai_examiner(checked: bool) -> None:
