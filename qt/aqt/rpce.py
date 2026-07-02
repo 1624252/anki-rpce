@@ -123,9 +123,12 @@ _APP_QSS = (
 # of the practice screen: white background, dark-navy text, blue links/cloze.
 _REVIEWER_CSS = (
     "<style>"
-    "html,body{background:#ffffff !important;color:#0a1f44 !important}"
-    ".card{background:transparent !important;background-color:transparent !important;"
-    "color:#0a1f44 !important}"
+    # Match the phone: soft-blue page, a white rounded card container.
+    "html,body{background:#eef4ff !important;color:#0a1f44 !important}"
+    ".card{background:#ffffff !important;border:1px solid #caddf7 !important;"
+    "border-radius:20px !important;padding:24px 20px !important;max-width:680px !important;"
+    "margin:18px auto !important;box-shadow:0 6px 20px rgba(10,31,68,.06) !important;"
+    "color:#0a1f44 !important;text-align:left !important}"
     "hr{border:none;border-top:1px solid #caddf7 !important}"
     "a{color:#1d4ed8 !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
@@ -147,13 +150,15 @@ _REVIEWER_BOTTOM_CSS = (
     # …and keep both side cells equal width so the rating buttons stay centered
     # now that the left (Edit) cell is empty.
     "td.stat{width:120px !important}"
-    "button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:#fff !important;"
-    "border:none !important;border-radius:10px !important;padding:8px 16px !important;"
-    "font-weight:700 !important;box-shadow:0 3px 10px rgba(29,78,216,.3) !important}"
+    # Big, bold, colored rating buttons matching the phone's Again/Hard/Good/Easy.
+    "button{background:#1d4ed8 !important;color:#fff !important;"
+    "border:none !important;border-radius:14px !important;padding:15px 22px !important;"
+    "font-size:16px !important;font-weight:800 !important;"
+    "box-shadow:0 3px 10px rgba(29,78,216,.25) !important}"
     "button *{color:#fff !important}"
     "button:hover{filter:brightness(1.06)}"
-    "button[data-ease='1']{background:#be123c !important}"  # Again  (red)
-    "button[data-ease='2']{background:#b45309 !important}"  # Hard   (amber)
+    "button[data-ease='1']{background:#9f1239 !important}"  # Again  (red)
+    "button[data-ease='2']{background:#a16207 !important}"  # Hard   (amber)
     "button[data-ease='3']{background:#1d4ed8 !important}"  # Good   (blue)
     "button[data-ease='4']{background:#15803d !important}"  # Easy   (green)
     ".stattxt,.nobold,.new-count,.review-count,.learn-count{color:#35548c !important}"
@@ -250,7 +255,14 @@ def _score_card(
         bar = (
             f"<div class='rpce-bar'><i class='{cf}' style='width:{pct:.0f}%'></i></div>"
         )
-    reason_html = f"<div class='rpce-reason'>{reason}</div>" if reason else ""
+    reason_html = (
+        "<details style='margin-top:10px'>"
+        "<summary style='cursor:pointer;font-size:13px;font-weight:700;"
+        "color:var(--accent1);list-style:none'>ℹ️ Why this score</summary>"
+        f"<div class='rpce-reason' style='margin-top:6px'>{reason}</div></details>"
+        if reason
+        else ""
+    )
     return (
         "<div class='rpce-card'>"
         f"<div class='rpce-label'>{label}</div>"
@@ -333,7 +345,7 @@ def _banner_html(col) -> str:
 
     def section_value(snap) -> str:
         return (
-            "Abstaining"
+            "—"  # dash when abstaining, matching Memory/Performance
             if snap.abstained
             else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
         )
@@ -372,8 +384,6 @@ def _banner_html(col) -> str:
     )
     # Dashboard kept clean: no phase/next chips or "readiness hidden" note —
     # the score cards + coverage already say enough.
-    note = ""
-    chips_row = ""
     # Sign-in status lives in the top-right; here we only offer Log out when
     # signed in (the redundant "Signed in to AnkiWeb" banner is gone).
     signed_in = False
@@ -401,9 +411,6 @@ def _banner_html(col) -> str:
   <div class="rpce-grid">{cards}</div>
   <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
-  {chips_row}
-  {_elaboration_html(s)}
-  {note}
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>

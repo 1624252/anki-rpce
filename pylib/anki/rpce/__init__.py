@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "7"
+RPCE_DECK_VERSION = "8"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -255,11 +255,11 @@ def add_question_note(
 #: Concept-note format → (payload field, plain-question field, plain-answer
 #: field, payload kind). Each format is one card template; a concept note only
 #: generates the cards whose payload field is filled (Anki skips empty fronts).
+#: Two-option MCQs (second/debatable) were dropped — those facts are covered in
+#: cloze form + the Reference tables (spec: no 2-answer multiple choice).
 _CONCEPT_FORMATS: tuple[tuple[str, str, str, str, str], ...] = (
     ("cloze", "ClozePayload", "ClozeQ", "ClozeA", KIND_CLOZE),
     ("mcq", "McqPayload", "McqQ", "McqA", KIND_MCQ),
-    ("second", "SecondPayload", "SecondQ", "SecondA", KIND_MCQ),
-    ("debatable", "DebatablePayload", "DebatableQ", "DebatableA", KIND_MCQ),
 )
 
 _CONCEPT_FIELDS: tuple[str, ...] = ("Concept", "Citation", "Quote") + tuple(

@@ -120,7 +120,6 @@ RENDER_JS = r"""
   // ---- multiple choice: tappable options ------------------------------------
   function renderMcq(p, host, opts){
     host.appendChild(el('div','rpce-q', p.stem));
-    if(p.hint) host.appendChild(el('div','rpce-hint', 'Hint: '+p.hint));
     var box=el('div','rpce-opts'); var fb=el('div','rpce-fb');
     var letters='ABCDEFGH', picked=false;
     // Fresh question: forget any earlier pick (survives the desktop's
