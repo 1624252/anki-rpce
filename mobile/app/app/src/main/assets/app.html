@@ -512,6 +512,13 @@ function friendlySyncError(raw){
     return 'AnkiWeb is having trouble right now. Please try again in a moment.';
   return raw ? ('Sync couldn’t complete: '+raw) : 'Something went wrong. Please try again.';
 }
+/* An expired/invalid saved session must not keep showing "Signed in". */
+function isAuthError(raw){
+  var e=(raw||'').toLowerCase();
+  return e.indexOf('auth')>=0||e.indexOf('login')>=0||e.indexOf('password')>=0||
+         e.indexOf('credential')>=0||e.indexOf('403')>=0||e.indexOf('401')>=0;
+}
+function clearSession(){ auth={hkey:'',endpoint:'',lastSync:0}; saveAuth(); updateNetStatus(); }
 
 /* ---- sign up: open AnkiWeb account creation in the browser ---- */
 function signup(){
@@ -566,7 +573,12 @@ function syncNow(){
   setTimeout(function(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
-      if(!r.ok){ popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
+      if(!r.ok){
+        if(isAuthError(r.error)){ clearSession(); show('sync');
+          popup('Please sign in again', 'Your saved AnkiWeb session has expired. Sign in to sync.', '🔒'); }
+        else popup('Sync failed', friendlySyncError(r.error), '⚠️');
+        return;
+      }
       if(r.required>=2){
         // Schema changed (e.g. desktop re-seed) → a full sync is required.
         // Route to the full-sync chooser instead of silently doing nothing.
@@ -590,6 +602,7 @@ function autoSync(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
       if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); }
+      else if(!r.ok && isAuthError(r.error)){ clearSession(); }  // stale/expired -> truthful status
     }catch(e){}
     _syncing=false; updateNetStatus();
   },0);

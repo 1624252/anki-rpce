@@ -460,6 +460,15 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
     assert deck_id is not None
     # FSRS on so the memory score uses real retrievability (spec §8).
     col.set_config("fsrs", True)
+    # No daily study cap — a candidate should be able to drill every due card,
+    # not hit Anki's default 20-new/200-review/day limit. Syncs via deck config.
+    try:
+        conf = col.decks.config_dict_for_deck_id(deck_id)
+        conf["new"]["perDay"] = 9999
+        conf["rev"]["perDay"] = 9999
+        col.decks.update_config(conf)
+    except Exception as exc:  # never block deck build over limits
+        print(f"RPCE deck-limit config error: {exc}")
     _concept_notetype(col)
     _question_notetype(col)
 
