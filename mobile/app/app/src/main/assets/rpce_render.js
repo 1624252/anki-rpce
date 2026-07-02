@@ -24,7 +24,7 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       if(m){ var i=+m[1]; var b=p.blanks[i]||{a:'',h:''};
         total++;
         var span=el('span','rpce-blank');
-        span.textContent=b.h?('? '+b.h):'?';
+        span.textContent='?';            // no give-away hint on the blank
         span.title='Tap to reveal';
         span.dataset.a=b.a;
         wrap.appendChild(span); blanks.push(span);
@@ -45,25 +45,35 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
   // ---- multiple choice: tappable options ------------------------------------
   function renderMcq(p, host, opts){
     host.appendChild(el('div','rpce-q', p.stem));
+    if(p.hint) host.appendChild(el('div','rpce-hint', 'Hint: '+p.hint));
     var box=el('div','rpce-opts'); var fb=el('div','rpce-fb');
     var letters='ABCDEFGH', picked=false;
+    // Fresh question: forget any earlier pick (survives the desktop's
+    // question->answer content swap, which shares this JS context).
+    if(!(opts&&opts.reveal)){ try{window.__rpce_pick=-1;}catch(e){} }
+    // Paint the answered state for a given picked index (-1 = none picked).
+    function mark(pick){
+      var btns=box.querySelectorAll('button');
+      for(var j=0;j<btns.length;j++){ btns[j].disabled=true;
+        if(j===p.answer){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓</span>'; }
+        else if(j===pick){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗</span>'; } }
+      if(pick>=0){ fb.style.color=(pick===p.answer)?'#15803d':'#be123c';
+        fb.textContent=(pick===p.answer)?'✓ Correct':'✗ Not quite — the correct answer is highlighted.'; }
+    }
     p.options.forEach(function(opt,i){
       var b=el('button','rpce-opt','<span class="k">'+letters[i]+'</span>'+opt);
       b.onclick=function(){ if(picked) return; picked=true;
-        var btns=box.querySelectorAll('button');
-        for(var j=0;j<btns.length;j++){ btns[j].disabled=true;
-          if(j===p.answer){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓</span>'; }
-          else if(j===i){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗</span>'; } }
-        fb.style.color=(i===p.answer)?'#15803d':'#be123c';
-        fb.textContent=(i===p.answer)?'✓ Correct':'✗ Not quite — the correct answer is highlighted.';
-        done(host,p,opts); };
+        try{window.__rpce_pick=i;}catch(e){}   // remember pick across the answer flip
+        mark(i); done(host,p,opts); };
       box.appendChild(b);
     });
     host.appendChild(box); host.appendChild(fb);
-    if(opts&&opts.reveal){ var btns=box.querySelectorAll('button');
-      for(var j=0;j<btns.length;j++){ btns[j].disabled=true;
-        if(j===p.answer){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓</span>'; } }
-      done(host,p,opts); }
+    // Answer side: replay the SAME highlighted state the tap produced (pick +
+    // correct + feedback) instead of re-listing options — so the desktop's flip
+    // is seamless, matching the phone. No pick recorded => just show the answer.
+    if(opts&&opts.reveal){
+      var pk=-1; try{ if(typeof window.__rpce_pick==='number') pk=window.__rpce_pick; }catch(e){}
+      mark(pk); done(host,p,opts); }
   }
 
   // ---- select-multiple: pick ALL that apply, then Check --------------------
