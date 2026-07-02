@@ -31,3 +31,8 @@ docs/autoapi/
 /mobile/app/**/build/
 /mobile/app/.gradle/
 /mobile/app/local.properties
+
+# RPCE: never commit AI keys
+openai_key
+*.openai_key
+.rpce_openai_key

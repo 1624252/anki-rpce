@@ -292,13 +292,20 @@ def _chip(text: str) -> str:
     return f"<span class='rpce-chip'>{text}</span>"
 
 
-def _examiner_badge() -> str:
-    """Show which examiner graded: the built-in offline examiner (no AI key
-    wired) or an online AI examiner. Mirrors the phone."""
+def _examiner_badge(used: str = "offline") -> str:
+    """Show which examiner actually graded this answer: the online AI examiner
+    (when a key is set and the call succeeded) or the offline examiner. Mirrors
+    the phone."""
+    if used == "ai":
+        return (
+            "<div style='margin-top:8px;color:#15803d;font-weight:700'>"
+            "🤖 AI examiner — graded for accuracy, grounded in the cited RONR "
+            "passage.</div>"
+        )
     return (
         "<div style='margin-top:8px;color:#b45309;font-weight:700'>"
-        "🔌 Offline examiner. Connect an online AI examiner for "
-        "richer feedback.</div>"
+        "🔌 Offline examiner. Set an AI examiner key (Tools menu) for "
+        "richer feedback when online.</div>"
     )
 
 
@@ -543,10 +550,12 @@ class ScenarioDialog(QDialog):
         if not answer:
             return
         s = self._scenarios[self._idx]
-        # Placeholder grader for now — no AI API calls yet (swap in the LLM
-        # examiner later without changing this screen).
-        result = examiner.PlaceholderExaminer().grade(
-            answer, s.gold_answer, self._corpus or s.gold_answer
+        # Online AI examiner when a key is set + reachable; otherwise the offline
+        # grader (AutoExaminer handles the fallback so we always get a grade).
+        ex = examiner.make_examiner()
+        result = ex.grade(
+            answer, s.gold_answer, self._corpus or s.gold_answer,
+            getattr(s, "rubric", None),
         )
         scores.record_scenario(self._mw.col)
         # Track total Section II answers graded (persists + syncs via config).
@@ -558,7 +567,7 @@ class ScenarioDialog(QDialog):
         self._result.setHtml(
             f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
             f"<b>Feedback:</b> {result.feedback}</div>"
-            + _examiner_badge()
+            + _examiner_badge(getattr(ex, "used", "offline"))
             + f"<div style='margin-top:8px'><b>Model ruling:</b> {s.gold_answer}</div>"
             + _ref_block(s.ref.section, s.ref.quote)
         )
@@ -824,8 +833,10 @@ class SimulationDialog(QDialog):
         answer = self._answer.toPlainText().strip()
         if not answer:
             return
-        result = examiner.PlaceholderExaminer().grade(
-            answer, self._pending.gold, self._corpus or self._pending.gold
+        ex = examiner.make_examiner()
+        result = ex.grade(
+            answer, self._pending.gold, self._corpus or self._pending.gold,
+            getattr(self._pending, "rubric", None),
         )
         scores.record_scenario(self._mw.col)
         # Track total simulation responses graded (persists + syncs via config).
@@ -839,8 +850,10 @@ class SimulationDialog(QDialog):
         self._append(
             f"<p><b>You (parliamentarian):</b> {answer}</p>"
             f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
-            f"({verdict}) — {result.feedback}<br>"
-            f"<b>Model ruling:</b> {self._pending.gold}</p>" + ref_html
+            f"({verdict}) — {result.feedback}</p>"
+            + _examiner_badge(getattr(ex, "used", "offline"))
+            + f"<p style='color:#35548c'><b>Model ruling:</b> {self._pending.gold}</p>"
+            + ref_html
         )
         self._answer.clear()
         self._play()
@@ -882,6 +895,9 @@ def _brand_main_window() -> None:
         act = QAction("Review session length…", mw)
         qconnect(act.triggered, _set_session_length)
         mw.form.menuTools.addAction(act)
+        aikey = QAction("Set AI examiner key…", mw)
+        qconnect(aikey.triggered, _set_ai_key)
+        mw.form.menuTools.addAction(aikey)
         logout = QAction("Log out of AnkiWeb", mw)
         qconnect(logout.triggered, _logout_ankiweb)
         mw.form.menuTools.addAction(logout)
@@ -1186,6 +1202,33 @@ def _set_session_length() -> None:
     if ok:
         mw.col.set_config("rpce:session_limit", int(n))
         tooltip(f"Review sessions are now {n} questions.")
+
+
+def _set_ai_key() -> None:
+    """Set/clear the OpenAI examiner key. Stored in a local git-ignored file
+    (~/.rpce/openai_key) — NEVER in the collection (which syncs) or the repo, so
+    the secret can't leak. Blank clears it; the app then uses the offline
+    examiner. Enables the online AI examiner for Section II + simulations."""
+    from aqt.qt import QInputDialog, QLineEdit
+    from aqt.utils import tooltip
+    from anki.rpce import ai
+
+    mw = aqt.mw
+    if mw is None:
+        return
+    current = "•••• (set)" if ai.ai_configured() else ""
+    key, ok = QInputDialog.getText(
+        mw, "AI examiner key",
+        "OpenAI API key (leave blank to clear and use the offline examiner):",
+        QLineEdit.EchoMode.Password, current,
+    )
+    if not ok or key.strip() == "••••  (set)".strip():
+        return  # unchanged
+    if key.strip().startswith("••"):
+        return  # user left the masked placeholder untouched
+    ai.set_openai_key(key.strip())
+    tooltip("AI examiner enabled — online grading with offline fallback."
+            if key.strip() else "AI key cleared — using the offline examiner.")
 
 
 def _logout_ankiweb() -> None:

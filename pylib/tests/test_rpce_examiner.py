@@ -102,13 +102,35 @@ def test_llm_examiner_abstains_on_malformed_output():
     assert result.abstained is True
 
 
-def test_make_examiner_falls_back_to_keyword_examiner_without_key(monkeypatch):
-    monkeypatch.delenv("RPCE_AI_KEY", raising=False)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    # AI-off fallback is now the rubric grader, not the plain overlap baseline.
-    assert isinstance(ex.make_examiner(), ex.KeywordExaminer)
-    # Providing a call_fn opts into the LLM examiner.
+def test_make_examiner_returns_auto_and_falls_back_offline(monkeypatch):
+    from anki.rpce import ai
+
+    # No key anywhere -> AutoExaminer must grade via the offline KeywordExaminer.
+    monkeypatch.setattr(ai, "ai_configured", lambda: False)
+    auto = ex.make_examiner()
+    assert isinstance(auto, ex.AutoExaminer)
+    r = auto.grade(
+        "The Previous Question needs a two-thirds vote.",
+        "Previous Question requires a two-thirds vote.", CORPUS,
+    )
+    assert auto.used == "offline" and not r.abstained and r.score > 0
+    # Providing a call_fn opts straight into the LLM examiner.
     assert isinstance(ex.make_examiner(lambda _p: "{}"), ex.LLMExaminer)
+
+
+def test_auto_examiner_falls_back_when_ai_call_fails(monkeypatch):
+    from anki.rpce import ai
+
+    # Key present but the API returns nothing (offline / rate-limited / bad
+    # output) -> AutoExaminer still grades offline, never abstains (spec §7g).
+    monkeypatch.setattr(ai, "ai_configured", lambda: True)
+    monkeypatch.setattr(ai, "chat_json", lambda *a, **k: None)
+    auto = ex.make_examiner()
+    r = auto.grade(
+        "The Previous Question needs a two-thirds vote.",
+        "Previous Question requires a two-thirds vote.", CORPUS,
+    )
+    assert auto.used == "offline" and not r.abstained and r.score > 0
 
 
 def test_offline_grader_distinguishes_second_polarity():
