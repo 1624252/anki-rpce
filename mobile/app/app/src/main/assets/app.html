@@ -157,7 +157,10 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <button class="btn ghost" onclick="openReference()">📋 Reference tables</button>
-    <div style="text-align:center;margin-top:16px"><span class="chip" id="engine">engine…</span></div>
+    <p class="muted" style="text-align:center;margin-top:14px">Review session:
+      <a onclick="setSessionLength()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer"><span id="sess-len">20</span> questions</a>
+    </p>
+    <div style="text-align:center;margin-top:8px"><span class="chip" id="engine">engine…</span></div>
     <p class="muted" id="home-msg"></p>
   </div>
 
@@ -276,6 +279,7 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){
 function refreshCounts(){
   var c = j(Engine.deckCounts());
   if (c.ok){ el('c-new').textContent=c.new; el('c-learn').textContent=c.learning; el('c-due').textContent=c.review; }
+  var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;   // reflect saved session length
 }
 function initHome(){
   try { el('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
@@ -303,7 +307,14 @@ function goHome(){ show('home'); refreshCounts(); updateNetStatus(); autoSync();
 /* ---- review loop (shared interactive renderer) ---- */
 var current=null;
 // A review session is capped; the user starts another afterward.
-var SESSION_LIMIT=20, sessDone=0;
+var SESSION_LIMIT=Math.max(1,Math.min(500, parseInt(localStorage.getItem('rpce_session_limit'),10)||20)), sessDone=0;
+function setSessionLength(){
+  var v=prompt('Questions per review session:', SESSION_LIMIT);
+  if(v===null) return;
+  SESSION_LIMIT=Math.max(1,Math.min(500, parseInt(v,10)||SESSION_LIMIT));
+  try{ localStorage.setItem('rpce_session_limit', SESSION_LIMIT); }catch(e){}
+  var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;
+}
 function startStudy(){ sessDone=0; show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
 function updateProgress(){
   var p=el('rev-progress'); if(!p) return;

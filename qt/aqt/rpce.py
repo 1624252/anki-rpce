@@ -805,6 +805,15 @@ def _brand_main_window() -> None:
             mw.resize(min_w, mw.height())
     except Exception as exc:  # never block startup over sizing
         print(f"RPCE window-size error: {exc}")
+    # Tools ▸ set how many questions a review session is.
+    try:
+        from aqt.qt import QAction
+
+        act = QAction("Review session length…", mw)
+        qconnect(act.triggered, _set_session_length)
+        mw.form.menuTools.addAction(act)
+    except Exception as exc:
+        print(f"RPCE menu error: {exc}")
 
 
 def _apply_light_theme() -> None:
@@ -971,10 +980,10 @@ def _on_answer_card(reviewer, card, ease) -> None:
             mw.col._backend.bury_concept_siblings(card_id=card.id)
     except Exception as exc:  # never break reviewing over concept burying
         print(f"RPCE concept-bury error: {exc}")
-    # Cap the session at _SESSION_LIMIT cards, then return home for a new one.
+    # Cap the session at the configured length, then return home for a new one.
     global _session_done
     _session_done += 1
-    if _session_done >= _SESSION_LIMIT:
+    if _session_done >= _session_limit():
         from aqt.qt import QTimer
 
         QTimer.singleShot(500, _end_session)
@@ -1045,22 +1054,52 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
     )
 
 
-#: A review session is capped at this many cards; the user starts a new session
-#: from the home screen afterward (spec-style focused sessions).
-_SESSION_LIMIT = 20
+#: A review session is capped at this many cards (configurable via the Tools ▸
+#: "Review session length…" menu, stored in the syncing collection config); the
+#: user starts a new session from the home screen afterward.
+_DEFAULT_SESSION_LIMIT = 20
 _session_done = 0  # cards answered in the current session
 
 
+def _session_limit() -> int:
+    """The configured questions-per-session (default 20), from the collection
+    config so it syncs to the phone."""
+    try:
+        col = aqt.mw.col if aqt.mw else None
+        n = int(col.get_config("rpce:session_limit", _DEFAULT_SESSION_LIMIT))
+        return max(1, min(500, n))
+    except Exception:
+        return _DEFAULT_SESSION_LIMIT
+
+
+def _set_session_length() -> None:
+    """Prompt for the review-session length and save it to the collection."""
+    from aqt.qt import QInputDialog
+    from aqt.utils import tooltip
+
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    n, ok = QInputDialog.getInt(
+        mw, "Review session length", "Questions per review session:",
+        _session_limit(), 1, 500, 1,
+    )
+    if ok:
+        mw.col.set_config("rpce:session_limit", int(n))
+        tooltip(f"Review sessions are now {n} questions.")
+
+
 def _session_progress_html() -> str:
-    """A slim 'Question N of 20' progress bar shown atop each reviewer card."""
-    n = min(_session_done + 1, _SESSION_LIMIT)
-    pct = int(100 * min(_session_done, _SESSION_LIMIT) / _SESSION_LIMIT)
+    """A slim 'Question N of M' progress bar shown atop each reviewer card."""
+    limit = _session_limit()
+    n = min(_session_done + 1, limit)
+    pct = int(100 * min(_session_done, limit) / limit)
     return (
         "<div style='max-width:680px;margin:0 auto 14px'>"
         "<div style='display:flex;justify-content:space-between;font-size:13px;"
         "font-weight:700;color:#35548c;margin-bottom:5px'>"
-        f"<span>Question {n} of {_SESSION_LIMIT}</span>"
-        f"<span>{_SESSION_LIMIT - _session_done} left</span></div>"
+        f"<span>Question {n} of {limit}</span>"
+        f"<span>{limit - _session_done} left</span></div>"
         "<div style='height:8px;border-radius:999px;background:#dbe8fb;overflow:hidden'>"
         f"<i style='display:block;height:100%;width:{pct}%;"
         "background:linear-gradient(90deg,#1d4ed8,#3b82f6)'></i></div></div>"
@@ -1071,6 +1110,7 @@ def _end_session() -> None:
     """End the review session at the cap and return home so the user can start a
     fresh one from the Study button."""
     global _session_done
+    limit = _session_limit()
     _session_done = 0
     mw = aqt.mw
     if mw is None:
@@ -1079,7 +1119,7 @@ def _end_session() -> None:
         mw.moveToState("deckBrowser")
         from aqt.utils import tooltip
 
-        tooltip(f"Session complete — {_SESSION_LIMIT} questions. Tap Study for another.")
+        tooltip(f"Session complete — {limit} questions. Tap Study for another.")
     except Exception as exc:
         print(f"RPCE end-session error: {exc}")
 
