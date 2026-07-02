@@ -500,8 +500,13 @@ def _banner_html(col) -> str:
         else ""
     )
     # Your activity totals (reviews combine across devices via sync; the two
-    # practice counters are stored in config, so they persist + sync too).
-    reviews_done = col.db.scalar("select count() from revlog") or 0
+    # practice counters are stored in config, so they persist + sync too). Count
+    # reviews of cards that still exist — same basis as the readiness gate — so
+    # "reviews done" matches the "x/200 graded reviews" figure (old deck versions
+    # can leave orphaned revlog rows that would otherwise inflate this).
+    from anki.rpce.scores import graded_reviews
+
+    reviews_done = graded_reviews(col)
     sec2_graded = int(col.get_config("rpce:section2_graded", 0))
     sim_responses = int(col.get_config("rpce:sim_responses", 0))
     activity_html = (
@@ -1686,7 +1691,7 @@ def _on_profile_open() -> None:
             mw.pm.set_update_check(False)
     except Exception:
         pass
-    from anki.rpce import CONCEPT_NOTETYPE, QUESTION_NOTETYPE, RPCE_DECK_VERSION
+    from anki.rpce import RPCE_DECK_VERSION
 
     if mw.col.decks.by_name("RPCE") is None:
         _build_or_import_rpce_deck(mw)
@@ -1700,9 +1705,12 @@ def _on_profile_open() -> None:
     # progress — we no longer wipe the deck first, which used to reset all cards
     # to "new" and re-show the same questions in fixed order every session.
     try:
-        stale = mw.col.find_notes(
-            f'deck:RPCE -note:"{QUESTION_NOTETYPE}" -note:"{CONCEPT_NOTETYPE}"'
-        )
+        # Only genuinely non-RPCE notes are stale. Match RPCE notetypes by PREFIX
+        # (note:RPCE*): repeated imports can leave name-collision variants ("RPCE
+        # Q 1++", "RPCE Concept 1+++"), and the exact-name filter treated ALL of
+        # those as stale — deleting every note each launch, which forced a reseed
+        # that reset all cards to new (the "same questions every session" bug).
+        stale = mw.col.find_notes("deck:RPCE -note:RPCE*")
         if stale:
             mw.col.remove_notes(stale)
         current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
@@ -1711,9 +1719,7 @@ def _on_profile_open() -> None:
             # In-place update: no remove_notes() here — that wiped scheduling.
             _build_or_import_rpce_deck(mw)
             did_reseed = True
-        elif not mw.col.find_cards(
-            f'note:"{QUESTION_NOTETYPE}" OR note:"{CONCEPT_NOTETYPE}"'
-        ):
+        elif not mw.col.find_cards("note:RPCE*"):
             _build_or_import_rpce_deck(mw)
             did_reseed = True
         deck = mw.col.decks.by_name("RPCE")
