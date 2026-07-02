@@ -69,22 +69,24 @@ RENDER_CSS = """
 .rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}
 .rpce-dest{display:flex;flex-direction:column;gap:4px;min-height:8px;
   border-left:3px solid #caddf7;padding-left:12px;margin:4px 0}
-.rpce-slot{display:flex;align-items:center;gap:10px;padding:4px 12px;border-radius:10px;
-  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px;line-height:1.3}
-.rpce-slot .n{min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;
-  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}
+.rpce-slot{display:flex;align-items:center;gap:8px;padding:2px 10px;border-radius:10px;
+  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px;line-height:1.25}
+.rpce-slot .n{min-width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;
+  background:#1d4ed8;color:#fff;font-size:12px;font-weight:800}
 .rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}
 .rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}
 .rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}
 /* drag-to-reorder ordering list */
+.rpce-order{touch-action:none}
 .rpce-order .rpce-slot{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .rpce-order .rpce-slot.drag{opacity:.6;box-shadow:0 4px 12px rgba(0,0,0,.18)}
 .rpce-order .rpce-slot .lbl{flex:1}
 .rpce-slot .rpce-omark{margin-left:8px;font-weight:800;font-size:13px;white-space:nowrap}
-.rpce-grip{color:#94a3b8;font-size:18px;cursor:grab;line-height:1}
-.rpce-moves{display:flex;flex-direction:column;gap:2px}
+.rpce-grip{color:#94a3b8;font-size:17px;cursor:grab;line-height:1}
+/* ▲/▼ side-by-side (accessible fallback to dragging) so the row stays one line tall */
+.rpce-moves{display:flex;flex-direction:row;gap:3px}
 .rpce-move{border:1px solid #caddf7;background:#fff;color:#1d4ed8;border-radius:6px;
-  width:28px;height:18px;line-height:1;font-size:11px;font-weight:800;cursor:pointer;padding:0}
+  width:26px;height:22px;line-height:1;font-size:12px;font-weight:800;cursor:pointer;padding:0}
 .rpce-move:disabled{opacity:.4;cursor:default}
 """
 
@@ -181,6 +183,9 @@ RENDER_JS = r"""
     host.appendChild(el('div','rpce-q', p.stem));
     var box=el('div','rpce-opts rpce-multi'); var fb=el('div','rpce-fb');
     var letters='ABCDEFGH', graded=false;
+    // Fresh question: forget the previous card's selection (this JS context
+    // persists across the desktop question->answer content swap).
+    if(!(opts&&opts.reveal)){ try{window.__rpce_multi=null;}catch(e){} }
     p.options.forEach(function(opt,i){
       var b=el('button','rpce-opt','<span class="box"></span><span class="k">'+letters[i]+'</span>'+opt);
       b.onclick=function(){ if(graded) return; b.classList.toggle('sel'); };
@@ -189,20 +194,30 @@ RENDER_JS = r"""
     host.appendChild(box);
     function grade(){
       if(graded) return; graded=true;
-      var correct=p.correct||[], btns=box.querySelectorAll('button'), ok=true;
+      var correct=p.correct||[], btns=box.querySelectorAll('button'), ok=true, picks=[];
       for(var j=0;j<btns.length;j++){
         var isC=correct.indexOf(j)>=0, sel=btns[j].classList.contains('sel');
+        if(sel) picks.push(j);
         btns[j].disabled=true; btns[j].classList.remove('sel');
-        if(isC && sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓</span>'; }
-        else if(isC && !sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">← should have been selected</span>'; ok=false; }
-        else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗</span>'; ok=false; }
+        if(isC && sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓ you picked</span>'; }
+        else if(isC && !sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">← missed</span>'; ok=false; }
+        else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗ you picked</span>'; ok=false; }
       }
+      try{window.__rpce_multi=picks;}catch(e){}   // remember picks across the answer flip
       fb.style.color=ok?'#15803d':'#be123c';
-      fb.textContent=ok?'✓ Correct — all and only the right ones.'
-        :'✗ Not quite — your incorrect picks are marked ✗ and the ones you missed are marked.';
+      fb.textContent=ok?'✓ Correct — you selected all and only the right ones.'
+        :'✗ Not quite — the ones you picked are marked ✓/✗ and the ones you missed are marked.';
       done(host,p,opts);
     }
-    if(opts&&opts.reveal){ (p.correct||[]).forEach(function(i){ box.querySelectorAll('button')[i].classList.add('sel'); }); grade(); return; }
+    // Answer side: replay the user's OWN selection graded (so they see what they
+    // chose + right/wrong), not just the key. No prior selection => show the key.
+    if(opts&&opts.reveal){
+      var saved=null; try{ if(window.__rpce_multi && window.__rpce_multi.length!=null) saved=window.__rpce_multi; }catch(e){}
+      var sel=saved!=null?saved:(p.correct||[]);
+      var mbtns=box.querySelectorAll('button');
+      sel.forEach(function(i){ if(mbtns[i]) mbtns[i].classList.add('sel'); });
+      grade(); return;
+    }
     var ctr=el('div','rpce-controls'); var chk=el('button','rpce-btn','Check answers');
     chk.onclick=grade; ctr.appendChild(chk); host.appendChild(ctr); host.appendChild(fb);
   }
@@ -214,6 +229,9 @@ RENDER_JS = r"""
   function renderOrder(p, host, opts){
     host.appendChild(el('div','rpce-q', p.prompt));
     var order=p.order;               // correct sequence, highest → lowest
+    // Fresh question: forget the previous card's arrangement (this JS context
+    // persists across the desktop question->answer content swap).
+    if(!(opts&&opts.reveal)){ try{window.__rpce_order=null;}catch(e){} }
     host.appendChild(el('div','rpce-axis','▲ top = HIGHER precedence, bottom = LOWER'));
     var list=el('div','rpce-dest rpce-order'); host.appendChild(list);
     var fb=el('div','rpce-fb');
@@ -245,39 +263,43 @@ RENDER_JS = r"""
       }
       return best;
     }
-    // Drag-to-reorder via Pointer Events: ONE code path that works with a mouse
-    // (QtWebEngine desktop) AND touch (Android WebView). We avoid native HTML5
-    // drag-and-drop because touch DnD is unreliable in WebViews. touch-action:none
-    // (see CSS) hands us the gesture instead of scrolling; setPointerCapture keeps
-    // pointermove flowing to the row even as it slides past its neighbours. We
-    // physically move the row element in the DOM as the pointer moves. The ▲/▼
-    // buttons stay as an accessible fallback.
-    function attachDrag(row){
-      var active=false, startY=0, moved=false;
-      row.addEventListener('pointerdown',function(ev){
-        if(graded) return;
-        // Let the ▲/▼ buttons handle their own taps.
-        if(ev.target && ev.target.classList && ev.target.classList.contains('rpce-move')) return;
-        active=true; moved=false; startY=ev.clientY;
-        try{ row.setPointerCapture(ev.pointerId); }catch(e){}
-      });
-      row.addEventListener('pointermove',function(ev){
-        if(!active) return;
-        // Small threshold so a plain tap isn't treated as a drag.
-        if(!moved){ if(Math.abs(ev.clientY-startY)<4) return; moved=true; row.classList.add('drag'); }
-        ev.preventDefault();                               // stop text selection / scroll
-        var after=afterRow(ev.clientY);
-        if(after==null) list.appendChild(row); else list.insertBefore(row,after);
-        renumber();
-      });
-      function end(ev){
-        if(!active) return; active=false; row.classList.remove('drag');
-        try{ row.releasePointerCapture(ev.pointerId); }catch(e){}
-      }
-      row.addEventListener('pointerup',end);
-      row.addEventListener('pointercancel',end);
-      row.addEventListener('lostpointercapture',end);
+    function slotFrom(node){
+      while(node && node!==list){ if(node.classList && node.classList.contains('rpce-slot')) return node; node=node.parentNode; }
+      return null;
     }
+    // Drag-to-reorder via Pointer Events. CRITICAL FIX: capture the pointer on the
+    // LIST (a stable element), not on the row — moving a captured element in the
+    // DOM (insertBefore) releases its capture in Chromium/QtWebEngine, which broke
+    // dragging after the first move. Delegating from the list keeps pointermove
+    // flowing while we physically reorder the rows. One path serves mouse
+    // (desktop) + touch (Android); touch-action:none (CSS) gives us the gesture.
+    // The ▲/▼ buttons remain an accessible fallback.
+    var dragRow=null, startY=0, moved=false;
+    list.addEventListener('pointerdown',function(ev){
+      if(graded) return;
+      // Let the ▲/▼ buttons handle their own taps.
+      if(ev.target && ev.target.classList && ev.target.classList.contains('rpce-move')) return;
+      var row=slotFrom(ev.target); if(!row) return;
+      dragRow=row; moved=false; startY=ev.clientY;
+      try{ list.setPointerCapture(ev.pointerId); }catch(e){}
+    });
+    list.addEventListener('pointermove',function(ev){
+      if(!dragRow) return;
+      // Small threshold so a plain tap isn't treated as a drag.
+      if(!moved){ if(Math.abs(ev.clientY-startY)<4) return; moved=true; dragRow.classList.add('drag'); }
+      ev.preventDefault();                               // stop text selection / scroll
+      var after=afterRow(ev.clientY);
+      if(after==null) list.appendChild(dragRow); else list.insertBefore(dragRow,after);
+      renumber();
+    });
+    function endDrag(ev){
+      if(!dragRow) return; dragRow.classList.remove('drag'); dragRow=null;
+      try{ list.releasePointerCapture(ev.pointerId); }catch(e){}
+    }
+    list.addEventListener('pointerup',endDrag);
+    list.addEventListener('pointercancel',endDrag);
+    list.addEventListener('lostpointercapture',endDrag);
+
     function makeRow(label){
       var row=el('div','rpce-slot'); row.dataset.label=label;
       row.appendChild(el('span','n',''));
@@ -287,7 +309,6 @@ RENDER_JS = r"""
       var up=el('button','rpce-move','▲'), dn=el('button','rpce-move','▼');
       up.onclick=function(){ nudge(row,-1); }; dn.onclick=function(){ nudge(row,1); };
       mv.appendChild(up); mv.appendChild(dn); row.appendChild(mv);
-      attachDrag(row);
       return row;
     }
     function submit(){
@@ -295,6 +316,7 @@ RENDER_JS = r"""
       // Rows stay in the user's submitted arrangement; mark each position right
       // or wrong so the user sees THEIR OWN answer graded, not just the key.
       var got=currentOrder(), rows=list.querySelectorAll('.rpce-slot'), allRight=true;
+      try{window.__rpce_order=got.slice();}catch(e){}   // remember across the answer flip
       for(var i=0;i<rows.length;i++){
         var mv=rows[i].querySelector('.rpce-moves'), mk=el('span','rpce-omark');
         if(got[i]===order[i]){ rows[i].classList.add('ok'); mk.style.color='#15803d';
@@ -312,8 +334,11 @@ RENDER_JS = r"""
       done(host,p,opts);
     }
 
-    if(opts&&opts.reveal){                       // answer side: show correct, all ok
-      order.forEach(function(label){ list.appendChild(makeRow(label)); });
+    if(opts&&opts.reveal){
+      // Answer side: rebuild the user's OWN submitted order and grade it, so they
+      // see what they arranged + which rows were wrong. No prior submit => show key.
+      var saved=null; try{ if(window.__rpce_order && window.__rpce_order.length) saved=window.__rpce_order; }catch(e){}
+      (saved||order).forEach(function(label){ list.appendChild(makeRow(label)); });
       renumber(); host.appendChild(fb); submit(); return;
     }
     shuffle(p.order.slice()).forEach(function(label){ list.appendChild(makeRow(label)); });
