@@ -222,6 +222,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <label>AnkiWeb email</label><input id="sy-user" type="email" autocapitalize="off" autocorrect="off">
     <label>Password</label><input id="sy-pass" type="password">
     <button class="btn" onclick="doSync()" style="margin-top:16px">Sign in &amp; sync</button>
+    <button class="btn ghost hidden" id="sy-logout" onclick="logout()" style="margin-top:12px">Log out</button>
     <p class="muted" style="margin-top:16px">No account yet?
       <a onclick="signup()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer">Create a free AnkiWeb account</a>
     </p>
@@ -544,13 +545,40 @@ function updateNetStatus(){
   var lg=el('sb-login'), sy=el('sb-sync');
   if(lg) lg.style.display = linked ? 'none' : '';   // hide Log in once signed in
   if(sy) sy.disabled = !on;                          // can't sync while offline
+  var lo=el('sy-logout'); if(lo) lo.classList.toggle('hidden', !linked);  // Log out only when signed in
 }
-function onSyncBarTap(){ if(!auth.hkey) show('sync'); else if(online()) syncNow(); }
+// Tap the status text to open the sync screen (sign in / sync / log out); the
+// pill's Sync button syncs directly.
+function onSyncBarTap(){ show('sync'); }
+function logout(){
+  auth={hkey:'',endpoint:'',lastSync:0}; saveAuth();
+  el('sy-full').classList.add('hidden');
+  var st=el('sy-status'); if(st){ st.classList.add('hidden'); st.textContent=''; }
+  updateNetStatus();
+  popup('Logged out','Signed out of AnkiWeb. Your local reviews stay on this device and sync again when you sign back in.','👋');
+}
 function syncNow(){
   if(!auth.hkey){ show('sync'); return; }            // need to log in first
   if(!online()){ popup('Offline','You’re offline. Your work is saved and will sync when you reconnect.','🔴'); return; }
+  if(_syncing) return;
+  _syncing=true;
   var txt=el('syncbar-txt'); if(txt) txt.textContent='🔄 Syncing…';
-  autoSync();
+  setTimeout(function(){
+    try{
+      var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
+      if(!r.ok){ popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
+      if(r.required>=2){
+        // Schema changed (e.g. desktop re-seed) → a full sync is required.
+        // Route to the full-sync chooser instead of silently doing nothing.
+        show('sync');
+        syStatus('A full sync is required — choose a direction below.');
+        el('sy-full').classList.remove('hidden');
+        return;
+      }
+      auth.lastSync=Date.now(); saveAuth(); refreshCounts();  // reviews unioned
+    }catch(e){ popup('Sync failed', friendlySyncError(''+e), '⚠️'); }
+    finally{ _syncing=false; updateNetStatus(); }
+  },0);
 }
 /* Auto-sync after each review / on returning home, when online and signed in.
    Anki unions the revlog, so reviews from phone + desktop ADD (none lost). */
