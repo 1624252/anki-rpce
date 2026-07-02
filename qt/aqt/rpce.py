@@ -856,6 +856,15 @@ def _brand_main_window() -> None:
         mw.form.menuTools.addAction(logout)
     except Exception as exc:
         print(f"RPCE menu error: {exc}")
+    # Block deck import: the RPCE deck is generated; importing an arbitrary
+    # collection would break its notetypes/tags. Hide the menu action (also kills
+    # its Ctrl+Shift+I shortcut) and refuse drag-and-drop file imports.
+    try:
+        mw.form.actionImport.setVisible(False)
+        mw.form.actionImport.setEnabled(False)
+        mw.setAcceptDrops(False)
+    except Exception as exc:
+        print(f"RPCE import-disable error: {exc}")
 
 
 def _apply_light_theme() -> None:
