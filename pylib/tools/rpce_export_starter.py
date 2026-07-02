@@ -38,8 +38,71 @@ import rpce_generate_questions as gen  # noqa: E402
 
 DEFAULT_COUNT = 0  # 0 = full coverage (2-5 questions from every corpus paragraph)
 
+# Authored (model-written) question bank — the shipping source of truth (rule R6
+# in docs/rpce/QUESTION_RULES.md). Produced by rpce_author_workflow.js and
+# quality-gated by solving each cold. When present it REPLACES the retired
+# template generator; the generator stays only as an offline fallback.
+AUTHORED_JSON = Path(__file__).resolve().parents[2] / "data" / "rpce_authored_questions.json"
+
+
+def _authored_payload(q: dict) -> tuple[dict, str, str]:
+    """Map one authored-question record to (render payload, plainQ, plainA)."""
+    cite, quote = q.get("cite", ""), q.get("quote", "")
+    if q["kind"] == "mcq":
+        payload = {
+            "kind": "mcq",
+            "stem": q["stem"],
+            "options": list(q["options"]),
+            "answer": int(q["answer"]),
+            "cite": cite,
+            "quote": quote,
+        }
+    else:  # cloze
+        payload = {
+            "kind": "cloze",
+            "text": q["text"],
+            "blanks": [{"a": b["a"], "h": b.get("h", "")} for b in q.get("blanks", [])],
+            "cite": cite,
+            "quote": quote,
+        }
+    return payload, q["plainQ"], q["plainA"]
+
+
+def add_authored_questions(col: Collection, deck_id: int) -> int:
+    """Load the model-authored bank and add each as a question note. Interleaves
+    by kind so a session mixes types instead of clustering (balanced order)."""
+    data = json.loads(AUTHORED_JSON.read_text(encoding="utf-8"))
+    questions = data["questions"] if isinstance(data, dict) else data
+    # Round-robin by kind for a balanced initial order (positions = add order).
+    groups: dict[str, list[dict]] = {}
+    for q in questions:
+        groups.setdefault(q["kind"], []).append(q)
+    ordered: list[dict] = []
+    while any(groups.values()):
+        for k in list(groups):
+            if groups[k]:
+                ordered.append(groups[k].pop(0))
+    for q in ordered:
+        payload, plain_q, plain_a = _authored_payload(q)
+        add_question_note(
+            col,
+            deck_id,
+            payload=payload,
+            plain_q=plain_q,
+            plain_a=plain_a,
+            domain=int(q["domain"]),
+            concept_id=str(q["concept"]),
+        )
+    return len(ordered)
+
 
 def add_generated_questions(col: Collection, deck_id: int, count: int) -> int:
+    # Prefer the authored bank (R6); fall back to the template generator offline.
+    if AUTHORED_JSON.exists():
+        n = add_authored_questions(col, deck_id)
+        print(f"loaded {n} authored questions from {AUTHORED_JSON.name}")
+        return n
+    print("no authored bank found; falling back to the template generator")
     questions = gen.build(count=count)
     for q in questions:
         add_question_note(

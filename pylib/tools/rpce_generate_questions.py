@@ -17,9 +17,10 @@ paragraph**, drawing answer spans from more than italics alone:
 
 Question types (the shared renderer draws each identically on desktop + phone):
 
-- **cloze**  — fill a key span blanked from a real RONR sentence; the blank
-  carries a hint (length + first letter, or "a voting threshold") so it stays
-  answerable (spec §7.1).
+- **cloze**  — fill a key span blanked from a real RONR sentence. A blank's
+  hint may name the answer's *category* (e.g. "a voting threshold") but never
+  its spelling — no length, first letter, or word count (see `_cloze_hint`);
+  otherwise the blank shows a plain "?" and the sentence + citation carry it.
 - **mcq**    — applied multiple choice grounded in the corpus, always with at
   least four options, exactly one correct. EVERY substantive paragraph yields at
   least one MCQ (a guaranteed section-stripped fallback covers the few that no
@@ -361,16 +362,17 @@ class Question:
 
 
 def _cloze_hint(kind: str, term: str) -> str:
-    """Keep a blank answerable without giving the word away (spec §7.1)."""
+    """A blank's hint may reveal the answer's *category*, never its spelling.
+
+    Content rule: a hint must not disclose the answer's length, first letter, or
+    word count — only what kind of thing it is. So we hint the semantic class
+    when we know it and give no hint otherwise (the blank renders as a plain
+    "?"), letting the sentence + citation carry the recall."""
     if kind == "vote":
         return "a voting threshold"
     if kind == "number":
         return "a number or length of time"
-    words = term.split()
-    if len(words) > 1:
-        return f"{len(words)} words, starts \u201c{term[0]}\u201d"
-    return f"{len(term)} letters, starts \u201c{term[0]}\u201d"
-
+    return ""
 
 def _vote_key(text: str) -> str | None:
     m = _VOTE_RE.search(text)

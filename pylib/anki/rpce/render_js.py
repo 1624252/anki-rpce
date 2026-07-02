@@ -39,8 +39,8 @@ RENDER_CSS = """
 .rpce-controls{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
 .rpce-btn{border:1px solid #caddf7;background:#f4f8ff;color:#1d4ed8;border-radius:12px;
   padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
-.rpce-opts{display:flex;flex-direction:column;gap:10px;margin-top:16px}
-.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:13px 16px;border-radius:12px;
+.rpce-opts{display:flex;flex-direction:column;gap:5px;margin-top:14px}
+.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:9px 16px;border-radius:12px;
   border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font:inherit}
 .rpce-opt .k{font-weight:800;color:#35548c;margin-right:8px}
 .rpce-opt .mark{float:right;font-weight:800}

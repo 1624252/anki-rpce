@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "10"
+RPCE_DECK_VERSION = "11"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -466,10 +466,12 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
         conf = col.decks.config_dict_for_deck_id(deck_id)
         conf["new"]["perDay"] = 9999
         conf["rev"]["perDay"] = 9999
-        # RANDOM_CARD: with one card shown per concept (siblings buried), a fully
-        # random new order makes each concept lead with a random question type,
-        # so a session moves between cloze / MCQ / ordering / etc. (spec §14).
-        conf["newSortOrder"] = 4
+        # NO_SORT: keep the deck's built-in add-order, which the exporter lays out
+        # round-robin by question type. A uniform RANDOM_CARD order over-showed the
+        # most common type (too many MCQs); add-order interleaving gives each type
+        # a roughly equal chance early in a session while staying sync-stable
+        # (positions come from add-order on import, identical on every device).
+        conf["newSortOrder"] = 1  # NEW_CARD_SORT_ORDER_NO_SORT
         col.decks.update_config(conf)
     except Exception as exc:  # never block deck build over limits
         print(f"RPCE deck-config error: {exc}")

@@ -31,6 +31,11 @@ html,body{margin:0;min-height:100%;
 .sb-btns{display:flex;gap:5px;flex-shrink:0}
 .sb-btn{border:1px solid currentColor;background:rgba(255,255,255,.7);color:inherit;
   border-radius:999px;padding:3px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+/* Reference tables — fixed top-left link (mirrors the desktop placement). */
+#reftab{position:fixed;top:8px;left:8px;z-index:40;padding:5px 12px;font-size:12px;font-weight:700;
+  border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;
+  box-shadow:0 4px 14px rgba(10,31,68,.12)}
+#reftab:active{background:var(--surface2)}
 .head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
 .logo{width:72px;height:72px;border-radius:20px;display:block;object-fit:contain;
   box-shadow:0 10px 26px rgba(29,78,216,.28)}
@@ -138,6 +143,8 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <button id="sb-sync" class="sb-btn" onclick="syncNow()">Sync</button>
   </span>
 </div>
+<!-- Reference tables entry — fixed top-left corner, matching the desktop. -->
+<button id="reftab" onclick="openReference()">📋 Reference</button>
 <div class="wrap">
 
   <!-- HOME -->
@@ -153,10 +160,9 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
       <div class="count due"><div class="n" id="c-due">–</div><div class="l">To review</div></div>
     </div>
     <button class="btn" onclick="openScores()">📊 Dashboard — readiness</button>
-    <button class="btn" onclick="startStudy()">Study flashcards</button>
+    <button class="btn" onclick="startStudy()">Review session</button>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
-    <button class="btn ghost" onclick="openReference()">📋 Reference tables</button>
     <p class="muted" style="text-align:center;margin-top:14px">Review session:
       <a onclick="setSessionLength()" style="color:var(--muted);font-weight:700;text-decoration:underline;cursor:pointer"><span id="sess-len">20</span> questions</a>
     </p>
@@ -576,6 +582,16 @@ function signup(){
 // Persisted so auto-sync survives app restarts. We store the AnkiWeb auth *key*
 // (hkey) — never the password — plus the endpoint and the last successful sync.
 var auth={hkey:'',endpoint:'',lastSync:0};
+// Last sync-required code seen (NORMAL=1, FULL_SYNC=2, FULL_DOWNLOAD=3, FULL_UPLOAD=4).
+var LAST_REQUIRED=0;
+// Auto-resolve a required full sync: adopt the desktop account (download) unless
+// the server is empty/behind (FULL_UPLOAD=4). Never clobber the desktop account.
+function resolveFull(){                       // returns true on success
+  var up = (LAST_REQUIRED===4);               // 4 => upload; 2/3 => download
+  var f=j(Engine.fullSync(auth.hkey, auth.endpoint, up));
+  if(f.ok){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); return true; }
+  return false;
+}
 function loadAuth(){ try{ var s=JSON.parse(localStorage.getItem('rpce_sync')||'{}');
   auth.hkey=s.hkey||''; auth.endpoint=s.endpoint||''; auth.lastSync=s.lastSync||0; }catch(e){} }
 function saveAuth(){ try{ localStorage.setItem('rpce_sync', JSON.stringify(auth)); }catch(e){} }
@@ -587,9 +603,13 @@ function relTime(ts){ if(!ts) return 'never';
   if(s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; }
 function updateNetStatus(){
   var bar=el('syncbar'), txt=el('syncbar-txt'); if(!bar||!txt) return;
-  var on=online(), linked=!!auth.hkey;
-  if(!on){ bar.className='off'; txt.textContent='🔴 Offline — saved on this device, will sync when back online'; }
+  var on=online(), linked=!!auth.hkey, synced=linked&&auth.lastSync>0;
+  if(!on){ bar.className='off';
+    // Keep the last-synced time visible even while offline (don't blank it).
+    txt.textContent = synced ? ('🔴 Offline · last synced '+relTime(auth.lastSync))
+      : '🔴 Offline — saved on this device, will sync when back online'; }
   else if(!linked){ bar.className='warn'; txt.textContent='⚠️ Not signed in'; }
+  else if(!synced){ bar.className='warn'; txt.textContent='🟡 Signed in — not synced yet'; }
   else { bar.className='ok'; txt.textContent='🟢 Signed in · synced '+relTime(auth.lastSync); }
   var lg=el('sb-login'), sy=el('sb-sync');
   if(lg) lg.style.display = linked ? 'none' : '';   // hide Log in once signed in
@@ -611,7 +631,8 @@ function syncNow(){
   if(!online()){ popup('Offline','You’re offline. Your work is saved and will sync when you reconnect.','🔴'); return; }
   if(_syncing) return;
   _syncing=true;
-  var txt=el('syncbar-txt'); if(txt) txt.textContent='🔄 Syncing…';
+  var bar=el('syncbar'), txt=el('syncbar-txt');           // amber pill while syncing
+  if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
@@ -622,11 +643,10 @@ function syncNow(){
         return;
       }
       if(r.required>=2){
-        // Schema changed (e.g. desktop re-seed) → a full sync is required.
-        // Route to the full-sync chooser instead of silently doing nothing.
-        show('sync');
-        syStatus('A full sync is required — choose a direction below.');
-        el('sy-full').classList.remove('hidden');
+        // A full sync is required (e.g. desktop re-seed). Resolve it automatically
+        // in the correct direction so later syncs combine incrementally.
+        LAST_REQUIRED=r.required;
+        if(!resolveFull()) popup('Sync failed','Couldn’t complete the required full sync. Try again.','⚠️');
         return;
       }
       auth.lastSync=Date.now(); saveAuth(); refreshCounts();  // reviews unioned
@@ -640,10 +660,14 @@ var _syncing=false;
 function autoSync(){
   if(_syncing || !auth.hkey || !online()) return;
   _syncing=true;
+  var bar=el('syncbar'), txt=el('syncbar-txt');           // amber pill while syncing
+  if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
       if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); }
+      else if(r.ok && r.required>=2){          // adopt desktop / combine automatically
+        LAST_REQUIRED=r.required; resolveFull(); }
       else if(!r.ok && isAuthError(r.error)){ clearSession(); }  // stale/expired -> truthful status
     }catch(e){}
     _syncing=false; updateNetStatus();
@@ -664,11 +688,21 @@ function doSync(){
       popup('Sign-in failed', friendlySyncError(login.error), '🔒'); return; }
     auth.hkey=login.hkey; auth.endpoint=login.endpoint||''; saveAuth(); updateNetStatus();
     syStatus('Syncing…');
+    var bar=el('syncbar'), sbt=el('syncbar-txt');         // amber pill while syncing
+    if(bar) bar.className='warn'; if(sbt) sbt.textContent='🟠 Syncing…';
     setTimeout(function(){
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint));
-      if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden');
+      if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden'); updateNetStatus();
         popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
-      if(r.required>=2){ syStatus('A full sync is required — choose an option below.'); el('sy-full').classList.remove('hidden'); }
+      if(r.required>=2){
+        // First alignment: adopt the desktop account automatically (spec §7b),
+        // then later syncs combine incrementally.
+        LAST_REQUIRED=r.required; syStatus('Aligning with the desktop…');
+        if(resolveFull()) syStatus('✓ Synced. Reviews now match the desktop.');
+        else { syStatus(''); el('sy-status').classList.add('hidden');
+          popup('Sync failed','Couldn’t complete the required full sync. Try again.','⚠️'); }
+        updateNetStatus();
+      }
       else { auth.lastSync=Date.now(); saveAuth(); syStatus('✓ Synced. Reviews now match the desktop.');
         refreshCounts(); updateNetStatus(); }
     },50);

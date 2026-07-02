@@ -134,8 +134,8 @@ _REVIEWER_CSS = (
     # Larger question + multiple-choice text on the bigger desktop screen,
     # with tighter spacing between the answer choices.
     ".rpce-q{font-size:23px !important;line-height:1.55 !important}"
-    ".rpce-opts{gap:6px !important;margin-top:12px !important}"
-    ".rpce-opt{font-size:20px !important;padding:11px 16px !important}"
+    ".rpce-opts{gap:3px !important;margin-top:10px !important}"
+    ".rpce-opt{font-size:20px !important;padding:8px 16px !important}"
     ".rpce-opt .k{font-size:20px !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
     # Revealed cloze blank — green, matching the phone.
@@ -428,7 +428,7 @@ def _banner_html(col) -> str:
   <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
-  <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
+  <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   {logout_html}
   <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
@@ -828,7 +828,7 @@ def _show_simulation() -> None:
 
 def _brand_main_window() -> None:
     """Brand the window (title + logo icon). All RPCE actions live on the top
-    toolbar tabs (Study / Section II / Simulate / Dashboard), so there is no
+    toolbar tabs (Review session / Section II / Simulate / Dashboard), so there is no
     separate RPCE dropdown menu."""
     mw = aqt.mw
     if mw is None:
@@ -1173,7 +1173,7 @@ def _session_progress_html() -> str:
 
 def _end_session() -> None:
     """End the review session at the cap and return home so the user can start a
-    fresh one from the Study button."""
+    fresh one from the Review session button."""
     global _session_done
     limit = _session_limit()
     _session_done = 0
@@ -1184,7 +1184,7 @@ def _end_session() -> None:
         mw.moveToState("deckBrowser")
         from aqt.utils import tooltip
 
-        tooltip(f"Session complete — {limit} questions. Tap Study for another.")
+        tooltip(f"Session complete — {limit} questions. Tap Review session for another.")
     except Exception as exc:
         print(f"RPCE end-session error: {exc}")
 
@@ -1319,7 +1319,7 @@ def _select_rpce_deck() -> bool:
 
 def _tab_study() -> None:
     """Start a review session straight away (like the phone) — skip Anki's
-    intermediate overview/"Study Now" screen so 'Study' always begins a session."""
+    intermediate overview/"Study Now" screen so 'Review session' always begins a session."""
     mw = aqt.mw
     if mw is None or not _select_rpce_deck():
         return
@@ -1369,9 +1369,9 @@ def _on_toolbar_links(links, toolbar) -> None:
     links.append(
         toolbar.create_link(
             "rpce_study",
-            "Study",
+            "Review session",
             _tab_study,
-            tip="Study RPCE flashcards",
+            tip="Start an RPCE review session",
             id="rpce_study",
         )
     )
@@ -1420,6 +1420,24 @@ def _last_sync_label() -> str:
 _syncing = False  # True while a sync is in progress (drives the orange state)
 
 
+def _is_offline() -> bool:
+    """Best-effort connectivity check for the sync indicator — no new deps.
+
+    A quick TCP probe (short timeout) to a public DNS resolver: connects fast
+    when online, fails fast (or times out) when the network is down. Returns
+    False (assume online) on anything unexpected so we never falsely hide the
+    live 'Synced' state."""
+    import socket
+
+    try:
+        with socket.create_connection(("1.1.1.1", 53), timeout=0.4):
+            return False
+    except OSError:  # no route / DNS down / refused → treat as offline
+        return True
+    except Exception:
+        return False
+
+
 def _on_left_tray(content, toolbar) -> None:
     """Top-left corner: quick access to the RONR reference tables."""
     content.append(
@@ -1436,7 +1454,8 @@ def _on_left_tray(content, toolbar) -> None:
 def _on_right_tray(content, toolbar) -> None:
     """Top-right corner: a live sync-status indicator (with last-synced time)
     followed by Anki's own Sync button — mirrors the phone's top-right sync
-    status. Orange while syncing, green signed-in, amber not-signed-in."""
+    status. Orange while syncing, green signed-in, amber not-signed-in — and,
+    when offline, an offline badge that still shows the last-synced time."""
     if _syncing:
         label, ident = "🔄 Syncing…", "rpce_sync_busy"
     else:
@@ -1447,8 +1466,15 @@ def _on_right_tray(content, toolbar) -> None:
             pass
         if signed_in:
             when = _last_sync_label()
-            label = f"🟢 Synced · {when}" if when else "🟢 Synced"
-            ident = "rpce_sync_in"
+            if _is_offline():
+                # Offline but signed in: keep the last-synced time visible so the
+                # user still knows how fresh their data is (can't sync until back
+                # online). Amber styling, same as the not-signed-in state.
+                label = f"📴 Offline · last synced {when}" if when else "📴 Offline"
+                ident = "rpce_sync_out"
+            else:
+                label = f"🟢 Synced · {when}" if when else "🟢 Synced"
+                ident = "rpce_sync_in"
         else:
             label, ident = "⚠️ Not signed in", "rpce_sync_out"
     content.append(
