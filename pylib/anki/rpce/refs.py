@@ -72,3 +72,9 @@ BYLAWS_AMENDMENT = Ref(
     "vote, provided that the amendment has been submitted in writing at the previous "
     "regular meeting.",
 )
+SCOPE_OF_NOTICE = Ref(
+    "57:11",
+    "If the bylaws require previous notice for their amendment … no amendment to a "
+    "bylaw amendment is in order that increases the modification of the article or "
+    "provision to be amended.",
+)

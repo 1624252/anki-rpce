@@ -51,6 +51,9 @@ def _simulations_json() -> list[dict]:
                 turn["prompt"] = t.prompt
                 turn["gold"] = t.gold
                 turn["ref"] = _ref(t.ref)
+                # Step-by-step expected key concepts (groups of synonyms) for the
+                # phone's lenient sim grader, mirroring examiner.grade_sim_step.
+                turn["expected"] = [list(g) for g in t.expected]
             turns.append(turn)
         out.append(
             {

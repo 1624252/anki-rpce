@@ -1,533 +1,533 @@
 [
- {
-  "domain": 1,
-  "prompt": "A member says \"I move that we donate $500 to the scholarship fund.\" No one has said anything else yet. As chair, what do you do before debate?",
-  "gold": "A main motion requires a second before it can be considered. The chair calls for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote.",
-  "ref": {
-   "section": "44:1",
-   "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
+  {
+    "domain": 1,
+    "prompt": "A member says \"I move that we donate $500 to the scholarship fund.\" No one has said anything else yet. As chair, what do you do before debate?",
+    "gold": "A main motion requires a second before it can be considered. The chair calls for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote.",
+    "ref": {
+      "section": "44:1",
+      "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "Debate has gone on for a long time and a member moves the Previous Question to end debate and vote now. How do you handle it?",
+    "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending question.",
+    "ref": {
+      "section": "16:1",
+      "quote": "The Previous Question is the motion used to bring the assembly to an immediate vote on one or more pending questions; its adoption does this with certain exceptions."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "While a motion is pending, a member believes the chair has violated the rules and says \"Point of Order.\" What is the correct handling?",
+    "gold": "A Point of Order is an incidental motion: it needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal.",
+    "ref": {
+      "section": "23:1",
+      "quote": "When a member thinks that the rules of the assembly are being violated, he can make a Point of Order (or \"raise a question of order,\" as it is sometimes expressed), thereby calling upon the chair for a ruling and an enforcement of the regular rules."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "A meeting is scheduled to begin but only a few members are present. A member wants to start adopting motions. What must you confirm first?",
+    "gold": "Business cannot be transacted without a quorum present. The chair must confirm a quorum (as defined by the bylaws) before the assembly takes any substantive action.",
+    "ref": {
+      "section": "40:1",
+      "quote": "A quorum in an assembly is the number of members … who must be present in order that business can be validly transacted."
+    }
+  },
+  {
+    "domain": 5,
+    "prompt": "An election for president is held with three candidates and the bylaws are silent on the threshold. One candidate gets the most votes but not half. Is that candidate elected?",
+    "gold": "No. Unless the bylaws provide otherwise, election requires a majority (more than half) of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority.",
+    "ref": {
+      "section": "44:11",
+      "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
+    }
+  },
+  {
+    "domain": 6,
+    "prompt": "During a contentious meeting, the chair asks the parliamentarian to tell the assembly which side is right. How should the parliamentarian respond?",
+    "gold": "The parliamentarian advises impartially and privately; they do not rule or take sides. The chair, not the parliamentarian, makes rulings. The parliamentarian should give neutral procedural advice to the chair.",
+    "ref": {
+      "section": "47:46",
+      "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "A member wants to amend the organization's bylaws at the next meeting. What conditions generally must be met to adopt the amendment?",
+    "gold": "Amending bylaws generally requires previous notice and a two-thirds vote (or whatever the bylaws themselves specify). Both the notice requirement and the higher voting threshold must be satisfied.",
+    "ref": {
+      "section": "56:67",
+      "quote": "These bylaws may be amended at any regular meeting of the Society by a two-thirds vote, provided that the amendment has been submitted in writing at the previous regular meeting."
+    }
+  },
+  {
+    "domain": 1,
+    "prompt": "At a meeting of the Harbor Town Historical Society, member Elena Ruiz moves \"that the Society sponsor a booth at the county fair.\" The motion is seconded, and the chair states the question. Before any debate, Ruiz decides she would rather word it \"that the Society sponsor a booth at both the county fair and the harvest festival,\" and she announces that she is changing her motion accordingly. May Ruiz modify her motion on her own authority at this point?",
+    "gold": "No. Once the chair has stated the question, the motion becomes the property of the assembly; Ruiz may modify or withdraw it only with the assembly's consent, or the wording may be changed by the process of amendment.",
+    "ref": {
+      "section": "4:19",
+      "quote": "After the question has been stated by the chair, the motion becomes the property of the assembly, and then its maker can do neither of these things without the assembly's consent"
+    }
+  },
+  {
+    "domain": 1,
+    "prompt": "The Lakeside Rowing Association has finished one agenda item and no motion is currently pending. A member rises, is recognized, and moves \"that the meeting recess for fifteen minutes.\" The seconded motion is stated by the chair. Made at this point, with no business pending, what class of motion is this motion to Recess?",
+    "gold": "It is an incidental main motion (not a privileged motion), because a motion to Recess made when no business is pending is a corresponding incidental main motion.",
+    "ref": {
+      "section": "6:13",
+      "quote": "For the motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn, there are corresponding incidental main motions of the same names."
+    }
+  },
+  {
+    "domain": 1,
+    "prompt": "Last month the Lakeshore Homeowners Association adopted a motion to hold its annual picnic on June 10, and that decision is still in force. At tonight's meeting, with nothing pending, member Raj Patel moves, \"That the Association hold its annual picnic on June 24.\" A member raises a point of order that this conflicts with the picnic date already adopted. State how the chair should rule and by what proper motions the June 24 date could instead be brought about.",
+    "gold": "The point of order is well taken; the motion is out of order because it conflicts with a main motion previously adopted and still in force. The June 24 date can be brought about only through the motion to Amend Something Previously Adopted or to Rescind (or, for a limited time in the same session, by reconsidering the vote).",
+    "ref": {
+      "section": "10:26(4)",
+      "quote": "Apart from a motion to Rescind or to Amend Something Previously Adopted, no main motion is in order that conflicts with a motion previously adopted at any time and still in force."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "The Ferndale Historical Society has pending the main motion, \"That the Society donate $5,000 to the county archives.\" Dana Okafor moves to postpone the motion indefinitely, and the motion is seconded. When Okafor begins to argue that the archives are poorly managed and that the whole donation is a bad idea, the chair interrupts and rules that debate on a motion to postpone indefinitely must be confined to whether to postpone and may not reach the merits of the donation itself. Was the chair's ruling correct, and how far may debate on the motion to postpone indefinitely extend?",
+    "gold": "The ruling is incorrect; Postpone Indefinitely is debatable, and unlike any other subsidiary motion, debate on it may go fully into the merits of the main question.",
+    "ref": {
+      "section": "11:2",
+      "quote": "Is debatable; and, unlike the case of any other subsidiary motion, debate on the motion to *Postpone Indefinitely* can go fully into the merits of the main question."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At the Lakeside Homeowners Association meeting, a main motion \"that the Association repave the parking lot\" is immediately pending. Dana Ruiz obtains the floor and moves \"to refer the motion to the Grounds Committee,\" which is seconded. As the assembly begins debating the motion to refer, Tom Beltran is recognized and launches into a lengthy argument that repaving is a waste of money and the lot is fine the way it is. The chair must rule on whether Beltran's remarks are in order. State the ruling.",
+    "gold": "The motion to Commit is debatable, but debate is confined to the desirability of committing the question and to the appropriate details of the referral, not the merits of the main question; the chair rules Beltran's remarks out of order.",
+    "ref": {
+      "section": "13:7(5)",
+      "quote": "Is debatable. The debate can extend only to the desirability of committing the main question and to the appropriate details of the motion to *Commit*, as explained below, however, and not to the merits of the main question."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At the Lakeside Camera Club's monthly meeting, the resolution 'That the club sponsor a photo exhibit at the public library' is under debate. Dana Okafor is recognized and moves 'that debate on the resolution be limited to one speech of three minutes for each member.' Another member calls out that the assembly should discuss whether this is a good idea before adopting it. State whether Okafor's motion requires a second, whether it is debatable, and the vote required to adopt it.",
+    "gold": "It requires a second; it is not debatable; and it requires a two-thirds vote to adopt.",
+    "ref": {
+      "section": "15:5",
+      "quote": "Requires a two-thirds vote"
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "During the Ridgeview Garden Club meeting, the resolution \"That the club plant a community orchard\" is pending, along with a proposed amendment to it and a motion to Commit it to the grounds committee. A guest speaker arrives early and must leave soon, so Omar Reyes moves to lay the resolution on the table; the motion is seconded and adopted by a majority vote. Which pending questions are placed on the table?",
+    "gold": "All of them: the resolution together with everything adhering to it, so the pending amendment and the motion to Commit go to the table with it at the same time, and if taken from the table all return together.",
+    "ref": {
+      "section": "17:5",
+      "quote": "if a resolution with a proposed amendment and a motion to Commit are pending and the resolution is laid on the table, all of these questions go to the table at the same time and, if taken from the table, all will return together."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At the Delphi Historical Society's annual meeting, the bylaws set the election of officers as a special order for 8:00 P.M. At 8:05 the assembly is still debating a motion to repaint the museum, and no one has moved to take up the election. Harriet Vance rises and, without waiting to be recognized while another member is speaking, says, \"Madam President, I call for the orders of the day.\" The president is unsure how to handle it. Does this call require a second, is it debatable or amendable, and what must the president do in response?",
+    "gold": "No second required; not debatable; not amendable; on one member's call the chair must enforce the orders and proceed to the orders of the day (take up the special order) unless a two-thirds vote sets them aside.",
+    "ref": {
+      "section": "18:4",
+      "quote": "Upon a call by a single member the orders of the day must be enforced, except that a two-thirds vote can set them aside."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "During the Riverton Club's meeting, a resolution to buy new chairs was postponed and made a special order for 7:30 P.M. At 7:30 a member calls for the orders of the day, but the club is in the middle of an engaged debate on the budget and the president senses the members would rather finish the budget discussion first. Instead of taking up the special order, the president states, \"The question is: Will the assembly proceed to the orders of the day?\" and puts it to a rising vote. What vote is required to refuse to proceed to the orders of the day and continue with the budget?",
+    "gold": "A two-thirds vote in the negative is required to vote the question down and refuse to proceed to the orders of the day.",
+    "ref": {
+      "section": "18:8",
+      "quote": "two thirds in the negative are required to vote down this question and refuse to take up the orders of the day."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At a regular meeting of the Fairhaven Historical Society, a resolution is pending when Delia Krause rises and states that she rises to a question of privilege, then puts it in the form of a motion to go into executive session, which is seconded. Several members want to debate whether the matter is urgent enough to interrupt the pending resolution and then vote on admitting it. Is the raising of this question of privilege debatable, and how is the question of admitting it decided?",
+    "gold": "The raising of a question of privilege is not debatable; the chair rules on whether it is a question of privilege and whether it is urgent enough to interrupt pending business, with no vote taken unless the chair's ruling is appealed, and that appeal is undebatable.",
+    "ref": {
+      "section": "19:6",
+      "quote": "Is ruled upon by the chair. No vote on the question's admissibility is taken unless the chair's ruling is appealed"
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "During a regular meeting of the Cedar Valley Garden Club, a member has moved to Recess and the motion has been seconded and is immediately pending. Before it is put to a vote, Marcus Bell rises to a question of privilege complaining that the room is too hot to conduct business. Is Bell's raising of a question of privilege in order at this moment?",
+    "gold": "No, it is not in order; Raise a Question of Privilege yields to the three higher-ranking privileged motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn, so it cannot be raised while the motion to Recess is pending.",
+    "ref": {
+      "section": "19:6",
+      "quote": "Takes precedence over all other motions except the three higher-ranking privileged motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At the Harbor Neighborhood Association, the assembly is in the middle of debating a pending main motion about a new fence ordinance. Growing tired, Raymond Ellis is recognized and moves \"that we recess until 7 P.M. tomorrow evening.\" The motion is seconded. The chair is unsure whether to treat this as a privileged motion. Rule on whether Ellis's motion is in order while the main motion is pending.",
+    "gold": "Out of order (not in order). A recess to begin at a future time is a main motion, in order only when no question is pending; only an immediate recess is privileged while a question is pending.",
+    "ref": {
+      "section": "20:3",
+      "quote": "a motion to take a recess at a future time is in order only when no question is pending."
+    }
+  },
+  {
+    "domain": 2,
+    "prompt": "At the Cedar Valley Garden Club, no motion is currently pending — the previous item of business has just been fully disposed of. Anticipating that next month's agenda will be crowded, member Thomas Reyes obtains the floor and moves, \"That when this meeting adjourns, it adjourn to meet on March 15 at 7:00 P.M. to continue this session.\" It is seconded, and several members indicate they wish to speak about whether the extra meeting is a good idea. Since nothing else is pending, is this the privileged motion, what kind of motion is it, and is debate on it allowed?",
+    "gold": "Because no question is pending, this is not the privileged motion to Fix the Time to Which to Adjourn; it is a main motion. As such it is in order, requires a second, is debatable, and is adopted by a majority vote.",
+    "ref": {
+      "section": "22:4",
+      "quote": "If a motion to fix the time to which to adjourn is made in any assembly when no question is pending, it is in order and is debatable and subject to all of the other rules applicable to main motions."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The Maple Ridge Camera Club has adopted a standing rule prohibiting the use of recording devices during its meetings. This rule does not relate to parliamentary procedure. At tonight's regular meeting, member Dana Okafor obtains the floor and moves to suspend that rule so the club may video-record the guest speaker's presentation. The motion is seconded. What vote is required to adopt Okafor's motion?",
+    "gold": "A majority vote, because it is an ordinary standing rule that does not relate to parliamentary procedure.",
+    "ref": {
+      "section": "25:15",
+      "quote": "Standing rules can be suspended by a majority vote."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the regular meeting of the Lakeside Historical Society, member Grant Whitby moves to suspend the rules and take up the Buildings Committee report ahead of its place in the order of business. The motion is seconded but fails to receive the needed vote. Later during the same meeting, Whitby again moves to suspend the rules for that same purpose. Is his renewed motion in order?",
+    "gold": "Not in order to renew it for the same purpose at the same meeting except by unanimous consent; it may be renewed for the same purpose after an adjournment.",
+    "ref": {
+      "section": "25:6",
+      "quote": "If a motion to suspend the rules is voted down, it cannot be renewed by moving to suspend the rules for the same purpose at the same meeting, unless unanimous consent is given."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the regular meeting of the Cedarville Historical Association, member Paul Reyes moves \"That the Association publicly condemn the town's former treasurer for mismanaging funds.\" The chair states the question. Before any debate occurs, member Diane Okafor rises without waiting to be recognized and says, \"I object to the consideration of the question.\" As chair, state how you must handle this Objection to the Consideration of a Question: does it require a second, is it debatable or amendable, and what vote is required to keep the motion from being considered?",
+    "gold": "No second required; not debatable; not amendable; a two-thirds vote against consideration is required to sustain the objection.",
+    "ref": {
+      "section": "26:2",
+      "quote": "Does not require a second."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The Lakeside Homeowners Association is taking up a proposed revised set of bylaws consisting of eight articles. Before the chair begins reading, member Dana Ortiz obtains the floor and moves that the revised bylaws be considered by paragraph (seriatim). Does this motion require a second, is it debatable, and what vote is required to adopt it?",
+    "gold": "The motion to Consider by Paragraph (Seriatim) needs a second, is not debatable, and requires a majority vote.",
+    "ref": {
+      "section": "28:2",
+      "quote": "Requires a majority vote."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the regular meeting of the Lakeside Historical Society, the main motion \"That the Society donate $2,000 to the county archives\" is immediately pending and under debate. Priya Nandal is recognized and moves \"that the vote on this main motion be taken by ballot.\" The chair is unsure how to handle it. Does this motion require a second, is it debatable, and what vote is required to adopt it?",
+    "gold": "The motion that the vote be taken by ballot is an incidental motion relating to methods of voting; it requires a second, is not debatable, and requires a majority vote to adopt.",
+    "ref": {
+      "section": "30:3",
+      "quote": "Require a majority vote, except a motion to close the polls, which requires a two-thirds vote."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The Riverbend Garden Club is electing its treasurer by ballot. Members are still coming forward to deposit their ballots, and one member is standing in line clearly waiting to vote. Harold Feng rises and moves \"that the polls be closed.\" How should the chair rule on Feng's motion, and if a motion to close the polls were properly made at the right time, what vote would it require?",
+    "gold": "The motion is out of order because a formal motion to close the polls may not be recognized until all have presumably voted; when properly made, a motion to close the polls requires a two-thirds vote.",
+    "ref": {
+      "section": "30:9",
+      "quote": "In any case, a formal motion to close the polls may not be recognized until all have presumably voted."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The National Rose Society is electing its president at an annual convention of about 800 delegates. Nominations are being taken from the floor, and after several names have been offered, delegate Harold Means is recognized and moves \"to close nominations.\" What are the second, debatability, and amendability requirements for this motion, and what vote is required to adopt it?",
+    "gold": "The motion to close nominations must be seconded, is not debatable, is amendable, and requires a two-thirds vote.",
+    "ref": {
+      "section": "31:2",
+      "quote": "Require a majority vote, except a motion to close nominations, which requires a two-thirds vote"
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the regular meeting of the Larkspur Garden Society, Dennis Fowler moved \"That the Society purchase a new greenhouse.\" The motion was seconded, and the chair stated the question. After some debate, but before any vote has been taken on the question, Fowler rises and says he wishes to withdraw his motion. What is required for Fowler to withdraw the motion at this point, and how should the chair proceed?",
+    "gold": "Because the chair has already stated the motion, the assembly's permission is required to withdraw it; the chair first treats the request as a unanimous-consent request, and only if there is an objection does it take a majority vote to grant. The request needs no second, is not debatable, and is not amendable.",
+    "ref": {
+      "section": "33:15",
+      "quote": "The chair treats this first as a unanimous-consent request."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "During debate on a motion to adopt a new dues schedule at the Cypress Rowing Club, member Harriet Vance rises to a parliamentary inquiry and asks the chair whether an amendment reducing the dues would be in order. The chair answers, \"It would not be in order.\" Vance disagrees and wants to challenge that answer. May she appeal the chair's answer to her parliamentary inquiry?",
+    "gold": "No. The chair's reply to a parliamentary inquiry is not subject to Appeal because it is an opinion, not a ruling; Vance may instead act contrary to the opinion and appeal any resulting adverse ruling by the chair.",
+    "ref": {
+      "section": "33:5",
+      "quote": "The chair's reply to a parliamentary inquiry is not subject to an appeal, since it is an opinion, not a ruling."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the Lakeside Rowing Club's regular monthly meeting, a resolution to buy a new coaching launch was laid on the table earlier in the meeting. After the club took up and disposed of two other items of business, Dana moved to take the launch resolution from the table; the motion was seconded and, on a voice vote, it lost. Immediately, with no other business having been transacted since that vote, Marcus rises and again moves to take the same resolution from the table. Winston raises a point of order against Marcus's motion. How should the chair rule?",
+    "gold": "Point of order well taken; the renewed motion to Take from the Table is out of order, because once it has been voted down it cannot be renewed until some further business has been transacted.",
+    "ref": {
+      "section": "34:2",
+      "quote": "if it is moved and voted down, the motion to *Take from the Table* cannot be renewed until some further business has been transacted."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The Fairview Historical Society laid a motion to commission a lobby mural on the table at its March regular meeting, and the motion was never taken up before that meeting adjourned. In April the president calls a special meeting to address a sudden budget shortfall; the call lists only the budget matter and says nothing about the mural. During the special meeting, member Priya moves to take the mural motion from the table. Another member raises a point of order against her motion. How should the chair rule?",
+    "gold": "Point of order well taken; the motion is out of order, because at a special meeting a question can be taken from the table only if it was laid on the table earlier at the same session or the call of the special meeting specifies that question or its subject matter.",
+    "ref": {
+      "section": "34:3",
+      "quote": "At a special meeting, however, a question can be taken from the table only if: (a) it has been laid on the table earlier at the same session, or (b) the call of the special meeting specifies either the particular question that lies on the table or its subject matter."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "The Lakeside Rowing Club referred a proposed sponsorship agreement to its Finance Committee at the May meeting, instructing the committee to report back at the June meeting. June came and went with no report from the committee. At the July regular meeting, while no business is pending and without any previous notice having been given, member Dana Ruiz moves \"that the Finance Committee be discharged from further consideration of the sponsorship agreement.\" What vote is required to adopt Dana's motion?",
+    "gold": "A majority vote suffices. Because the committee failed to report within the time it was instructed to report, the motion to Discharge a Committee requires only a majority vote even without notice.",
+    "ref": {
+      "section": "36:4",
+      "quote": "there are two special circumstances under which the motion requires only a majority vote (even without notice): (a) if the committee fails to report within a prescribed time as instructed, and (b) while the assembly is considering any partial report of the committee."
+    }
+  },
+  {
+    "domain": 3,
+    "prompt": "At the Parkview Historical Society, a member had moved and the assembly had adopted a main motion to refer the subject of creating a new membership category to a special committee (the subject was not otherwise pending; it came up only through that main motion to refer it). Weeks later, with no question pending, a member moves to discharge that special committee, and the motion to discharge is adopted. Is the subject of the new membership category now automatically before the assembly for consideration?",
+    "gold": "No. Because the matter was referred by a main motion, discharging the committee is a particular case of Rescind or Amend Something Previously Adopted; another (new) main motion is needed to bring the matter before the assembly, otherwise it dies.",
+    "ref": {
+      "section": "36:11",
+      "quote": "When such a motion to Discharge a Committee has been adopted, another main motion is needed to bring before the assembly the matter that was referred; otherwise it dies."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At a regular meeting of the Fernwood Garden Club, members are exasperated with Harold Pratt, who dominates every meeting. Vera Lindqvist moves, 'That Harold Pratt be barred from making any motions and from speaking in debate for the remainder of the year.' The motion is seconded, and several members are ready to vote for it. Harold objects that the club has no power to do this to him. Is Harold correct, and may the assembly adopt this motion?",
+    "gold": "Harold is correct; the motion is not in order and cannot be adopted. The rights to attend meetings, make motions, speak in debate, and vote are basic rights of membership, and no member can be individually deprived of them except through disciplinary proceedings.",
+    "ref": {
+      "section": "1:4",
+      "quote": "No member can be individually deprived of these basic rights of membership—or of any basic rights concomitant to them, such as the right to make nominations or to give previous notice of a motion—except through disciplinary proceedings."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Lakeside Book Society, which has adopted RONR as its parliamentary authority, has a standing rule that its meetings shall adjourn no later than 9:00 p.m. Tonight an important debate is still going at 8:55 p.m., and a member wants the assembly to keep meeting past 9:00 p.m. just for tonight. What is required to set aside this standing rule for tonight's meeting?",
+    "gold": "Since the standing rule has its application only within the context of a meeting, it can be suspended for this session only (not for future sessions) by a majority vote.",
+    "ref": {
+      "section": "2:23",
+      "quote": "if it has its application only within the context of a meeting, it can be suspended at any particular session (although not for future sessions) by a majority vote."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At a regular meeting of the Fairhaven Historical Society, the assembly is about to discuss sensitive allegations against a former treasurer, and the bylaws and custom are silent on closing the meeting. Member Lucia Romero rises and moves that the Society go into executive session so the discussion remains secret. The chair is unsure how to classify this motion and what vote is needed to adopt it. How is the motion to go into executive session classified, and what vote does it require?",
+    "gold": "It is a question of privilege and is adopted by a majority vote.",
+    "ref": {
+      "section": "9:24",
+      "quote": "A motion to go into (or out of) executive session is a question of privilege, and is adopted by a majority vote."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At the March regular meeting of the Lakeside Camera Club, member Diego Reyes moves \"that the club purchase a new projector for $500.\" No member seconds the motion, so the chair proceeds to other business. Later in the same meeting, after several unrelated items have been handled, Diego rises and makes the identical motion again. Another member objects that the club already had this motion before it during this session and therefore cannot take it up again. Is Diego's renewed motion in order, and why?",
+    "gold": "The renewed motion is in order. A motion that dies for lack of a second is not treated as decided by the assembly, so the rules restricting renewal do not apply, and it may be renewed whenever it would originally be in order.",
+    "ref": {
+      "section": "38:2",
+      "quote": "The rules restricting renewal of motions also do not apply to any motion that dies for lack of a second."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Riverside Historical Society holds a one-day session made up of two meetings: a morning meeting and, after the assembly adjourned for lunch, an afternoon meeting. During the morning meeting, a motion to Suspend the Rules to permit a guest to address the assembly for a particular purpose is made, seconded, and voted down. During the afternoon meeting, the same member makes the identical motion to Suspend the Rules for the same purpose. A point of order is raised that the motion cannot be renewed during the same session. How should the chair rule?",
+    "gold": "The point of order is not well taken; the motion is in order. Suspend the Rules for the same purpose cannot be renewed at the same meeting, but it may be renewed at a later meeting even though it is part of the same session (or same day).",
+    "ref": {
+      "section": "38:6",
+      "quote": "Although the motion to *Suspend the Rules* for the same purpose cannot be renewed at the same meeting, such a motion can be renewed at the next meeting or any later meeting, even if the next meeting is held on the same day or is part of the same session."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Lakeside Rowing Club is in the middle of debating a lengthy budget motion. Dennis Fowler, who opposes the budget, has just moved to adjourn for the fourth time in fifteen minutes; nothing in the meeting has changed since each of his three previous motions to adjourn was defeated. The chair is now convinced Fowler is simply trying to derail the budget vote. What kind of motion is Fowler making, and what may the chair do about it?",
+    "gold": "Dilatory motion; the chair may decline to recognize the member or rule the motions not in order.",
+    "ref": {
+      "section": "39:4",
+      "quote": "Whenever the chair becomes convinced that one or more members are repeatedly using parliamentary forms for dilatory purposes, he should either not recognize these members or he should rule that such motions are not in order"
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At its March meeting, the Fairview Garden Society adopted a motion setting the annual banquet ticket price at $40, and that decision is still in force. At the April meeting, with nothing else pending, Harriet Lowe moves 'that the banquet ticket price be $25.' She does not offer it as a motion to Rescind or to Amend Something Previously Adopted. Is Lowe's motion in order, and what is its effect if adopted?",
+    "gold": "Not in order; it is an improper motion conflicting with a previously adopted motion still in force; if adopted it is null and void unless adopted by the vote required to rescind or amend.",
+    "ref": {
+      "section": "39:5",
+      "quote": "motions are not in order if they conflict with one or more motions previously adopted at any time and still in force. Such conflicting motions, if adopted, are null and void unless adopted by the vote required to rescind or amend the motion previously adopted."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Lakeside Rowing Club's bylaws set a quorum of 15 members. At the regular meeting the president calls the meeting to order but only 8 members have arrived, and no more are expected soon. Several members want to keep the meeting productive and start acting on the club's agenda anyway. While the assembly remains without a quorum, which motions may it legitimately take up?",
+    "gold": "Only four kinds of action: fix the time to which to adjourn; adjourn; recess; and take measures to obtain a quorum (plus motions related to the conduct of the meeting). Any other (substantive) business would be null and void.",
+    "ref": {
+      "section": "40:7",
+      "quote": "Even in the absence of a quorum, the assembly may fix the time to which to adjourn ([22]), adjourn ([21]), recess ([20]), or take measures to obtain a quorum."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Fernwood Garden Society had a quorum when its president called the meeting to order, but as the evening wore on members drifted out. Without noticing, the chair continued stating new questions and taking votes on several motions. Only later does a member rise to a point of order that the quorum had in fact been lost before those votes. How should the chair rule on the validity of the votes taken while the quorum was absent, and on whether those prior actions can now be voided?",
+    "gold": "Business transacted in the absence of a quorum is null and void; but a point of order about the absence of a quorum is generally not permitted to affect prior action. Only upon clear and convincing proof can it be given retrospective effect by a ruling of the chair, subject to appeal.",
+    "ref": {
+      "section": "40:12",
+      "quote": "a point of order relating to the absence of a quorum is generally not permitted to affect prior action; but upon clear and convincing proof, such a point of order can be given effect retrospectively by a ruling of the presiding officer, subject to appeal"
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "The Lakeside Camera Club is proceeding through its standard order of business and is currently under Reports of Officers. Dolores Pratt wants the club to take up an urgent item of new business right now — a resolution about a fast-approaching grant deadline — before the New Business heading is reached. She asks the presiding officer to simply skip ahead to it. May the chair advance to that item on his own, and if not, what does the assembly have to do to take it up out of its proper order?",
+    "gold": "No — the chair alone cannot depart from the prescribed order of business. To take the item up out of its proper order the assembly must adopt a motion to Suspend the Rules by a two-thirds vote, or grant unanimous consent.",
+    "ref": {
+      "section": "41:37",
+      "quote": "Any particular item of business can be taken up out of its proper order by adopting a motion to Suspend the Rules by a two-thirds vote, although this is usually arranged by unanimous consent."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "Delia Okafor is a member of the Fernwood Historical Society and has agreed to serve as its parliamentarian for tonight's meeting. Late in the meeting, a motion is decided by a rising vote and the count is extremely close—Delia's single vote could change the outcome. She approaches the chair and asks whether, as a member, she may cast her vote to break the near-tie. May a member who is serving as the assembly's parliamentarian vote on this motion?",
+    "gold": "No—she may not. A member serving as parliamentarian must maintain impartiality and does not make motions, debate, or vote on any question except a ballot vote, and does not cast a deciding vote.",
+    "ref": {
+      "section": "47:55",
+      "quote": "A member of an assembly who acts as its parliamentarian has the same duty as the presiding officer to maintain a position of impartiality, and therefore does not make motions, participate in debate, or vote on any question except in the case of a ballot vote."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At the opening of the Riverton Camera Club's regular monthly meeting, right after the call to order, the secretary is about to read the minutes of the previous meeting. A member is eager to get to a time-sensitive main motion first and moves \"to dispense with the reading of the minutes\" at the regular time for their approval. Name this motion and state whether it is debatable and the vote required to adopt it.",
+    "gold": "The motion to Dispense with the Reading of the Minutes; it is not debatable and requires a majority vote.",
+    "ref": {
+      "section": "48:11",
+      "quote": "it may, by majority vote without debate, “dispense with the reading of the minutes.”"
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At the Cedar Valley Historical Society's regular meeting, President Nadia Foster repeatedly 'gavels through' motions and refuses to recognize members who are entitled to the floor, ignoring their points of order. Foster is the society's regularly elected president, not an appointed or elected chairman pro tem. The members want to strip her of the authority to preside for the remainder of this session. What is the proper motion, and what vote is required to adopt it?",
+    "gold": "A motion to declare the chair vacant is not in order; instead, move to Suspend the Rules to take away her authority to preside for all or part of the session, which requires a two-thirds vote.",
+    "ref": {
+      "section": "62:12",
+      "quote": "If the chair is not an appointed or elected chairman pro tem, a motion to declare the chair vacant is not in order. However, a motion can be made to Suspend the Rules so as to take away from him the authority to preside during all or part of a given session."
+    }
+  },
+  {
+    "domain": 4,
+    "prompt": "At a trial held in executive session before the assembly of the Fairview Choral Society, member Mr. N has been found guilty of the charge. A manager for the society moves that Mr. N be expelled from membership. Before the vote is taken, one member demands that it be taken by ballot. What vote is required to adopt the motion to expel, and must the demand for a ballot be honored?",
+    "gold": "A two-thirds vote is required to expel; and on the demand of a single member the vote on the penalty must be taken by ballot, so the demand must be honored.",
+    "ref": {
+      "section": "63:33",
+      "quote": "On the demand of a single member both the question of guilt and the question of the penalty must be voted on by ballot."
+    }
+  },
+  {
+    "domain": 5,
+    "prompt": "At the regular meeting of the Fairview Rowing Club, President Dolores Vance is a member of the assembly. A main motion to purchase a new coaching launch is taken by a rising vote. Without the president's own vote, 20 members vote in favor and 19 members vote opposed. President Vance is opposed to the purchase and wishes to use her own vote to defeat it. How may she vote to accomplish this, and what is the result?",
+    "gold": "She may vote in the negative, making the vote 20 to 20; because a tie vote is not a majority, the motion is lost.",
+    "ref": {
+      "section": "44:12",
+      "quote": "On a tie vote, a motion requiring a majority vote for adoption is lost, since a tie is not a majority."
+    }
+  },
+  {
+    "domain": 5,
+    "prompt": "The Lakeside Photography Guild is electing its president. Its bylaws adopt RONR and contain no special voting rule for elections. Three members run for the office. On the ballot, 100 votes are cast: Alvarez receives 42, Boone 33, and Chen 25. The tellers report that Alvarez received the largest number of votes. A member asks whether Alvarez is thereby elected. What is the answer?",
+    "gold": "No; Alvarez has only a plurality, not a majority, and a plurality does not elect absent a special rule prescribed in the bylaws, so no one is elected on this ballot.",
+    "ref": {
+      "section": "44:11",
+      "quote": "A plurality that is not a majority never chooses a proposition or elects anyone to office except by virtue of a special rule previously adopted."
+    }
+  },
+  {
+    "domain": 5,
+    "prompt": "At the March regular meeting of the Lakeside Rowing Club, the ballot vote on a main motion was announced as adopted, 40 to 38. Debate and other business then followed. Later in the same session, a member moves that the tellers recount the ballots because the margin was so close. What vote is required to order the recount, and is the motion timely?",
+    "gold": "Majority vote; timely — a recount may be ordered by a majority vote at the same session (or at the next regular session if held within a quarterly time interval).",
+    "ref": {
+      "section": "45:41",
+      "quote": "A recount may be ordered by the voting body, by a majority vote, at the same session at which the voting result was announced, or at the next regular session if that session is held within a quarterly time interval (see 9:7)."
+    }
+  },
+  {
+    "domain": 5,
+    "prompt": "The Lakeside Rowing Club's bylaws require officers to be elected by ballot, with a majority vote needed to elect. Three members are nominated for president: Ames, Bell, and Cho. On the first ballot, of 40 votes cast, Ames receives 18, Bell 16, and Cho 6 — no candidate has a majority. The chair announces that Cho, the low candidate, is dropped and that the next ballot will be limited to Ames and Bell. Is the chair's action proper, and how should the balloting proceed?",
+    "gold": "No. No candidate may be dropped; on repeated balloting the candidates remain unless one voluntarily withdraws, and balloting is simply repeated as many times as necessary until a candidate obtains a majority.",
+    "ref": {
+      "section": "46:32",
+      "quote": "When repeated balloting for an office is necessary, individuals are never removed from candidacy on the next ballot unless they voluntarily withdraw—which they are not obligated to do."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "The Fairfield Historical Society's executive board has seven members, and all seven are present at its monthly meeting. Delia Marsh moves \"That the board purchase a new display case for the lobby.\" No one seconds the motion. Bram Okafor rises to a point of order, contending that the motion is not before the board because it received no second. How should the chair rule on the point of order?",
+    "gold": "Point of order not well taken; this is a small board (not more than about a dozen members present), where motions need not be seconded; the motion is properly before the board.",
+    "ref": {
+      "section": "49:21",
+      "quote": "Motions need not be seconded."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "Between the regular monthly meetings of the Riverside Arts Guild, its president needs approval to sign a facility-rental contract. Rather than call a meeting, she telephones and emails each of the five board members individually, and every one of them tells her they approve. She signs the contract, stating that the board has authorized it. Is this a valid action of the board?",
+    "gold": "No; approval obtained separately by telephone, individual interview, or in writing—even from every member—is not the approval of the board; a board can act only in a regular or properly called meeting at which a quorum is present.",
+    "ref": {
+      "section": "49:16",
+      "quote": "The personal approval of a proposed action obtained separately by telephone, by individual interviews, or in writing, even from every member of the board, is not the approval of the board, since the members lacked the opportunity to mutually debate and decide the matter as a deliberative body."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "The Membership Committee of the Lakeside Gardeners' Club is meeting to work out a proposal on new dues categories. Discussion has run long, and Harold Pace, eager to wrap up, is recognized and says, \"I move the previous question.\" Another member seconds it. The committee chair is unsure whether to state the question or take a vote on it. Is Pace's motion for the previous question in order in the committee?",
+    "gold": "Not in order; motions to close or limit debate (Previous Question) are not allowed in committees; the chair rules the motion out of order.",
+    "ref": {
+      "section": "50:25",
+      "quote": "motions to close or limit debate ([**15**](#sec-15), [**16**](#sec-16)) are not allowed in committees."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "At the regular meeting of the Lakeside Garden Club, Wanda Perez, chairman of the Buildings and Grounds Committee, reads the committee's written report aloud. It concludes with a recommended resolution to authorize repair of the clubhouse roof. Immediately after reading, Perez says, \"By direction of the committee, I move the adoption of the resolution just read.\" No one seconds the motion, and member Tom Ross rises to a point of order that the motion is not in order because it received no second. How should the chair rule?",
+    "gold": "Point of order not well taken; no second is required because the motion to implement the recommendation is made on behalf of the committee; the chair states the question on the resolution.",
+    "ref": {
+      "section": "51:11",
+      "quote": "No second is required in these cases, since the motion is made on behalf of the board or committee"
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "The Statewide Teachers Association, a large convention, has voted to go into a committee of the whole to consider a lengthy resolution on curriculum standards. After considerable discussion, delegate Harold Nkemelu obtains the floor and moves that the committee rise. Delegate Priya Anand objects, insisting the motion must be debated and that she should be allowed to amend it to set a time for the committee to sit again. State whether the motion to rise requires a second, whether it is debatable, whether it is amendable, and the vote required to adopt it.",
+    "gold": "The motion to rise must be seconded, is not debatable, is not amendable, and requires a majority vote.",
+    "ref": {
+      "section": "52:9",
+      "quote": "The motion to rise must be seconded, is undebatable, cannot be amended, and requires a majority vote."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "Citizens Against the Riverside Airport hold a mass meeting. The published call states that the meeting's purpose is to oppose construction of the proposed airport at the Riverside site. While a resolution opposing the airport is pending, Dana Whitfield obtains the floor and moves a resolution \"that this meeting endorse the airport project as an economic benefit to the region.\" A point of order is raised against Whitfield's motion. As parliamentarian, how should the chair rule?",
+    "gold": "The point of order is well taken. The motion is out of order (not in order) because it is contrary to the announced purpose in the call; the provisions of the call have the force of bylaws and confine business to the stated purpose. The chair rules the motion out of order.",
+    "ref": {
+      "section": "53:17",
+      "quote": "any motion within the scope of the meeting's purpose as announced in the call is in order; but any motion outside of or contrary to that purpose is not in order."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "At a mass meeting called to organize opposition to a proposed factory, two members rise and claim the floor at the same moment. The chair recognizes Ortiz. Bell, the other member, is dissatisfied and moves to Appeal from the chair's decision assigning the floor to Ortiz. As parliamentarian, how should the chair rule on Bell's appeal?",
+    "gold": "The appeal is not in order. In a mass meeting there is no appeal from the chair's decision in assigning the floor. The chair rules the appeal out of order and Ortiz keeps the floor.",
+    "ref": {
+      "section": "53:18",
+      "quote": "In a mass meeting, however, there is no appeal from the chair's decision in assigning the floor."
+    }
+  },
+  {
+    "domain": 7,
+    "prompt": "The Riverside Chess Club and the Metropolitan Chess Federation are both unincorporated societies. The two boards have agreed that Riverside will combine into the Federation, with Riverside giving up its independent identity and ceasing to exist while the Federation continues. At Riverside's next meeting, a member offers a resolution that the Riverside Chess Club be merged into the Metropolitan Chess Federation. As parliamentarian, you are asked what notice and what vote are required for Riverside to adopt this resolution to merge. What do you advise?",
+    "gold": "This is a merger; adoption of the resolution to merge requires the same notice and the same vote as are required to amend the bylaws.",
+    "ref": {
+      "section": "55:3",
+      "quote": "For its adoption, such a resolution requires the same notice and vote as for amending the bylaws."
+    }
   }
- },
- {
-  "domain": 2,
-  "prompt": "Debate has gone on for a long time and a member moves the Previous Question to end debate and vote now. How do you handle it?",
-  "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending question.",
-  "ref": {
-   "section": "16:1",
-   "quote": "The Previous Question is the motion used to bring the assembly to an immediate vote on one or more pending questions; its adoption does this with certain exceptions."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "While a motion is pending, a member believes the chair has violated the rules and says \"Point of Order.\" What is the correct handling?",
-  "gold": "A Point of Order is an incidental motion: it needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal.",
-  "ref": {
-   "section": "23:1",
-   "quote": "When a member thinks that the rules of the assembly are being violated, he can make a Point of Order (or \"raise a question of order,\" as it is sometimes expressed), thereby calling upon the chair for a ruling and an enforcement of the regular rules."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "A meeting is scheduled to begin but only a few members are present. A member wants to start adopting motions. What must you confirm first?",
-  "gold": "Business cannot be transacted without a quorum present. The chair must confirm a quorum (as defined by the bylaws) before the assembly takes any substantive action.",
-  "ref": {
-   "section": "40:1",
-   "quote": "A quorum in an assembly is the number of members … who must be present in order that business can be validly transacted."
-  }
- },
- {
-  "domain": 5,
-  "prompt": "An election for president is held with three candidates and the bylaws are silent on the threshold. One candidate gets the most votes but not half. Is that candidate elected?",
-  "gold": "No. Unless the bylaws provide otherwise, election requires a majority (more than half) of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority.",
-  "ref": {
-   "section": "44:11",
-   "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
-  }
- },
- {
-  "domain": 6,
-  "prompt": "During a contentious meeting, the chair asks the parliamentarian to tell the assembly which side is right. How should the parliamentarian respond?",
-  "gold": "The parliamentarian advises impartially and privately; they do not rule or take sides. The chair, not the parliamentarian, makes rulings. The parliamentarian should give neutral procedural advice to the chair.",
-  "ref": {
-   "section": "47:46",
-   "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "A member wants to amend the organization's bylaws at the next meeting. What conditions generally must be met to adopt the amendment?",
-  "gold": "Amending bylaws generally requires previous notice and a two-thirds vote (or whatever the bylaws themselves specify). Both the notice requirement and the higher voting threshold must be satisfied.",
-  "ref": {
-   "section": "56:67",
-   "quote": "These bylaws may be amended at any regular meeting of the Society by a two-thirds vote, provided that the amendment has been submitted in writing at the previous regular meeting."
-  }
- },
- {
-  "domain": 1,
-  "prompt": "At a meeting of the Harbor Town Historical Society, member Elena Ruiz moves \"that the Society sponsor a booth at the county fair.\" The motion is seconded, and the chair states the question. Before any debate, Ruiz decides she would rather word it \"that the Society sponsor a booth at both the county fair and the harvest festival,\" and she announces that she is changing her motion accordingly. May Ruiz modify her motion on her own authority at this point?",
-  "gold": "No. Once the chair has stated the question, the motion becomes the property of the assembly; Ruiz may modify or withdraw it only with the assembly's consent, or the wording may be changed by the process of amendment.",
-  "ref": {
-   "section": "4:19",
-   "quote": "After the question has been stated by the chair, the motion becomes the property of the assembly, and then its maker can do neither of these things without the assembly's consent"
-  }
- },
- {
-  "domain": 1,
-  "prompt": "The Lakeside Rowing Association has finished one agenda item and no motion is currently pending. A member rises, is recognized, and moves \"that the meeting recess for fifteen minutes.\" The seconded motion is stated by the chair. Made at this point, with no business pending, what class of motion is this motion to Recess?",
-  "gold": "It is an incidental main motion (not a privileged motion), because a motion to Recess made when no business is pending is a corresponding incidental main motion.",
-  "ref": {
-   "section": "6:13",
-   "quote": "For the motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn, there are corresponding incidental main motions of the same names."
-  }
- },
- {
-  "domain": 1,
-  "prompt": "Last month the Lakeshore Homeowners Association adopted a motion to hold its annual picnic on June 10, and that decision is still in force. At tonight's meeting, with nothing pending, member Raj Patel moves, \"That the Association hold its annual picnic on June 24.\" A member raises a point of order that this conflicts with the picnic date already adopted. State how the chair should rule and by what proper motions the June 24 date could instead be brought about.",
-  "gold": "The point of order is well taken; the motion is out of order because it conflicts with a main motion previously adopted and still in force. The June 24 date can be brought about only through the motion to Amend Something Previously Adopted or to Rescind (or, for a limited time in the same session, by reconsidering the vote).",
-  "ref": {
-   "section": "10:26(4)",
-   "quote": "Apart from a motion to Rescind or to Amend Something Previously Adopted, no main motion is in order that conflicts with a motion previously adopted at any time and still in force."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "The Ferndale Historical Society has pending the main motion, \"That the Society donate $5,000 to the county archives.\" Dana Okafor moves to postpone the motion indefinitely, and the motion is seconded. When Okafor begins to argue that the archives are poorly managed and that the whole donation is a bad idea, the chair interrupts and rules that debate on a motion to postpone indefinitely must be confined to whether to postpone and may not reach the merits of the donation itself. Was the chair's ruling correct, and how far may debate on the motion to postpone indefinitely extend?",
-  "gold": "The ruling is incorrect; Postpone Indefinitely is debatable, and unlike any other subsidiary motion, debate on it may go fully into the merits of the main question.",
-  "ref": {
-   "section": "11:2",
-   "quote": "Is debatable; and, unlike the case of any other subsidiary motion, debate on the motion to *Postpone Indefinitely* can go fully into the merits of the main question."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At the Lakeside Homeowners Association meeting, a main motion \"that the Association repave the parking lot\" is immediately pending. Dana Ruiz obtains the floor and moves \"to refer the motion to the Grounds Committee,\" which is seconded. As the assembly begins debating the motion to refer, Tom Beltran is recognized and launches into a lengthy argument that repaving is a waste of money and the lot is fine the way it is. The chair must rule on whether Beltran's remarks are in order. State the ruling.",
-  "gold": "The motion to Commit is debatable, but debate is confined to the desirability of committing the question and to the appropriate details of the referral, not the merits of the main question; the chair rules Beltran's remarks out of order.",
-  "ref": {
-   "section": "13:7(5)",
-   "quote": "Is debatable. The debate can extend only to the desirability of committing the main question and to the appropriate details of the motion to *Commit*, as explained below, however, and not to the merits of the main question."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At the Lakeside Camera Club's monthly meeting, the resolution 'That the club sponsor a photo exhibit at the public library' is under debate. Dana Okafor is recognized and moves 'that debate on the resolution be limited to one speech of three minutes for each member.' Another member calls out that the assembly should discuss whether this is a good idea before adopting it. State whether Okafor's motion requires a second, whether it is debatable, and the vote required to adopt it.",
-  "gold": "It requires a second; it is not debatable; and it requires a two-thirds vote to adopt.",
-  "ref": {
-   "section": "15:5",
-   "quote": "Requires a two-thirds vote"
-  }
- },
- {
-  "domain": 2,
-  "prompt": "During the Ridgeview Garden Club meeting, the resolution \"That the club plant a community orchard\" is pending, along with a proposed amendment to it and a motion to Commit it to the grounds committee. A guest speaker arrives early and must leave soon, so Omar Reyes moves to lay the resolution on the table; the motion is seconded and adopted by a majority vote. Which pending questions are placed on the table?",
-  "gold": "All of them: the resolution together with everything adhering to it, so the pending amendment and the motion to Commit go to the table with it at the same time, and if taken from the table all return together.",
-  "ref": {
-   "section": "17:5",
-   "quote": "if a resolution with a proposed amendment and a motion to Commit are pending and the resolution is laid on the table, all of these questions go to the table at the same time and, if taken from the table, all will return together."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At the Delphi Historical Society's annual meeting, the bylaws set the election of officers as a special order for 8:00 P.M. At 8:05 the assembly is still debating a motion to repaint the museum, and no one has moved to take up the election. Harriet Vance rises and, without waiting to be recognized while another member is speaking, says, \"Madam President, I call for the orders of the day.\" The president is unsure how to handle it. Does this call require a second, is it debatable or amendable, and what must the president do in response?",
-  "gold": "No second required; not debatable; not amendable; on one member's call the chair must enforce the orders and proceed to the orders of the day (take up the special order) unless a two-thirds vote sets them aside.",
-  "ref": {
-   "section": "18:4",
-   "quote": "Upon a call by a single member the orders of the day must be enforced, except that a two-thirds vote can set them aside."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "During the Riverton Club's meeting, a resolution to buy new chairs was postponed and made a special order for 7:30 P.M. At 7:30 a member calls for the orders of the day, but the club is in the middle of an engaged debate on the budget and the president senses the members would rather finish the budget discussion first. Instead of taking up the special order, the president states, \"The question is: Will the assembly proceed to the orders of the day?\" and puts it to a rising vote. What vote is required to refuse to proceed to the orders of the day and continue with the budget?",
-  "gold": "A two-thirds vote in the negative is required to vote the question down and refuse to proceed to the orders of the day.",
-  "ref": {
-   "section": "18:8",
-   "quote": "two thirds in the negative are required to vote down this question and refuse to take up the orders of the day."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At a regular meeting of the Fairhaven Historical Society, a resolution is pending when Delia Krause rises and states that she rises to a question of privilege, then puts it in the form of a motion to go into executive session, which is seconded. Several members want to debate whether the matter is urgent enough to interrupt the pending resolution and then vote on admitting it. Is the raising of this question of privilege debatable, and how is the question of admitting it decided?",
-  "gold": "The raising of a question of privilege is not debatable; the chair rules on whether it is a question of privilege and whether it is urgent enough to interrupt pending business, with no vote taken unless the chair's ruling is appealed, and that appeal is undebatable.",
-  "ref": {
-   "section": "19:6",
-   "quote": "Is ruled upon by the chair. No vote on the question's admissibility is taken unless the chair's ruling is appealed"
-  }
- },
- {
-  "domain": 2,
-  "prompt": "During a regular meeting of the Cedar Valley Garden Club, a member has moved to Recess and the motion has been seconded and is immediately pending. Before it is put to a vote, Marcus Bell rises to a question of privilege complaining that the room is too hot to conduct business. Is Bell's raising of a question of privilege in order at this moment?",
-  "gold": "No, it is not in order; Raise a Question of Privilege yields to the three higher-ranking privileged motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn, so it cannot be raised while the motion to Recess is pending.",
-  "ref": {
-   "section": "19:6",
-   "quote": "Takes precedence over all other motions except the three higher-ranking privileged motions to Recess, to Adjourn, and to Fix the Time to Which to Adjourn."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At the Harbor Neighborhood Association, the assembly is in the middle of debating a pending main motion about a new fence ordinance. Growing tired, Raymond Ellis is recognized and moves \"that we recess until 7 P.M. tomorrow evening.\" The motion is seconded. The chair is unsure whether to treat this as a privileged motion. Rule on whether Ellis's motion is in order while the main motion is pending.",
-  "gold": "Out of order (not in order). A recess to begin at a future time is a main motion, in order only when no question is pending; only an immediate recess is privileged while a question is pending.",
-  "ref": {
-   "section": "20:3",
-   "quote": "a motion to take a recess at a future time is in order only when no question is pending."
-  }
- },
- {
-  "domain": 2,
-  "prompt": "At the Cedar Valley Garden Club, no motion is currently pending — the previous item of business has just been fully disposed of. Anticipating that next month's agenda will be crowded, member Thomas Reyes obtains the floor and moves, \"That when this meeting adjourns, it adjourn to meet on March 15 at 7:00 P.M. to continue this session.\" It is seconded, and several members indicate they wish to speak about whether the extra meeting is a good idea. Since nothing else is pending, is this the privileged motion, what kind of motion is it, and is debate on it allowed?",
-  "gold": "Because no question is pending, this is not the privileged motion to Fix the Time to Which to Adjourn; it is a main motion. As such it is in order, requires a second, is debatable, and is adopted by a majority vote.",
-  "ref": {
-   "section": "22:4",
-   "quote": "If a motion to fix the time to which to adjourn is made in any assembly when no question is pending, it is in order and is debatable and subject to all of the other rules applicable to main motions."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The Maple Ridge Camera Club has adopted a standing rule prohibiting the use of recording devices during its meetings. This rule does not relate to parliamentary procedure. At tonight's regular meeting, member Dana Okafor obtains the floor and moves to suspend that rule so the club may video-record the guest speaker's presentation. The motion is seconded. What vote is required to adopt Okafor's motion?",
-  "gold": "A majority vote, because it is an ordinary standing rule that does not relate to parliamentary procedure.",
-  "ref": {
-   "section": "25:15",
-   "quote": "Standing rules can be suspended by a majority vote."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the regular meeting of the Lakeside Historical Society, member Grant Whitby moves to suspend the rules and take up the Buildings Committee report ahead of its place in the order of business. The motion is seconded but fails to receive the needed vote. Later during the same meeting, Whitby again moves to suspend the rules for that same purpose. Is his renewed motion in order?",
-  "gold": "Not in order to renew it for the same purpose at the same meeting except by unanimous consent; it may be renewed for the same purpose after an adjournment.",
-  "ref": {
-   "section": "25:6",
-   "quote": "If a motion to suspend the rules is voted down, it cannot be renewed by moving to suspend the rules for the same purpose at the same meeting, unless unanimous consent is given."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the regular meeting of the Cedarville Historical Association, member Paul Reyes moves \"That the Association publicly condemn the town's former treasurer for mismanaging funds.\" The chair states the question. Before any debate occurs, member Diane Okafor rises without waiting to be recognized and says, \"I object to the consideration of the question.\" As chair, state how you must handle this Objection to the Consideration of a Question: does it require a second, is it debatable or amendable, and what vote is required to keep the motion from being considered?",
-  "gold": "No second required; not debatable; not amendable; a two-thirds vote against consideration is required to sustain the objection.",
-  "ref": {
-   "section": "26:2",
-   "quote": "Does not require a second."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The Lakeside Homeowners Association is taking up a proposed revised set of bylaws consisting of eight articles. Before the chair begins reading, member Dana Ortiz obtains the floor and moves that the revised bylaws be considered by paragraph (seriatim). Does this motion require a second, is it debatable, and what vote is required to adopt it?",
-  "gold": "The motion to Consider by Paragraph (Seriatim) needs a second, is not debatable, and requires a majority vote.",
-  "ref": {
-   "section": "28:2",
-   "quote": "Requires a majority vote."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the regular meeting of the Lakeside Historical Society, the main motion \"That the Society donate $2,000 to the county archives\" is immediately pending and under debate. Priya Nandal is recognized and moves \"that the vote on this main motion be taken by ballot.\" The chair is unsure how to handle it. Does this motion require a second, is it debatable, and what vote is required to adopt it?",
-  "gold": "The motion that the vote be taken by ballot is an incidental motion relating to methods of voting; it requires a second, is not debatable, and requires a majority vote to adopt.",
-  "ref": {
-   "section": "30:3",
-   "quote": "Require a majority vote, except a motion to close the polls, which requires a two-thirds vote."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The Riverbend Garden Club is electing its treasurer by ballot. Members are still coming forward to deposit their ballots, and one member is standing in line clearly waiting to vote. Harold Feng rises and moves \"that the polls be closed.\" How should the chair rule on Feng's motion, and if a motion to close the polls were properly made at the right time, what vote would it require?",
-  "gold": "The motion is out of order because a formal motion to close the polls may not be recognized until all have presumably voted; when properly made, a motion to close the polls requires a two-thirds vote.",
-  "ref": {
-   "section": "30:9",
-   "quote": "In any case, a formal motion to close the polls may not be recognized until all have presumably voted."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The National Rose Society is electing its president at an annual convention of about 800 delegates. Nominations are being taken from the floor, and after several names have been offered, delegate Harold Means is recognized and moves \"to close nominations.\" What are the second, debatability, and amendability requirements for this motion, and what vote is required to adopt it?",
-  "gold": "The motion to close nominations must be seconded, is not debatable, is amendable, and requires a two-thirds vote.",
-  "ref": {
-   "section": "31:2",
-   "quote": "Require a majority vote, except a motion to close nominations, which requires a two-thirds vote"
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the regular meeting of the Larkspur Garden Society, Dennis Fowler moved \"That the Society purchase a new greenhouse.\" The motion was seconded, and the chair stated the question. After some debate, but before any vote has been taken on the question, Fowler rises and says he wishes to withdraw his motion. What is required for Fowler to withdraw the motion at this point, and how should the chair proceed?",
-  "gold": "Because the chair has already stated the motion, the assembly's permission is required to withdraw it; the chair first treats the request as a unanimous-consent request, and only if there is an objection does it take a majority vote to grant. The request needs no second, is not debatable, and is not amendable.",
-  "ref": {
-   "section": "33:15",
-   "quote": "The chair treats this first as a unanimous-consent request."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "During debate on a motion to adopt a new dues schedule at the Cypress Rowing Club, member Harriet Vance rises to a parliamentary inquiry and asks the chair whether an amendment reducing the dues would be in order. The chair answers, \"It would not be in order.\" Vance disagrees and wants to challenge that answer. May she appeal the chair's answer to her parliamentary inquiry?",
-  "gold": "No. The chair's reply to a parliamentary inquiry is not subject to Appeal because it is an opinion, not a ruling; Vance may instead act contrary to the opinion and appeal any resulting adverse ruling by the chair.",
-  "ref": {
-   "section": "33:5",
-   "quote": "The chair's reply to a parliamentary inquiry is not subject to an appeal, since it is an opinion, not a ruling."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the Lakeside Rowing Club's regular monthly meeting, a resolution to buy a new coaching launch was laid on the table earlier in the meeting. After the club took up and disposed of two other items of business, Dana moved to take the launch resolution from the table; the motion was seconded and, on a voice vote, it lost. Immediately, with no other business having been transacted since that vote, Marcus rises and again moves to take the same resolution from the table. Winston raises a point of order against Marcus's motion. How should the chair rule?",
-  "gold": "Point of order well taken; the renewed motion to Take from the Table is out of order, because once it has been voted down it cannot be renewed until some further business has been transacted.",
-  "ref": {
-   "section": "34:2",
-   "quote": "if it is moved and voted down, the motion to *Take from the Table* cannot be renewed until some further business has been transacted."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The Fairview Historical Society laid a motion to commission a lobby mural on the table at its March regular meeting, and the motion was never taken up before that meeting adjourned. In April the president calls a special meeting to address a sudden budget shortfall; the call lists only the budget matter and says nothing about the mural. During the special meeting, member Priya moves to take the mural motion from the table. Another member raises a point of order against her motion. How should the chair rule?",
-  "gold": "Point of order well taken; the motion is out of order, because at a special meeting a question can be taken from the table only if it was laid on the table earlier at the same session or the call of the special meeting specifies that question or its subject matter.",
-  "ref": {
-   "section": "34:3",
-   "quote": "At a special meeting, however, a question can be taken from the table only if: (a) it has been laid on the table earlier at the same session, or (b) the call of the special meeting specifies either the particular question that lies on the table or its subject matter."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "The Lakeside Rowing Club referred a proposed sponsorship agreement to its Finance Committee at the May meeting, instructing the committee to report back at the June meeting. June came and went with no report from the committee. At the July regular meeting, while no business is pending and without any previous notice having been given, member Dana Ruiz moves \"that the Finance Committee be discharged from further consideration of the sponsorship agreement.\" What vote is required to adopt Dana's motion?",
-  "gold": "A majority vote suffices. Because the committee failed to report within the time it was instructed to report, the motion to Discharge a Committee requires only a majority vote even without notice.",
-  "ref": {
-   "section": "36:4",
-   "quote": "there are two special circumstances under which the motion requires only a majority vote (even without notice): (a) if the committee fails to report within a prescribed time as instructed, and (b) while the assembly is considering any partial report of the committee."
-  }
- },
- {
-  "domain": 3,
-  "prompt": "At the Parkview Historical Society, a member had moved and the assembly had adopted a main motion to refer the subject of creating a new membership category to a special committee (the subject was not otherwise pending; it came up only through that main motion to refer it). Weeks later, with no question pending, a member moves to discharge that special committee, and the motion to discharge is adopted. Is the subject of the new membership category now automatically before the assembly for consideration?",
-  "gold": "No. Because the matter was referred by a main motion, discharging the committee is a particular case of Rescind or Amend Something Previously Adopted; another (new) main motion is needed to bring the matter before the assembly, otherwise it dies.",
-  "ref": {
-   "section": "36:11",
-   "quote": "When such a motion to Discharge a Committee has been adopted, another main motion is needed to bring before the assembly the matter that was referred; otherwise it dies."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At a regular meeting of the Fernwood Garden Club, members are exasperated with Harold Pratt, who dominates every meeting. Vera Lindqvist moves, 'That Harold Pratt be barred from making any motions and from speaking in debate for the remainder of the year.' The motion is seconded, and several members are ready to vote for it. Harold objects that the club has no power to do this to him. Is Harold correct, and may the assembly adopt this motion?",
-  "gold": "Harold is correct; the motion is not in order and cannot be adopted. The rights to attend meetings, make motions, speak in debate, and vote are basic rights of membership, and no member can be individually deprived of them except through disciplinary proceedings.",
-  "ref": {
-   "section": "1:4",
-   "quote": "No member can be individually deprived of these basic rights of membership—or of any basic rights concomitant to them, such as the right to make nominations or to give previous notice of a motion—except through disciplinary proceedings."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Lakeside Book Society, which has adopted RONR as its parliamentary authority, has a standing rule that its meetings shall adjourn no later than 9:00 p.m. Tonight an important debate is still going at 8:55 p.m., and a member wants the assembly to keep meeting past 9:00 p.m. just for tonight. What is required to set aside this standing rule for tonight's meeting?",
-  "gold": "Since the standing rule has its application only within the context of a meeting, it can be suspended for this session only (not for future sessions) by a majority vote.",
-  "ref": {
-   "section": "2:23",
-   "quote": "if it has its application only within the context of a meeting, it can be suspended at any particular session (although not for future sessions) by a majority vote."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At a regular meeting of the Fairhaven Historical Society, the assembly is about to discuss sensitive allegations against a former treasurer, and the bylaws and custom are silent on closing the meeting. Member Lucia Romero rises and moves that the Society go into executive session so the discussion remains secret. The chair is unsure how to classify this motion and what vote is needed to adopt it. How is the motion to go into executive session classified, and what vote does it require?",
-  "gold": "It is a question of privilege and is adopted by a majority vote.",
-  "ref": {
-   "section": "9:24",
-   "quote": "A motion to go into (or out of) executive session is a question of privilege, and is adopted by a majority vote."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At the March regular meeting of the Lakeside Camera Club, member Diego Reyes moves \"that the club purchase a new projector for $500.\" No member seconds the motion, so the chair proceeds to other business. Later in the same meeting, after several unrelated items have been handled, Diego rises and makes the identical motion again. Another member objects that the club already had this motion before it during this session and therefore cannot take it up again. Is Diego's renewed motion in order, and why?",
-  "gold": "The renewed motion is in order. A motion that dies for lack of a second is not treated as decided by the assembly, so the rules restricting renewal do not apply, and it may be renewed whenever it would originally be in order.",
-  "ref": {
-   "section": "38:2",
-   "quote": "The rules restricting renewal of motions also do not apply to any motion that dies for lack of a second."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Riverside Historical Society holds a one-day session made up of two meetings: a morning meeting and, after the assembly adjourned for lunch, an afternoon meeting. During the morning meeting, a motion to Suspend the Rules to permit a guest to address the assembly for a particular purpose is made, seconded, and voted down. During the afternoon meeting, the same member makes the identical motion to Suspend the Rules for the same purpose. A point of order is raised that the motion cannot be renewed during the same session. How should the chair rule?",
-  "gold": "The point of order is not well taken; the motion is in order. Suspend the Rules for the same purpose cannot be renewed at the same meeting, but it may be renewed at a later meeting even though it is part of the same session (or same day).",
-  "ref": {
-   "section": "38:6",
-   "quote": "Although the motion to *Suspend the Rules* for the same purpose cannot be renewed at the same meeting, such a motion can be renewed at the next meeting or any later meeting, even if the next meeting is held on the same day or is part of the same session."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Lakeside Rowing Club is in the middle of debating a lengthy budget motion. Dennis Fowler, who opposes the budget, has just moved to adjourn for the fourth time in fifteen minutes; nothing in the meeting has changed since each of his three previous motions to adjourn was defeated. The chair is now convinced Fowler is simply trying to derail the budget vote. What kind of motion is Fowler making, and what may the chair do about it?",
-  "gold": "Dilatory motion; the chair may decline to recognize the member or rule the motions not in order.",
-  "ref": {
-   "section": "39:4",
-   "quote": "Whenever the chair becomes convinced that one or more members are repeatedly using parliamentary forms for dilatory purposes, he should either not recognize these members or he should rule that such motions are not in order"
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At its March meeting, the Fairview Garden Society adopted a motion setting the annual banquet ticket price at $40, and that decision is still in force. At the April meeting, with nothing else pending, Harriet Lowe moves 'that the banquet ticket price be $25.' She does not offer it as a motion to Rescind or to Amend Something Previously Adopted. Is Lowe's motion in order, and what is its effect if adopted?",
-  "gold": "Not in order; it is an improper motion conflicting with a previously adopted motion still in force; if adopted it is null and void unless adopted by the vote required to rescind or amend.",
-  "ref": {
-   "section": "39:5",
-   "quote": "motions are not in order if they conflict with one or more motions previously adopted at any time and still in force. Such conflicting motions, if adopted, are null and void unless adopted by the vote required to rescind or amend the motion previously adopted."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Lakeside Rowing Club's bylaws set a quorum of 15 members. At the regular meeting the president calls the meeting to order but only 8 members have arrived, and no more are expected soon. Several members want to keep the meeting productive and start acting on the club's agenda anyway. While the assembly remains without a quorum, which motions may it legitimately take up?",
-  "gold": "Only four kinds of action: fix the time to which to adjourn; adjourn; recess; and take measures to obtain a quorum (plus motions related to the conduct of the meeting). Any other (substantive) business would be null and void.",
-  "ref": {
-   "section": "40:7",
-   "quote": "Even in the absence of a quorum, the assembly may fix the time to which to adjourn ([22]), adjourn ([21]), recess ([20]), or take measures to obtain a quorum."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Fernwood Garden Society had a quorum when its president called the meeting to order, but as the evening wore on members drifted out. Without noticing, the chair continued stating new questions and taking votes on several motions. Only later does a member rise to a point of order that the quorum had in fact been lost before those votes. How should the chair rule on the validity of the votes taken while the quorum was absent, and on whether those prior actions can now be voided?",
-  "gold": "Business transacted in the absence of a quorum is null and void; but a point of order about the absence of a quorum is generally not permitted to affect prior action. Only upon clear and convincing proof can it be given retrospective effect by a ruling of the chair, subject to appeal.",
-  "ref": {
-   "section": "40:12",
-   "quote": "a point of order relating to the absence of a quorum is generally not permitted to affect prior action; but upon clear and convincing proof, such a point of order can be given effect retrospectively by a ruling of the presiding officer, subject to appeal"
-  }
- },
- {
-  "domain": 4,
-  "prompt": "The Lakeside Camera Club is proceeding through its standard order of business and is currently under Reports of Officers. Dolores Pratt wants the club to take up an urgent item of new business right now — a resolution about a fast-approaching grant deadline — before the New Business heading is reached. She asks the presiding officer to simply skip ahead to it. May the chair advance to that item on his own, and if not, what does the assembly have to do to take it up out of its proper order?",
-  "gold": "No — the chair alone cannot depart from the prescribed order of business. To take the item up out of its proper order the assembly must adopt a motion to Suspend the Rules by a two-thirds vote, or grant unanimous consent.",
-  "ref": {
-   "section": "41:37",
-   "quote": "Any particular item of business can be taken up out of its proper order by adopting a motion to Suspend the Rules by a two-thirds vote, although this is usually arranged by unanimous consent."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "Delia Okafor is a member of the Fernwood Historical Society and has agreed to serve as its parliamentarian for tonight's meeting. Late in the meeting, a motion is decided by a rising vote and the count is extremely close—Delia's single vote could change the outcome. She approaches the chair and asks whether, as a member, she may cast her vote to break the near-tie. May a member who is serving as the assembly's parliamentarian vote on this motion?",
-  "gold": "No—she may not. A member serving as parliamentarian must maintain impartiality and does not make motions, debate, or vote on any question except a ballot vote, and does not cast a deciding vote.",
-  "ref": {
-   "section": "47:55",
-   "quote": "A member of an assembly who acts as its parliamentarian has the same duty as the presiding officer to maintain a position of impartiality, and therefore does not make motions, participate in debate, or vote on any question except in the case of a ballot vote."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At the opening of the Riverton Camera Club's regular monthly meeting, right after the call to order, the secretary is about to read the minutes of the previous meeting. A member is eager to get to a time-sensitive main motion first and moves \"to dispense with the reading of the minutes\" at the regular time for their approval. Name this motion and state whether it is debatable and the vote required to adopt it.",
-  "gold": "The motion to Dispense with the Reading of the Minutes; it is not debatable and requires a majority vote.",
-  "ref": {
-   "section": "48:11",
-   "quote": "it may, by majority vote without debate, “dispense with the reading of the minutes.”"
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At the Cedar Valley Historical Society's regular meeting, President Nadia Foster repeatedly 'gavels through' motions and refuses to recognize members who are entitled to the floor, ignoring their points of order. Foster is the society's regularly elected president, not an appointed or elected chairman pro tem. The members want to strip her of the authority to preside for the remainder of this session. What is the proper motion, and what vote is required to adopt it?",
-  "gold": "A motion to declare the chair vacant is not in order; instead, move to Suspend the Rules to take away her authority to preside for all or part of the session, which requires a two-thirds vote.",
-  "ref": {
-   "section": "62:12",
-   "quote": "If the chair is not an appointed or elected chairman pro tem, a motion to declare the chair vacant is not in order. However, a motion can be made to Suspend the Rules so as to take away from him the authority to preside during all or part of a given session."
-  }
- },
- {
-  "domain": 4,
-  "prompt": "At a trial held in executive session before the assembly of the Fairview Choral Society, member Mr. N has been found guilty of the charge. A manager for the society moves that Mr. N be expelled from membership. Before the vote is taken, one member demands that it be taken by ballot. What vote is required to adopt the motion to expel, and must the demand for a ballot be honored?",
-  "gold": "A two-thirds vote is required to expel; and on the demand of a single member the vote on the penalty must be taken by ballot, so the demand must be honored.",
-  "ref": {
-   "section": "63:33",
-   "quote": "On the demand of a single member both the question of guilt and the question of the penalty must be voted on by ballot."
-  }
- },
- {
-  "domain": 5,
-  "prompt": "At the regular meeting of the Fairview Rowing Club, President Dolores Vance is a member of the assembly. A main motion to purchase a new coaching launch is taken by a rising vote. Without the president's own vote, 20 members vote in favor and 19 members vote opposed. President Vance is opposed to the purchase and wishes to use her own vote to defeat it. How may she vote to accomplish this, and what is the result?",
-  "gold": "She may vote in the negative, making the vote 20 to 20; because a tie vote is not a majority, the motion is lost.",
-  "ref": {
-   "section": "44:12",
-   "quote": "On a tie vote, a motion requiring a majority vote for adoption is lost, since a tie is not a majority."
-  }
- },
- {
-  "domain": 5,
-  "prompt": "The Lakeside Photography Guild is electing its president. Its bylaws adopt RONR and contain no special voting rule for elections. Three members run for the office. On the ballot, 100 votes are cast: Alvarez receives 42, Boone 33, and Chen 25. The tellers report that Alvarez received the largest number of votes. A member asks whether Alvarez is thereby elected. What is the answer?",
-  "gold": "No; Alvarez has only a plurality, not a majority, and a plurality does not elect absent a special rule prescribed in the bylaws, so no one is elected on this ballot.",
-  "ref": {
-   "section": "44:11",
-   "quote": "A plurality that is not a majority never chooses a proposition or elects anyone to office except by virtue of a special rule previously adopted."
-  }
- },
- {
-  "domain": 5,
-  "prompt": "At the March regular meeting of the Lakeside Rowing Club, the ballot vote on a main motion was announced as adopted, 40 to 38. Debate and other business then followed. Later in the same session, a member moves that the tellers recount the ballots because the margin was so close. What vote is required to order the recount, and is the motion timely?",
-  "gold": "Majority vote; timely — a recount may be ordered by a majority vote at the same session (or at the next regular session if held within a quarterly time interval).",
-  "ref": {
-   "section": "45:41",
-   "quote": "A recount may be ordered by the voting body, by a majority vote, at the same session at which the voting result was announced, or at the next regular session if that session is held within a quarterly time interval (see 9:7)."
-  }
- },
- {
-  "domain": 5,
-  "prompt": "The Lakeside Rowing Club's bylaws require officers to be elected by ballot, with a majority vote needed to elect. Three members are nominated for president: Ames, Bell, and Cho. On the first ballot, of 40 votes cast, Ames receives 18, Bell 16, and Cho 6 — no candidate has a majority. The chair announces that Cho, the low candidate, is dropped and that the next ballot will be limited to Ames and Bell. Is the chair's action proper, and how should the balloting proceed?",
-  "gold": "No. No candidate may be dropped; on repeated balloting the candidates remain unless one voluntarily withdraws, and balloting is simply repeated as many times as necessary until a candidate obtains a majority.",
-  "ref": {
-   "section": "46:32",
-   "quote": "When repeated balloting for an office is necessary, individuals are never removed from candidacy on the next ballot unless they voluntarily withdraw—which they are not obligated to do."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "The Fairfield Historical Society's executive board has seven members, and all seven are present at its monthly meeting. Delia Marsh moves \"That the board purchase a new display case for the lobby.\" No one seconds the motion. Bram Okafor rises to a point of order, contending that the motion is not before the board because it received no second. How should the chair rule on the point of order?",
-  "gold": "Point of order not well taken; this is a small board (not more than about a dozen members present), where motions need not be seconded; the motion is properly before the board.",
-  "ref": {
-   "section": "49:21",
-   "quote": "Motions need not be seconded."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "Between the regular monthly meetings of the Riverside Arts Guild, its president needs approval to sign a facility-rental contract. Rather than call a meeting, she telephones and emails each of the five board members individually, and every one of them tells her they approve. She signs the contract, stating that the board has authorized it. Is this a valid action of the board?",
-  "gold": "No; approval obtained separately by telephone, individual interview, or in writing—even from every member—is not the approval of the board; a board can act only in a regular or properly called meeting at which a quorum is present.",
-  "ref": {
-   "section": "49:16",
-   "quote": "The personal approval of a proposed action obtained separately by telephone, by individual interviews, or in writing, even from every member of the board, is not the approval of the board, since the members lacked the opportunity to mutually debate and decide the matter as a deliberative body."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "The Membership Committee of the Lakeside Gardeners' Club is meeting to work out a proposal on new dues categories. Discussion has run long, and Harold Pace, eager to wrap up, is recognized and says, \"I move the previous question.\" Another member seconds it. The committee chair is unsure whether to state the question or take a vote on it. Is Pace's motion for the previous question in order in the committee?",
-  "gold": "Not in order; motions to close or limit debate (Previous Question) are not allowed in committees; the chair rules the motion out of order.",
-  "ref": {
-   "section": "50:25",
-   "quote": "motions to close or limit debate ([**15**](#sec-15), [**16**](#sec-16)) are not allowed in committees."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "At the regular meeting of the Lakeside Garden Club, Wanda Perez, chairman of the Buildings and Grounds Committee, reads the committee's written report aloud. It concludes with a recommended resolution to authorize repair of the clubhouse roof. Immediately after reading, Perez says, \"By direction of the committee, I move the adoption of the resolution just read.\" No one seconds the motion, and member Tom Ross rises to a point of order that the motion is not in order because it received no second. How should the chair rule?",
-  "gold": "Point of order not well taken; no second is required because the motion to implement the recommendation is made on behalf of the committee; the chair states the question on the resolution.",
-  "ref": {
-   "section": "51:11",
-   "quote": "No second is required in these cases, since the motion is made on behalf of the board or committee"
-  }
- },
- {
-  "domain": 7,
-  "prompt": "The Statewide Teachers Association, a large convention, has voted to go into a committee of the whole to consider a lengthy resolution on curriculum standards. After considerable discussion, delegate Harold Nkemelu obtains the floor and moves that the committee rise. Delegate Priya Anand objects, insisting the motion must be debated and that she should be allowed to amend it to set a time for the committee to sit again. State whether the motion to rise requires a second, whether it is debatable, whether it is amendable, and the vote required to adopt it.",
-  "gold": "The motion to rise must be seconded, is not debatable, is not amendable, and requires a majority vote.",
-  "ref": {
-   "section": "52:9",
-   "quote": "The motion to rise must be seconded, is undebatable, cannot be amended, and requires a majority vote."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "Citizens Against the Riverside Airport hold a mass meeting. The published call states that the meeting's purpose is to oppose construction of the proposed airport at the Riverside site. While a resolution opposing the airport is pending, Dana Whitfield obtains the floor and moves a resolution \"that this meeting endorse the airport project as an economic benefit to the region.\" A point of order is raised against Whitfield's motion. As parliamentarian, how should the chair rule?",
-  "gold": "The point of order is well taken. The motion is out of order (not in order) because it is contrary to the announced purpose in the call; the provisions of the call have the force of bylaws and confine business to the stated purpose. The chair rules the motion out of order.",
-  "ref": {
-   "section": "53:17",
-   "quote": "any motion within the scope of the meeting's purpose as announced in the call is in order; but any motion outside of or contrary to that purpose is not in order."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "At a mass meeting called to organize opposition to a proposed factory, two members rise and claim the floor at the same moment. The chair recognizes Ortiz. Bell, the other member, is dissatisfied and moves to Appeal from the chair's decision assigning the floor to Ortiz. As parliamentarian, how should the chair rule on Bell's appeal?",
-  "gold": "The appeal is not in order. In a mass meeting there is no appeal from the chair's decision in assigning the floor. The chair rules the appeal out of order and Ortiz keeps the floor.",
-  "ref": {
-   "section": "53:18",
-   "quote": "In a mass meeting, however, there is no appeal from the chair's decision in assigning the floor."
-  }
- },
- {
-  "domain": 7,
-  "prompt": "The Riverside Chess Club and the Metropolitan Chess Federation are both unincorporated societies. The two boards have agreed that Riverside will combine into the Federation, with Riverside giving up its independent identity and ceasing to exist while the Federation continues. At Riverside's next meeting, a member offers a resolution that the Riverside Chess Club be merged into the Metropolitan Chess Federation. As parliamentarian, you are asked what notice and what vote are required for Riverside to adopt this resolution to merge. What do you advise?",
-  "gold": "This is a merger; adoption of the resolution to merge requires the same notice and the same vote as are required to amend the bylaws.",
-  "ref": {
-   "section": "55:3",
-   "quote": "For its adoption, such a resolution requires the same notice and vote as for amending the bylaws."
-  }
- }
 ]

@@ -17,11 +17,16 @@
         "speaker": "Chair",
         "line": "(turning to you) Before I do anything, what needs to happen with this motion?",
         "prompt": "Advise the chair: what must happen before this main motion is debated?",
-        "gold": "A main motion requires a second before it is considered. The chair should call for a second; if seconded, the chair states the question and opens it to debate. A main motion is adopted by a majority vote.",
+        "gold": "A main motion requires a second before it is considered. The chair should call for a second; if seconded, the chair states the question and opens it to debate.",
         "ref": {
           "section": "44:1",
           "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
-        }
+        },
+        "expected": [
+          [
+            "second"
+          ]
+        ]
       },
       {
         "speaker": "Member (Chen)",
@@ -29,7 +34,32 @@
       },
       {
         "speaker": "Chair",
-        "line": "It is moved and seconded that the Association spend $500 on new signage. Is there any debate?"
+        "line": "It is moved and seconded to spend $500 on new signage. Is there any debate?"
+      },
+      {
+        "speaker": "Member (Park)",
+        "line": "I move to amend by striking out '$500' and inserting '$750'.",
+        "prompt": "Advise the chair: how is this amendment handled, and what vote does it need?",
+        "gold": "The amendment needs a second and must be germane to the motion. It is debatable and is adopted by a majority vote — even though the main motion might require a different threshold, an amendment needs only a majority.",
+        "ref": {
+          "section": "5:8",
+          "quote": "A secondary motion thus takes precedence over the main motion; and a main motion takes precedence over nothing and yields to all applicable secondary motions."
+        },
+        "expected": [
+          [
+            "majority",
+            "second",
+            "germane"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Chen)",
+        "line": "Second the amendment!"
+      },
+      {
+        "speaker": "Chair",
+        "line": "The amendment carries. The motion now reads 'spend $750 on new signage.' Further debate?"
       },
       {
         "speaker": "Member (Ramos)",
@@ -39,7 +69,37 @@
         "ref": {
           "section": "16:1",
           "quote": "The Previous Question is the motion used to bring the assembly to an immediate vote on one or more pending questions; its adoption does this with certain exceptions."
-        }
+        },
+        "expected": [
+          [
+            "two-thirds",
+            "2/3",
+            "two thirds"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Chen)",
+        "line": "Second!"
+      },
+      {
+        "speaker": "Chair",
+        "line": "The previous question is adopted by more than two-thirds; debate is closed. (to you) What vote is now needed to adopt the main motion itself?",
+        "prompt": "Advise the chair: what vote adopts this main motion?",
+        "gold": "A main motion is adopted by a majority vote unless a special rule or the bylaws require more. Here a majority of the votes cast decides it.",
+        "ref": {
+          "section": "44:1",
+          "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
+        },
+        "expected": [
+          [
+            "majority"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "The motion is adopted. Thank you, parliamentarian."
       }
     ]
   },
@@ -57,11 +117,16 @@
         "ref": {
           "section": "40:1",
           "quote": "A quorum in an assembly is the number of members … who must be present in order that business can be validly transacted."
-        }
+        },
+        "expected": [
+          [
+            "quorum"
+          ]
+        ]
       },
       {
         "speaker": "Chair",
-        "line": "Thank you. We do have a quorum. Proceed."
+        "line": "Thank you. Members have arrived and we now have a quorum. Proceed."
       },
       {
         "speaker": "Member (Ito)",
@@ -71,7 +136,36 @@
         "ref": {
           "section": "23:1",
           "quote": "When a member thinks that the rules of the assembly are being violated, he can make a Point of Order (or \"raise a question of order,\" as it is sometimes expressed), thereby calling upon the chair for a ruling and an enforcement of the regular rules."
-        }
+        },
+        "expected": [
+          [
+            "rule",
+            "rules",
+            "ruling",
+            "decide",
+            "decides"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(quietly, to you) I'm inclined to rule the point well taken — but should I make this ruling, or should you as the parliamentarian?",
+        "prompt": "Advise: who rules on the point — you or the chair?",
+        "gold": "The chair rules, not the parliamentarian. The parliamentarian only advises the chair (usually privately); the chair then states the ruling to the assembly.",
+        "ref": {
+          "section": "47:46",
+          "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
+        },
+        "expected": [
+          [
+            "chair",
+            "advis"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "Understood. I rule the point well taken."
       }
     ]
   },
@@ -83,17 +177,93 @@
     "turns": [
       {
         "speaker": "Teller",
-        "line": "The results are: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes."
+        "line": "First ballot: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes."
       },
       {
         "speaker": "Chair",
         "line": "(to you) Alvarez has a plurality. Can I declare Alvarez elected?",
         "prompt": "Advise the chair: is a plurality enough to elect here?",
-        "gold": "No. Unless the bylaws provide otherwise, election requires a majority — more than half of the votes cast. A plurality does not elect; balloting continues until a candidate has a majority.",
+        "gold": "No. Unless the bylaws provide otherwise, election requires a majority — more than half of the votes cast. A plurality does not elect.",
         "ref": {
           "section": "44:11",
           "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
-        }
+        },
+        "expected": [
+          [
+            "majority"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "We balloted again: Alvarez 48, Brooks 42, Cho 5 — still no one over half. (to you) What do we do now?",
+        "prompt": "Advise the chair: what happens when no candidate has a majority?",
+        "gold": "Balloting is simply repeated until one candidate receives a majority. Candidates are not dropped unless the bylaws so provide, and members may change their votes on each ballot.",
+        "ref": {
+          "section": "44:11",
+          "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
+        },
+        "expected": [
+          [
+            "majority",
+            "repeat",
+            "again",
+            "another"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "Third ballot: Alvarez has 51 of 95 votes — a majority. Alvarez is elected."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "domain": 7,
+    "title": "A dues increase at the Historical Society",
+    "setting": "You are the parliamentarian at the Historical Society. A bylaw amendment to raise annual dues from $50 to $75 was submitted in writing at last month's regular meeting, and is now up for consideration.",
+    "turns": [
+      {
+        "speaker": "Chair",
+        "line": "Next: the bylaw amendment to raise dues from $50 to $75, noticed last month."
+      },
+      {
+        "speaker": "Member (Vance)",
+        "line": "Let's just pass it with a simple majority and move on.",
+        "prompt": "Advise the chair: what vote does adopting this bylaw amendment require?",
+        "gold": "Amending the bylaws takes a two-thirds vote, and it is in order now only because previous notice was given at the last regular meeting. A simple majority is not sufficient.",
+        "ref": {
+          "section": "56:67",
+          "quote": "These bylaws may be amended at any regular meeting of the Society by a two-thirds vote, provided that the amendment has been submitted in writing at the previous regular meeting."
+        },
+        "expected": [
+          [
+            "two-thirds",
+            "2/3",
+            "two thirds"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Ruiz)",
+        "line": "I move to amend the amendment — make the new dues $150 instead of $75.",
+        "prompt": "Advise the chair: is amending the figure up to $150 in order?",
+        "gold": "No. An amendment to a bylaw amendment cannot exceed the scope of the notice. Members were noticed of an increase to $75, so a higher figure like $150 is out of order; a figure between the current $50 and the noticed $75 would be in order.",
+        "ref": {
+          "section": "57:11",
+          "quote": "If the bylaws require previous notice for their amendment … no amendment to a bylaw amendment is in order that increases the modification of the article or provision to be amended."
+        },
+        "expected": [
+          [
+            "scope",
+            "notice"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "The amendment to $150 is out of order — it exceeds the scope of the notice. We'll vote on the $75 amendment as noticed."
       }
     ]
   }

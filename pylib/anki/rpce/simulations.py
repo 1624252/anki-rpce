@@ -82,7 +82,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 prompt="Advise the chair: what must happen before this main motion is debated?",
                 gold="A main motion requires a second before it is considered. The chair "
                 "should call for a second; if seconded, the chair states the question and "
-                "opens it to debate. A main motion is adopted by a majority vote.",
+                "opens it to debate.",
                 ref=refs.MAJORITY,
                 rubric=RUBRIC_MAIN_MOTION,
                 expected=(("second",),),
@@ -90,8 +90,23 @@ SIMULATIONS: tuple[Simulation, ...] = (
             SimTurn("Member (Chen)", "Second!"),
             SimTurn(
                 "Chair",
-                "It is moved and seconded that the Association spend $500 on new signage. "
-                "Is there any debate?",
+                "It is moved and seconded to spend $500 on new signage. Is there any debate?",
+            ),
+            SimTurn(
+                "Member (Park)",
+                "I move to amend by striking out '$500' and inserting '$750'.",
+                prompt="Advise the chair: how is this amendment handled, and what vote does it need?",
+                gold="The amendment needs a second and must be germane to the motion. It is "
+                "debatable and is adopted by a majority vote — even though the main motion "
+                "might require a different threshold, an amendment needs only a majority.",
+                ref=refs.PRECEDENCE,
+                expected=(("majority", "second", "germane"),),
+            ),
+            SimTurn("Member (Chen)", "Second the amendment!"),
+            SimTurn(
+                "Chair",
+                "The amendment carries. The motion now reads 'spend $750 on new signage.' "
+                "Further debate?",
             ),
             SimTurn(
                 "Member (Ramos)",
@@ -104,6 +119,18 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 rubric=RUBRIC_PREVIOUS_QUESTION,
                 expected=(("two-thirds", "2/3", "two thirds"),),
             ),
+            SimTurn("Member (Chen)", "Second!"),
+            SimTurn(
+                "Chair",
+                "The previous question is adopted by more than two-thirds; debate is closed. "
+                "(to you) What vote is now needed to adopt the main motion itself?",
+                prompt="Advise the chair: what vote adopts this main motion?",
+                gold="A main motion is adopted by a majority vote unless a special rule or the "
+                "bylaws require more. Here a majority of the votes cast decides it.",
+                ref=refs.MAJORITY,
+                expected=(("majority",),),
+            ),
+            SimTurn("Chair", "The motion is adopted. Thank you, parliamentarian."),
         ),
     ),
     Simulation(
@@ -126,7 +153,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
             ),
             SimTurn(
                 "Chair",
-                "Thank you. We do have a quorum. Proceed.",
+                "Thank you. Members have arrived and we now have a quorum. Proceed.",
             ),
             SimTurn(
                 "Member (Ito)",
@@ -139,6 +166,18 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 rubric=RUBRIC_POINT_OF_ORDER,
                 expected=(("rule", "rules", "ruling", "decide", "decides"),),
             ),
+            SimTurn(
+                "Chair",
+                "(quietly, to you) I'm inclined to rule the point well taken — but should I "
+                "make this ruling, or should you as the parliamentarian?",
+                prompt="Advise: who rules on the point — you or the chair?",
+                gold="The chair rules, not the parliamentarian. The parliamentarian only "
+                "advises the chair (usually privately); the chair then states the ruling to "
+                "the assembly.",
+                ref=refs.PARLIAMENTARIAN,
+                expected=(("chair", "advis"),),
+            ),
+            SimTurn("Chair", "Understood. I rule the point well taken."),
         ),
     ),
     Simulation(
@@ -150,18 +189,72 @@ SIMULATIONS: tuple[Simulation, ...] = (
         (
             SimTurn(
                 "Teller",
-                "The results are: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes.",
+                "First ballot: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes.",
             ),
             SimTurn(
                 "Chair",
                 "(to you) Alvarez has a plurality. Can I declare Alvarez elected?",
                 prompt="Advise the chair: is a plurality enough to elect here?",
                 gold="No. Unless the bylaws provide otherwise, election requires a majority — "
-                "more than half of the votes cast. A plurality does not elect; balloting "
-                "continues until a candidate has a majority.",
+                "more than half of the votes cast. A plurality does not elect.",
                 ref=refs.PLURALITY,
                 rubric=RUBRIC_PLURALITY,
                 expected=(("majority",),),
+            ),
+            SimTurn(
+                "Chair",
+                "We balloted again: Alvarez 48, Brooks 42, Cho 5 — still no one over half. "
+                "(to you) What do we do now?",
+                prompt="Advise the chair: what happens when no candidate has a majority?",
+                gold="Balloting is simply repeated until one candidate receives a majority. "
+                "Candidates are not dropped unless the bylaws so provide, and members may "
+                "change their votes on each ballot.",
+                ref=refs.PLURALITY,
+                expected=(("majority", "repeat", "again", "another"),),
+            ),
+            SimTurn(
+                "Chair",
+                "Third ballot: Alvarez has 51 of 95 votes — a majority. Alvarez is elected.",
+            ),
+        ),
+    ),
+    Simulation(
+        4,
+        7,
+        "A dues increase at the Historical Society",
+        "You are the parliamentarian at the Historical Society. A bylaw amendment to "
+        "raise annual dues from $50 to $75 was submitted in writing at last month's "
+        "regular meeting, and is now up for consideration.",
+        (
+            SimTurn(
+                "Chair",
+                "Next: the bylaw amendment to raise dues from $50 to $75, noticed last month.",
+            ),
+            SimTurn(
+                "Member (Vance)",
+                "Let's just pass it with a simple majority and move on.",
+                prompt="Advise the chair: what vote does adopting this bylaw amendment require?",
+                gold="Amending the bylaws takes a two-thirds vote, and it is in order now only "
+                "because previous notice was given at the last regular meeting. A simple "
+                "majority is not sufficient.",
+                ref=refs.BYLAWS_AMENDMENT,
+                expected=(("two-thirds", "2/3", "two thirds"),),
+            ),
+            SimTurn(
+                "Member (Ruiz)",
+                "I move to amend the amendment — make the new dues $150 instead of $75.",
+                prompt="Advise the chair: is amending the figure up to $150 in order?",
+                gold="No. An amendment to a bylaw amendment cannot exceed the scope of the "
+                "notice. Members were noticed of an increase to $75, so a higher figure like "
+                "$150 is out of order; a figure between the current $50 and the noticed $75 "
+                "would be in order.",
+                ref=refs.SCOPE_OF_NOTICE,
+                expected=(("scope", "notice"),),
+            ),
+            SimTurn(
+                "Chair",
+                "The amendment to $150 is out of order — it exceeds the scope of the notice. "
+                "We'll vote on the $75 amendment as noticed.",
             ),
         ),
     ),
