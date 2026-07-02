@@ -551,19 +551,41 @@ class PlaceholderExaminer(Examiner):
         )
 
 
-def build_grading_prompt(answer: str, gold_answer: str, context: str) -> str:
-    """Construct the examiner prompt: grade for accuracy against the rubric,
-    grounded in the supplied RONR context; the candidate need not cite."""
+def build_grading_prompt(
+    answer: str, gold_answer: str, context: str, keywords: str = ""
+) -> str:
+    """Construct the examiner prompt: grade for accuracy against the model ruling,
+    grounded in the exact RONR quote and the specific key points to look for (so
+    the grader is precise, not vague); the candidate need not cite."""
+    kw = (
+        f"Key points the answer must address (grade against THESE):\n{keywords}\n\n"
+        if keywords else ""
+    )
     return (
         "You are a strict RPCE Section II examiner. Grade the candidate's answer "
         "for ACCURACY and reasoning against the model ruling, using only the RONR "
-        "context provided. The candidate is NOT required to cite sources. Do not "
-        "introduce facts absent from the context. Respond as JSON: "
+        "quote and key points provided. Award credit only for key points the "
+        "candidate actually got right; deduct for a wrong one (a confidently "
+        "wrong threshold or motion fails). The candidate is NOT required to cite "
+        "sources. Do not introduce facts absent from the quote. Respond as JSON: "
         '{"score": <0-5 number>, "feedback": "<one or two sentences>"}.\n\n'
-        f"RONR context:\n{context}\n\n"
+        f"RONR quote:\n{context}\n\n"
+        f"{kw}"
         f"Model ruling:\n{gold_answer}\n\n"
         f"Candidate answer:\n{answer}\n"
     )
+
+
+def _rubric_keywords(rubric: "Rubric | None") -> str:
+    """The rubric's key points as a checklist for the grader: each element's
+    expected value (or its canonical accepted phrase), marked required/bonus."""
+    if not rubric or not getattr(rubric, "elements", None):
+        return ""
+    lines = []
+    for el in rubric.elements:
+        want = el.expects or (el.accepted[0] if el.accepted else el.name)
+        lines.append(f"- {el.name}: {want}{' (required)' if el.essential else ''}")
+    return "\n".join(lines)
 
 
 def _parse_llm_json(raw: str) -> dict:
@@ -656,21 +678,27 @@ class AutoExaminer(Examiner):
         from . import ai
 
         if answer.strip() and ai.ai_configured() and ai.ai_enabled():
-            res = self._grade_ai(answer, gold_answer, corpus)
+            res = self._grade_ai(answer, gold_answer, corpus, rubric)
             if res is not None:
                 self.used = "ai"
                 return res
         self.used = "offline"
         return self._offline.grade(answer, gold_answer, corpus, rubric)
 
-    def _grade_ai(self, answer: str, gold_answer: str, corpus: str):
+    def _grade_ai(self, answer: str, gold_answer: str, corpus: str, rubric=None):
         from . import ai
 
         passages = retrieve(corpus, gold_answer, k=3)
         if not passages:  # no traceable source -> let the offline grader handle it
             return None
         context = "\n\n".join(p.text for p in passages)
-        data = ai.chat_json(_EXAMINER_SYSTEM, build_grading_prompt(answer, gold_answer, context))
+        # Feed the exact key points to check for (from the scenario rubric), so
+        # the grader is precise instead of vague.
+        keywords = _rubric_keywords(rubric)
+        data = ai.chat_json(
+            _EXAMINER_SYSTEM,
+            build_grading_prompt(answer, gold_answer, context, keywords),
+        )
         if not data:  # offline / rate-limited / timeout / bad output
             return None
         try:

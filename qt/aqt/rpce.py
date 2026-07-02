@@ -546,10 +546,9 @@ def _section2_html(col) -> str:
     d = domain_by_code(s.domain_code)
     return f"""{_theme_style()}{_S2_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <div style="text-align:left;margin-bottom:8px">
     <a href="#" onclick="pycmd('rpce:home');return false;"
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
-    {_ai_toggle_html()}
   </div>
   <div class="rpce-h1">Section II <small>performance scenario</small></div>
   <div class="rpce-sub">Domain {d.code}: {d.name} · scenario {i + 1} of {total}</div>
@@ -619,16 +618,15 @@ def _s2_grade(answer_b64: str) -> None:
     gold = s.gold_answer
 
     def op():
-        # Runs OFF the UI thread. Online AI examiner when a key is set + reachable;
-        # otherwise the offline grader (AutoExaminer handles the fallback).
-        ex = examiner.make_examiner()
-        result = ex.grade(answer, gold, corpus, rubric)
-        return result, getattr(ex, "used", "offline")
+        # Section II uses the deterministic offline keyword/rubric grader only —
+        # no AI here (AI is reserved for AI-generated Simulate scenarios).
+        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
+        return result, "offline"
 
     def on_done(future) -> None:
         # Runs back on the main thread.
         try:
-            result, used = future.result()
+            result, _used = future.result()
         except Exception as exc:
             _s2_inject(
                 "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
@@ -650,7 +648,6 @@ def _s2_grade(answer_b64: str) -> None:
             f"Score: {result.score:.1f}/5 "
             f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span></div>"
             f"<div style='margin-top:8px;color:var(--ink)'>{result.feedback}</div>"
-            + _examiner_badge(used)
             + f"<div style='margin-top:10px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
             + _ref_block(s.ref.section, s.ref.quote)
             + "</div>"
