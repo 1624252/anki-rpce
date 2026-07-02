@@ -3,17 +3,17 @@ requires-python = ">=3.10"
 
 # This project was generated with 0.3.26 using template: https://github.com/beeware/briefcase-template @ v0.3.26
 [tool.briefcase]
-project_name = "Anki"
-bundle = "net.ankiweb"
-url = "https://apps.ankiweb.net"
+project_name = "Speedrun for the RPCE"
+bundle = "com.rpce"
+url = "https://github.com/1624252/anki-rpce"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
-author = "Damien Elmes"
+author = "Speedrun for the RPCE"
 
 [tool.briefcase.app.anki]
-formal_name = "Anki"
-description = "An intelligent spaced-repetition learning system"
-long_description = """Anki is a flashcard program that helps you spend more time on challenging material, and less on what you already know."""
+formal_name = "Speedrun for the RPCE"
+description = "A spaced-repetition study app tailored for the RPCE."
+long_description = """Speedrun for the RPCE is a focused, offline-ready study app built on Anki's spaced-repetition engine and geared toward RPCE preparation. It keeps you drilling the material you find hardest while spending less time on what you already know."""
 sources = [
   "src/anki",
 ]

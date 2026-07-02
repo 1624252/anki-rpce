@@ -71,13 +71,14 @@ def get_briefcase_sources_path(out_dir: Path) -> Path:
     if sys.platform == "win32":
         path = out_dir / "build" / "anki" / "windows" / "app" / "src"
     elif sys.platform == "darwin":
+        # The .app bundle name must match `formal_name` in app/pyproject.toml.
         path = (
             out_dir
             / "build"
             / "anki"
             / "macos"
             / "app"
-            / "Anki.app"
+            / "Speedrun for the RPCE.app"
             / "Contents"
             / "Resources"
         )

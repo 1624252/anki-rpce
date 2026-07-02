@@ -1,0 +1,75 @@
+# Build "Speedrun for the RPCE" desktop installers for Windows, macOS and Linux.
+#
+# NOTE: This workflow is likely to need iteration. The installer build
+# (Briefcase + our build system) downloads most of its own dependencies at
+# build time, so the OS-level prerequisites below are intentionally minimal.
+# Adjust the "Install OS prerequisites" steps if a platform build fails.
+#
+# Triggers:
+#   - push of a tag matching v*   (produces release artifacts for that tag)
+#   - manual workflow_dispatch    (for testing; upload step is skipped without a tag)
+
+name: RPCE Installers
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# Needed so softprops/action-gh-release can create/update the GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build installer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Keep building the other OSes even if one fails.
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Installer templates live in git submodules under qt/installer.
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Linux needs a few system libraries for the Qt/WebEngine build; the rest
+      # of the toolchain is downloaded by our build system. Windows and macoS
+      # runners already ship what we need.
+      - name: Install OS prerequisites (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential libglib2.0-0
+
+      - name: Build installer (Windows)
+        if: runner.os == 'Windows'
+        run: tools\build-installer.bat
+
+      - name: Build installer (macOS / Linux)
+        if: runner.os != 'Windows'
+        run: ./tools/build-installer
+
+      # Publish the produced installer(s) to the release for the pushed tag.
+      # Skipped for workflow_dispatch runs (no tag => nothing to attach).
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/installer/dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
