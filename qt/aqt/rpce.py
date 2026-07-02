@@ -1108,14 +1108,20 @@ def _sim_respond(answer_b64: str) -> None:
         f"<p style='margin:10px 0'><b>You (parliamentarian):</b> {answer}</p>"
     )
 
+    expected = getattr(pending, "expected", ()) or ()
+    ref = getattr(pending, "ref", None)
+    step_cite = ref.section if ref else None
+
     def op():
         # Runs OFF the UI thread.
         if is_ai:
             ex = examiner.make_examiner()
             result = ex.grade(answer, gold, corpus, rubric)
             return result, getattr(ex, "used", "offline")
-        # Scripted scenario: deterministic offline grader, no AI, no badge.
-        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
+        # Scripted simulation: short, step-by-step. Grade leniently against this
+        # step's key concept(s) so a brief correct reply ("wait for a second")
+        # is full credit — NOT the stricter Section II performance grader.
+        result = examiner.grade_sim_step(answer, expected, step_cite)
         return result, None
 
     def on_done(future) -> None:
@@ -2000,6 +2006,9 @@ def _set_session_length() -> None:
     if ok:
         mw.col.set_config("rpce:session_limit", int(n))
         tooltip(f"Review sessions are now {n} questions.")
+        # Re-render the dashboard so the ⚙️ pill shows the new length immediately.
+        if mw.state == "deckBrowser":
+            mw.moveToState("deckBrowser")
 
 
 def _set_ai_key() -> None:

@@ -102,7 +102,9 @@ _PHRASES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\btwo[\s-]thirds\b"), " twothirds "),
     (re.compile(r"\bno second\b|\bwithout a second\b|\bno seconder\b"), " nosecond "),
     (
-        re.compile(r"\bnot debatable\b|\bno debate\b|\bundebatable\b|\bcannot be debated\b"),
+        re.compile(
+            r"\bnot debatable\b|\bno debate\b|\bundebatable\b|\bcannot be debated\b"
+        ),
         " nodebate ",
     ),
     (re.compile(r"\bno vote\b|\bwithout a vote\b"), " novote "),
@@ -121,7 +123,9 @@ def _tokens(text: str) -> set[str]:
     """Content keywords: length ≥ 3, not stopwords, with RONR phrases collapsed
     to positive keyword tokens (``twothirds``/``nodebate``/``nosecond``)."""
     return {
-        w for w in _WORD_RE.findall(_normalize(text)) if len(w) >= 3 and w not in _STOPWORDS
+        w
+        for w in _WORD_RE.findall(_normalize(text))
+        if len(w) >= 3 and w not in _STOPWORDS
     }
 
 
@@ -139,17 +143,31 @@ def _tokens(text: str) -> set[str]:
 _ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
     # vote thresholds
     (re.compile(r"\b2\s*/\s*3\b|⅔"), " twothirds "),  # 2/3, ⅔
-    (re.compile(r"\bmore than half\b|\bover half\b|\bgreater than half\b"), " majority "),
+    (
+        re.compile(r"\bmore than half\b|\bover half\b|\bgreater than half\b"),
+        " majority ",
+    ),
     (re.compile(r"\bsimple majority\b|\bmajority\b"), " majority "),
     # motions / incidental questions
-    (re.compile(r"\bprevious question\b|\bclose debate\b|\bmotion to close debate\b"),
-     " previousquestion "),
-    (re.compile(r"\bpoint of order\b|\braise a point\b|\bquestion of order\b"),
-     " pointoforder "),
+    (
+        re.compile(
+            r"\bprevious question\b|\bclose debate\b|\bmotion to close debate\b"
+        ),
+        " previousquestion ",
+    ),
+    (
+        re.compile(r"\bpoint of order\b|\braise a point\b|\bquestion of order\b"),
+        " pointoforder ",
+    ),
     (re.compile(r"\bmain motion\b"), " mainmotion "),
     # actions: adopt / pass / carry / approve all mean "adopt"
-    (re.compile(r"\badopt(?:ed|s)?\b|\bpass(?:ed|es)?\b|\bcarr(?:y|ied|ies)\b|"
-                r"\bapprov(?:e|ed|es)\b"), " adopt "),
+    (
+        re.compile(
+            r"\badopt(?:ed|s)?\b|\bpass(?:ed|es)?\b|\bcarr(?:y|ied|ies)\b|"
+            r"\bapprov(?:e|ed|es)\b"
+        ),
+        " adopt ",
+    ),
     # a second (positive); "no second" already collapsed to nosecond by _PHRASES
     (re.compile(r"\bseconded\b|\bsecond(?:er|s)?\b"), " second "),
     # positive debatability; "not debatable"/"no debate" already -> nodebate
@@ -161,9 +179,26 @@ _ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
 # Suffixes stripped by the light stemmer, longest first. Only strip when the
 # stem stays >= 3 chars, so short words are left alone.
 _SUFFIXES: tuple[str, ...] = (
-    "ization", "izations", "ational", "ations", "ation", "ments", "ment",
-    "ings", "ing", "edly", "able", "ible", "ally", "ness", "ies", "ied",
-    "ed", "es", "ly", "s",
+    "ization",
+    "izations",
+    "ational",
+    "ations",
+    "ation",
+    "ments",
+    "ment",
+    "ings",
+    "ing",
+    "edly",
+    "able",
+    "ible",
+    "ally",
+    "ness",
+    "ies",
+    "ied",
+    "ed",
+    "es",
+    "ly",
+    "s",
 )
 
 
@@ -172,9 +207,23 @@ _SUFFIXES: tuple[str, ...] = (
 # and "debatable" must not collapse to "debat" — those literals anchor rubrics).
 _PROTECTED: frozenset[str] = frozenset(
     {
-        "twothirds", "nosecond", "nodebate", "novote", "majority", "second",
-        "debatable", "previousquestion", "pointoforder", "mainmotion", "adopt",
-        "quorum", "plurality", "appeal", "adjourn", "amend", "notice",
+        "twothirds",
+        "nosecond",
+        "nodebate",
+        "novote",
+        "majority",
+        "second",
+        "debatable",
+        "previousquestion",
+        "pointoforder",
+        "mainmotion",
+        "adopt",
+        "quorum",
+        "plurality",
+        "appeal",
+        "adjourn",
+        "amend",
+        "notice",
     }
 )
 
@@ -273,41 +322,65 @@ def derive_rubric(gold_answer: str) -> Rubric | None:
     for token, name, display in _MOTION_TOKENS:
         if token in seq:
             els.append(
-                RubricElement(name, (token,), weight=2.0, essential=True, expects=display)
+                RubricElement(
+                    name, (token,), weight=2.0, essential=True, expects=display
+                )
             )
             break
 
     if "twothirds" in seq:
         els.append(
-            RubricElement("the vote threshold", ("twothirds",), weight=2.0,
-                          essential=True, forbidden=("majority",), expects="two-thirds")
+            RubricElement(
+                "the vote threshold",
+                ("twothirds",),
+                weight=2.0,
+                essential=True,
+                forbidden=("majority",),
+                expects="two-thirds",
+            )
         )
     elif "majority" in seq:
         els.append(
-            RubricElement("the vote threshold", ("majority",), weight=2.0,
-                          essential=True, forbidden=("twothirds",), expects="a majority")
+            RubricElement(
+                "the vote threshold",
+                ("majority",),
+                weight=2.0,
+                essential=True,
+                forbidden=("twothirds",),
+                expects="a majority",
+            )
         )
 
     if "nosecond" in seq:
         els.append(
-            RubricElement("the second", ("nosecond",), forbidden=("second",),
-                          expects="no second")
+            RubricElement(
+                "the second", ("nosecond",), forbidden=("second",), expects="no second"
+            )
         )
     elif "second" in seq:
         els.append(
-            RubricElement("the second", ("second",), forbidden=("nosecond",),
-                          expects="a second")
+            RubricElement(
+                "the second", ("second",), forbidden=("nosecond",), expects="a second"
+            )
         )
 
     if "nodebate" in seq:
         els.append(
-            RubricElement("debatability", ("nodebate",), forbidden=("debatable",),
-                          expects="not debatable")
+            RubricElement(
+                "debatability",
+                ("nodebate",),
+                forbidden=("debatable",),
+                expects="not debatable",
+            )
         )
     elif "debatable" in seq:
         els.append(
-            RubricElement("debatability", ("debatable",), forbidden=("nodebate",),
-                          expects="debatable")
+            RubricElement(
+                "debatability",
+                ("debatable",),
+                forbidden=("nodebate",),
+                expects="debatable",
+            )
         )
 
     return Rubric(tuple(els)) if els else None
@@ -355,6 +428,42 @@ class GradeResult:
     feedback: str
     citation: str | None  # RONR citation supplied by the examiner (not the candidate)
     abstained: bool
+
+
+def grade_sim_step(
+    answer: str, expected: tuple[tuple[str, ...], ...], citation: str | None = None
+) -> GradeResult:
+    """Lenient grader for a SIMULATION step (short, step-by-step answers) — NOT
+    the longer Section II performance answers.
+
+    ``expected`` is a list of concept groups; each group is a tuple of accepted
+    synonyms. The candidate hits a concept if their answer contains ANY synonym
+    in the group. A step passes when every concept is hit — so a brief correct
+    reply ("wait for a second") is full credit. Feedback names the concepts the
+    candidate got and the ones still missing (the first synonym labels each)."""
+    text = answer.lower()
+    if not expected:  # no rubric for this step → accept a non-empty reply
+        return GradeResult(5.0, True, "Noted — the meeting continues.", citation, False)
+    got, missing = [], []
+    for group in expected:
+        label = group[0]
+        if any(syn.lower() in text for syn in group):
+            got.append(label)
+        else:
+            missing.append(label)
+    score = round(5.0 * len(got) / len(expected), 1)
+    passed = not missing  # every key concept covered
+    parts = []
+    if got:
+        parts.append("✓ You covered: " + ", ".join(f"<b>{g}</b>" for g in got) + ".")
+    if missing:
+        parts.append(
+            "<span style='color:#be123c'>Still needed: "
+            + ", ".join(f"<b>{m}</b>" for m in missing)
+            + ".</span>"
+        )
+    feedback = " ".join(parts) if parts else "Respond to advise the chair."
+    return GradeResult(score, passed, feedback, citation, False)
 
 
 class Examiner:
@@ -493,7 +602,10 @@ class KeywordExaminer(Examiner):
         passed = score >= self.pass_score
         verdict = "matches" if passed else "misses key points from"
         return GradeResult(
-            score, passed, f"Your answer {verdict} the model ruling.", citation,
+            score,
+            passed,
+            f"Your answer {verdict} the model ruling.",
+            citation,
             abstained=False,
         )
 
@@ -512,7 +624,9 @@ class KeywordExaminer(Examiner):
         if missing:
             # Name the point the answer didn't address, with the expected value
             # where we have one, so the candidate knows exactly what to add.
-            disp = [f"{el.name} ({el.expects})" if el.expects else el.name for el in missing]
+            disp = [
+                f"{el.name} ({el.expects})" if el.expects else el.name for el in missing
+            ]
             parts.append("Didn't address: " + ", ".join(disp) + ".")
         if not parts:
             parts.append("No relevant points identified.")
@@ -559,7 +673,8 @@ def build_grading_prompt(
     the grader is precise, not vague); the candidate need not cite."""
     kw = (
         f"Key points the answer must address (grade against THESE):\n{keywords}\n\n"
-        if keywords else ""
+        if keywords
+        else ""
     )
     return (
         "You are a strict RPCE Section II examiner. Grade the candidate's answer "
@@ -707,7 +822,10 @@ class AutoExaminer(Examiner):
             return None
         feedback = str(data.get("feedback", "")).strip() or "(no feedback)"
         return GradeResult(
-            score, score >= self.pass_score, feedback, passages[0].citation,
+            score,
+            score >= self.pass_score,
+            feedback,
+            passages[0].citation,
             abstained=False,
         )
 

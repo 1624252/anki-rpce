@@ -44,6 +44,10 @@ class SimTurn:
     #: Per-element grading rubric for this decision point (shared with the
     #: matching Section II scenario); ``None`` -> derived from ``gold``.
     rubric: Rubric | None = None
+    #: Simulation is SHORT / step-by-step: the key concept(s) this step tests, as
+    #: groups of accepted synonyms. Graded leniently by ``grade_sim_step`` — a
+    #: brief correct reply gets full credit. ``()`` -> any non-empty reply passes.
+    expected: tuple[tuple[str, ...], ...] = ()
 
     @property
     def needs_response(self) -> bool:
@@ -81,6 +85,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "opens it to debate. A main motion is adopted by a majority vote.",
                 ref=refs.MAJORITY,
                 rubric=RUBRIC_MAIN_MOTION,
+                expected=(("second",),),
             ),
             SimTurn("Member (Chen)", "Second!"),
             SimTurn(
@@ -97,6 +102,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "assembly votes on the pending motion.",
                 ref=refs.PREVIOUS_QUESTION,
                 rubric=RUBRIC_PREVIOUS_QUESTION,
+                expected=(("two-thirds", "2/3", "two thirds"),),
             ),
         ),
     ),
@@ -116,6 +122,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "assembly takes any substantive action.",
                 ref=refs.QUORUM,
                 rubric=RUBRIC_QUORUM,
+                expected=(("quorum",),),
             ),
             SimTurn(
                 "Chair",
@@ -130,6 +137,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "challenged by an Appeal.",
                 ref=refs.POINT_OF_ORDER,
                 rubric=RUBRIC_POINT_OF_ORDER,
+                expected=(("rule", "rules", "ruling", "decide", "decides"),),
             ),
         ),
     ),
@@ -153,6 +161,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "continues until a candidate has a majority.",
                 ref=refs.PLURALITY,
                 rubric=RUBRIC_PLURALITY,
+                expected=(("majority",),),
             ),
         ),
     ),
