@@ -1739,13 +1739,26 @@ def _on_answer_card(reviewer, card, ease) -> None:
             mw.col._backend.bury_concept_siblings(card_id=card.id)
     except Exception as exc:  # never break reviewing over concept burying
         print(f"RPCE concept-bury error: {exc}")
+    # Tally this answer for the completion-page breakdown (rating + format).
+    global _session_done, _session_stats
+    if _session_stats is None:
+        _session_stats = _new_session_stats()
+    _session_stats["total"] += 1
+    bucket = _RATING_BUCKET.get(ease)
+    if bucket:
+        _session_stats["ratings"][bucket] += 1
+    kind = _rpce_card_kind(card)
+    _session_stats["by_type"][kind] = _session_stats["by_type"].get(kind, 0) + 1
     # Cap the session at the configured length, then return home for a new one.
-    global _session_done
     _session_done += 1
     if _session_done >= _session_limit():
         from aqt.qt import QTimer
 
-        QTimer.singleShot(500, _end_session)
+        global _last_session_stats
+        _last_session_stats = _session_stats  # freeze for the completion page
+        # No artificial delay — the user has already seen + rated this card, so
+        # jump straight to the completion page on the next event-loop tick.
+        QTimer.singleShot(0, _end_session)
 
 
 def _is_rpce_card(card) -> bool:
@@ -1817,6 +1830,54 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
 #: user starts a new session from the home screen afterward.
 _DEFAULT_SESSION_LIMIT = 20
 _session_done = 0  # cards answered in the current session
+#: Live tally for the current session; frozen into ``_last_session_stats`` at the
+#: cap so the completion page can show a breakdown after the counter resets.
+_session_stats: dict | None = None
+_last_session_stats: dict | None = None
+
+#: Rating (ease) → bucket for the completion-page breakdown.
+_RATING_BUCKET = {1: "again", 2: "hard", 3: "good", 4: "easy"}
+#: Payload ``kind`` → human label for the per-type breakdown.
+_KIND_LABEL = {
+    "cloze": "Cloze",
+    "mcq": "Multiple choice",
+    "multi": "Select-all",
+    "order": "Ordering",
+}
+
+
+def _new_session_stats() -> dict:
+    return {
+        "total": 0,
+        "ratings": {"again": 0, "hard": 0, "good": 0, "easy": 0},
+        "by_type": {},
+    }
+
+
+def _rpce_card_kind(card) -> str:
+    """The question format of an RPCE card ('Cloze'/'Multiple choice'/…), read
+    from its payload JSON; 'Question' if it can't be determined."""
+    import json
+
+    try:
+        note = card.note()
+        for f in (
+            "Payload",
+            "ClozePayload",
+            "McqPayload",
+            "SecondPayload",
+            "DebatablePayload",
+        ):
+            try:
+                raw = note[f]
+            except Exception:
+                continue
+            if raw:
+                kind = json.loads(raw).get("kind", "")
+                return _KIND_LABEL.get(kind, "Question")
+    except Exception:
+        pass
+    return "Question"
 
 
 def _session_limit() -> int:
@@ -1932,18 +1993,65 @@ def _session_progress_html() -> str:
     )
 
 
+def _stat_pill(value: str, label: str, color: str) -> str:
+    """One big-number stat tile for the completion page."""
+    return (
+        "<div style='flex:1;min-width:96px;background:var(--surface2);"
+        "border:1px solid var(--border);border-radius:16px;padding:14px 10px;text-align:center'>"
+        f"<div style='font-size:30px;font-weight:900;color:{color};line-height:1'>{value}</div>"
+        f"<div style='margin-top:6px;font-size:13px;font-weight:700;color:var(--ink2)'>{label}</div>"
+        "</div>"
+    )
+
+
 def _session_done_html(col) -> str:
     """The end-of-session completion page, rendered in-window through the
-    deck-browser content hook (the same mechanism as the Section II / Simulate
-    pages, switched by ``_RPCE_VIEW``): a checkmark heading, the count reviewed,
-    a prominent 'Start new session' button, and a link back to the dashboard."""
-    limit = _session_limit()
+    deck-browser content hook (switched by ``_RPCE_VIEW``): a heading, a
+    statistics panel for the session just finished (how many recalled well vs.
+    missed, and a breakdown by question type), a prominent 'Start new session'
+    button, and a link back to the dashboard."""
+    st = _last_session_stats or _new_session_stats()
+    total = st["total"] or _session_limit()
+    r = st["ratings"]
+    recalled = r["good"] + r["easy"]  # rated Good/Easy = confident recall
+    struggled = r["hard"]
+    missed = r["again"]
+    acc = round(100 * recalled / total) if total else 0
+
+    # Big stat tiles: total, recalled, needed effort, missed.
+    tiles = "".join(
+        [
+            _stat_pill(str(total), "questions", "var(--ink)"),
+            _stat_pill(str(recalled), "recalled", "#15803d"),
+            _stat_pill(str(struggled), "needed effort", "#b45309"),
+            _stat_pill(str(missed), "missed", "#be123c"),
+        ]
+    )
+
+    # Per-format breakdown (Cloze / Multiple choice / Select-all / Ordering).
+    by_type = st.get("by_type") or {}
+    type_rows = "".join(
+        f"<div style='display:flex;justify-content:space-between;padding:6px 0;"
+        f"border-bottom:1px solid var(--border)'><span>{name}</span>"
+        f"<b>{cnt}</b></div>"
+        for name, cnt in sorted(by_type.items(), key=lambda kv: -kv[1])
+    )
+    type_html = (
+        "<div style='margin-top:24px'><div style='font-weight:800;color:var(--ink);"
+        "margin-bottom:6px'>By question type</div>"
+        f"{type_rows}</div>"
+        if type_rows
+        else ""
+    )
+
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head" style="gap:18px">
     <div class="rpce-h1" style="font-size:var(--fs-display)">✅ Session complete</div>
-    <div class="rpce-sub">You reviewed <b>{limit}</b> questions. Nice work.</div>
+    <div class="rpce-sub">You recalled <b>{acc}%</b> of this session confidently.</div>
   </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px">{tiles}</div>
+  {type_html}
   <div style="text-align:center;margin-top:30px">
     <button onclick="pycmd('rpce:newsession');return false;"
       style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;
@@ -2086,8 +2194,9 @@ def _on_state_change(new_state, old_state) -> None:
             mw.bottomWeb.show()
         # Starting review (from home/overview) begins a fresh session.
         if new_state == "review" and old_state != "review":
-            global _session_done
+            global _session_done, _session_stats
             _session_done = 0
+            _session_stats = _new_session_stats()
         # A finished study session is a meaningful moment to record readiness
         # to the audit trail + refresh the last-updated stamp (§7.4).
         if (
