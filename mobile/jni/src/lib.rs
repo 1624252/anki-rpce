@@ -437,7 +437,7 @@ const DOMAINS: [(i64, &str); 7] = [
 
 const MIN_REVIEWS: i64 = 200;
 const MIN_COVERAGE: f64 = 0.5;
-const MIN_SCENARIOS: i64 = 10;
+const MIN_SCENARIOS: i64 = 100;
 
 /// Run a read-only SQL query through the shared backend's db command.
 fn db_query(sql: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {

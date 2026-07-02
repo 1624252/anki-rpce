@@ -10,7 +10,7 @@ and get the same result.
 ## The give-up rule (written down)
 
 No readiness score is shown until the collection has **≥ 200 graded reviews** and
-**≥ 50% domain coverage** (and, for Section II, **≥ 10 graded scenarios**).
+**≥ 50% domain coverage** (and, for Section II, **≥ 100 graded scenarios**).
 `GiveUpRule` in `scores.py`; below the line the dashboard shows "—" and states
 exactly what data is missing (e.g. "16/200 graded reviews") rather than a number.
 A confident number with nothing behind it is a guess in a nice font — so we show

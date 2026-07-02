@@ -187,10 +187,10 @@ def test_keyword_examiner_gives_partial_credit_with_breakdown():
     r = kw.grade("The previous question requires a two-thirds vote.", _PQ_GOLD,
                  CORPUS, _PQ_RUBRIC)
     assert 0.0 < r.score < 5.0
-    # Per-element breakdown names what was identified and what is missing.
+    # Per-element breakdown names what was identified and what wasn't addressed.
     assert "the motion" in r.feedback
     assert "the vote threshold" in r.feedback
-    assert "Missing" in r.feedback and "the second" in r.feedback
+    assert "Didn't address" in r.feedback and "the second" in r.feedback
 
 
 def test_keyword_examiner_empty_and_irrelevant_answers_score_low():

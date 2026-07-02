@@ -52,7 +52,7 @@ class GiveUpRule:
 
     min_graded_reviews: int = 200
     min_coverage: float = 0.5
-    min_scenarios: int = 10
+    min_scenarios: int = 100
 
 
 CONFIDENCE_LABELS = {

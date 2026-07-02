@@ -455,7 +455,7 @@ class KeywordExaminer(Examiner):
         seq = _canon_seq(answer)
         earned = penalty = total = 0.0
         got: list[str] = []
-        missing: list[str] = []
+        missing: list[RubricElement] = []
         wrong: list[RubricElement] = []
         essentials_ok = True
 
@@ -473,7 +473,7 @@ class KeywordExaminer(Examiner):
                 earned += el.weight
                 got.append(el.name)
             else:
-                missing.append(el.name)
+                missing.append(el)
                 if el.essential:
                     essentials_ok = False
 
@@ -499,7 +499,7 @@ class KeywordExaminer(Examiner):
 
     @staticmethod
     def _feedback(
-        got: list[str], missing: list[str], wrong: list[RubricElement]
+        got: list[str], missing: list[RubricElement], wrong: list[RubricElement]
     ) -> str:
         parts: list[str] = []
         if got:
@@ -510,7 +510,10 @@ class KeywordExaminer(Examiner):
             else:
                 parts.append(f"Wrong on {el.name}.")
         if missing:
-            parts.append("Missing: " + ", ".join(missing) + ".")
+            # Name the point the answer didn't address, with the expected value
+            # where we have one, so the candidate knows exactly what to add.
+            disp = [f"{el.name} ({el.expects})" if el.expects else el.name for el in missing]
+            parts.append("Didn't address: " + ", ".join(disp) + ".")
         if not parts:
             parts.append("No relevant points identified.")
         return " ".join(parts)

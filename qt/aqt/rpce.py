@@ -293,11 +293,11 @@ def _chip(text: str) -> str:
 
 
 def _examiner_badge() -> str:
-    """Show which examiner graded: the built-in offline keyword matcher (no AI
-    key wired) or an online AI examiner. Mirrors the phone."""
+    """Show which examiner graded: the built-in offline examiner (no AI key
+    wired) or an online AI examiner. Mirrors the phone."""
     return (
         "<div style='margin-top:8px;color:#b45309;font-weight:700'>"
-        "🔌 Offline examiner (keyword match). Connect an online AI examiner for "
+        "🔌 Offline examiner. Connect an online AI examiner for "
         "richer feedback.</div>"
     )
 
@@ -426,6 +426,11 @@ def _banner_html(col) -> str:
         f"Section II answers graded: <b>{sec2_graded}</b> · "
         f"Simulation responses: <b>{sim_responses}</b></div>"
     )
+    session_html = (
+        "<div class='rpce-foot' style='margin-top:10px'>Review session: "
+        f"<b>{_session_limit()}</b> questions · "
+        "<a href='#' onclick=\"pycmd('rpce:session_length');return false;\">change</a></div>"
+    )
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head">
@@ -442,6 +447,7 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   {activity_html}
+  {session_html}
   {logout_html}
   <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
@@ -706,6 +712,9 @@ def _on_webview_message(handled, message: str, context):
         return (True, None)
     if message == "rpce:logout":
         _logout_ankiweb()
+        return (True, None)
+    if message == "rpce:session_length":
+        _set_session_length()
         return (True, None)
     return handled
 
@@ -1379,11 +1388,14 @@ _TOOLBAR_CSS = (
     "box-shadow:0 4px 14px rgba(29,78,216,.30) !important}"
     ".hitem:hover{background:linear-gradient(135deg,#2563eb,#60a5fa) !important;"
     "color:#fff !important;border-color:#1d4ed8 !important}"
-    # Sync-status indicator: amber not-signed-in, green signed-in, orange syncing.
+    # Sync-status indicator: amber not-signed-in, green signed-in, orange
+    # syncing, gray offline.
     "#rpce_sync_out{background:#fef3c7 !important;color:#b45309 !important;"
     "border-color:#f0c674 !important;box-shadow:none !important}"
     "#rpce_sync_in{background:#e7f6ec !important;color:#15803d !important;"
     "border-color:#9fd8b3 !important;box-shadow:none !important}"
+    "#rpce_sync_offline{background:#e5e7eb !important;color:#6b7280 !important;"
+    "border-color:#d1d5db !important;box-shadow:none !important}"
     "#rpce_sync_busy{background:#fff1e0 !important;color:#c2410c !important;"
     "border-color:#fdba74 !important;box-shadow:none !important}"
     # Anki's own Sync button turns orange while a sync is in progress.
@@ -1511,9 +1523,9 @@ def _on_right_tray(content, toolbar) -> None:
             if _is_offline():
                 # Offline but signed in: keep the last-synced time visible so the
                 # user still knows how fresh their data is (can't sync until back
-                # online). Amber styling, same as the not-signed-in state.
+                # online). Gray styling — a neutral, non-alarming state.
                 label = f"📴 Offline · last synced {when}" if when else "📴 Offline"
-                ident = "rpce_sync_out"
+                ident = "rpce_sync_offline"
             else:
                 label = f"🟢 Synced · {when}" if when else "🟢 Synced"
                 ident = "rpce_sync_in"
@@ -1528,7 +1540,6 @@ def _on_right_tray(content, toolbar) -> None:
             id=ident,
         )
     )
-    content.append(toolbar._create_sync_link())
 
 
 def _redraw_toolbar() -> None:

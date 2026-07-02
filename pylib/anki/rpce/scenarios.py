@@ -131,7 +131,7 @@ RUBRIC_BYLAWS_AMENDMENT = Rubric(
 SCENARIOS: tuple[Scenario, ...] = (
     Scenario(
         1,
-        "A member says 'I move that we donate $500 to the scholarship fund.' "
+        'A member says "I move that we donate $500 to the scholarship fund." '
         "No one has said anything else yet. As chair, what do you do before debate?",
         "A main motion requires a second before it can be considered. The chair "
         "calls for a second; if seconded, the chair states the question and opens "
@@ -152,7 +152,7 @@ SCENARIOS: tuple[Scenario, ...] = (
     Scenario(
         3,
         "While a motion is pending, a member believes the chair has violated the "
-        "rules and says 'Point of Order.' What is the correct handling?",
+        'rules and says "Point of Order." What is the correct handling?',
         "A Point of Order is an incidental motion: it needs no second, is not "
         "debatable, and is raised at the time of the breach. The chair rules on "
         "the point; the chair's ruling may be challenged by an Appeal.",
