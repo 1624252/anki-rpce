@@ -165,6 +165,14 @@ rpce-eval:
 rpce-sync-test:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_sync_test_run.py
 
+# RPCE: memory-vs-performance paraphrase gap (spec §7d) — deterministic, offline.
+rpce-paraphrase:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_paraphrase.py
+
+# RPCE: crash/offline resilience (spec §7g) — kills a review mid-flight 20x, checks integrity.
+rpce-crash:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_crash_test.py
+
 # Build documentation site
 docs:
     {{ uv }} run --group docs sphinx-build -b html docs out/docs/html
