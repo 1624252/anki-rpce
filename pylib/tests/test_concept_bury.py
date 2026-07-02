@@ -54,4 +54,3 @@ def test_bury_concept_siblings_noop_without_concept_tag():
 
     assert out.count == 0, "a card with no concept tag buries nothing"
     assert _queue(col, neighbor) == QUEUE_TYPE_NEW
-</content>
