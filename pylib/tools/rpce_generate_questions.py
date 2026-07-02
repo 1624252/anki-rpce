@@ -1012,6 +1012,49 @@ def build_knowledge(
     return qs
 
 
+def _norm_opt(s: str) -> str:
+    """Aggressive key for near-duplicate options: case-, space- and
+    punctuation-insensitive, so "Point of Order" / "point of order," collapse."""
+    import re as _re
+
+    return _re.sub(r"[^a-z0-9]+", "", s.lower())
+
+
+def _dedup_options(q: Question, rng: random.Random) -> None:
+    """Drop near-duplicate answer choices (same text bar case/punctuation) from
+    an MCQ/multiselect, remap the correct index/indices, and pad an MCQ back to
+    four with distinct generic distractors. Fixes 'two options one letter apart'."""
+    p = q.payload
+    opts = p.get("options")
+    if not opts or p.get("kind") not in ("mcq", "multi"):
+        return
+    seen: dict[str, int] = {}
+    kept: list[str] = []
+    old_to_new: dict[int, int] = {}
+    for i, o in enumerate(opts):
+        k = _norm_opt(o)
+        if k in seen:
+            old_to_new[i] = seen[k]  # fold into the first occurrence
+            continue
+        seen[k] = len(kept)
+        old_to_new[i] = len(kept)
+        kept.append(o)
+    if p["kind"] == "mcq":
+        ans = old_to_new.get(p.get("answer", 0), 0)
+        for d in _GENERIC_DISTRACTORS:  # pad back to four, keeping norms distinct
+            if len(kept) >= 4:
+                break
+            if _norm_opt(d) not in seen:
+                seen[_norm_opt(d)] = len(kept)
+                kept.append(d)
+        ans_text = kept[ans]
+        rng.shuffle(kept)
+        p["answer"] = kept.index(ans_text)
+    else:  # multi
+        p["correct"] = sorted({old_to_new[c] for c in p.get("correct", []) if c in old_to_new})
+    p["options"] = kept
+
+
 def build(count: int = 0, per_para: int = PER_PARA) -> list[Question]:
     """Knowledge-based questions + 2–``per_para`` varied questions from every
     substantive corpus paragraph. ``count`` optionally caps the total (0 = no
@@ -1023,6 +1066,8 @@ def build(count: int = 0, per_para: int = PER_PARA) -> list[Question]:
     term_pool = sorted({t for p in paras for t in (*p.emphases, *p.bold)})
     questions: list[Question] = list(build_knowledge(sents, secq, rng))
     questions.extend(build_corpus(paras, term_pool, rng, per_para))
+    for q in questions:  # scrub near-duplicate answer choices
+        _dedup_options(q, rng)
     return questions[:count] if count else questions
 
 

@@ -171,9 +171,9 @@ def hint_for(term: str) -> str:
     give away (debatable-vs-not, amendable-vs-not). Things the sentence already
     frames (e.g. "... a ___ vote") get no hint; hints never reveal spelling."""
     t = term.strip().lower()
-    if t == "debatable" or "not debatable" in t:
+    if "debatable" in t:  # debatable / not debatable / undebatable
         return "debatable or not debatable"
-    if t == "amendable" or "not amendable" in t:
+    if "amendable" in t:
         return "amendable or not amendable"
     return ""
 
