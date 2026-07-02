@@ -294,6 +294,31 @@ def _sync_status_html() -> str:
     )
 
 
+def _elaboration_html(s: dict) -> str:
+    """Collapsible confidence elaboration for the dashboard (spec §4). Reads the
+    engine summary's ``confidence_label`` (a string containing "confidence") and
+    ``elaboration`` (preparedness-focused prose) when present, and tucks the prose
+    into a ``<details>`` so the dashboard stays uncluttered. Falls back to a
+    generic confidence label so the word "confidence" is always shown."""
+    label = str(s.get("confidence_label") or "").strip()
+    body = str(s.get("elaboration") or "").strip()
+    if not body:
+        return ""
+    if not label:
+        label = "Overall confidence"
+    elif "confidence" not in label.lower():
+        label = f"{label} confidence"
+    return (
+        "<details class='rpce-elab' style='margin-top:22px;background:var(--surface2);"
+        "border:1px solid var(--border);border-radius:16px;padding:2px 18px'>"
+        "<summary style='cursor:pointer;font-weight:800;color:var(--ink);"
+        "font-size:var(--fs-body);padding:14px 0'>"
+        f"ℹ️ {label} — why these scores</summary>"
+        "<div style='color:var(--ink2);font-size:var(--fs-small);line-height:1.5;"
+        f"padding:0 0 16px'>{body}</div></details>"
+    )
+
+
 def _banner_html(col) -> str:
     from anki.rpce import scores
 
@@ -376,6 +401,7 @@ def _banner_html(col) -> str:
   <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   {chips_row}
+  {_elaboration_html(s)}
   {note}
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
@@ -458,6 +484,10 @@ class ScenarioDialog(QDialog):
         self._next_btn = QPushButton("Next scenario →")
         qconnect(self._next_btn.clicked, self._next)
         layout.addWidget(self._next_btn)
+        # Always give an explicit way back to the Dashboard (don't trap the user).
+        self._close_btn = QPushButton("← Back to Dashboard")
+        qconnect(self._close_btn.clicked, self.accept)
+        layout.addWidget(self._close_btn)
         self._load()
 
     def _load(self) -> None:
@@ -604,6 +634,17 @@ def _trigger_sync() -> None:
         print(f"RPCE sync error: {exc}")
 
 
+def _auto_full_upload(mw, server_usn, on_done) -> None:
+    """Skip Anki's "your AnkiWeb collection has no cards — replace it?" prompt
+    after logging in with an empty AnkiWeb account: the local RPCE deck is the
+    source of truth, so proceed straight to the upload. Mirrors the "proceed"
+    branch of ``aqt.sync.confirm_full_upload``. (Only the empty-UPLOAD case is
+    auto-handled; full_download and the 3-way conflict dialog are untouched.)"""
+    import aqt.sync
+
+    mw.closeAllWindows(lambda: aqt.sync.full_upload(mw, server_usn, on_done))
+
+
 def _on_webview_message(handled, message: str, context):
     """Open the Reference dialog from the dashboard banner link (keeps it off the
     top toolbar). Returns a filter result tuple."""
@@ -662,6 +703,11 @@ class SimulationDialog(QDialog):
         self._next_btn = QPushButton("Next meeting →")
         qconnect(self._next_btn.clicked, self._next_sim)
         layout.addWidget(self._next_btn)
+
+        # Always give an explicit way back to the Dashboard (don't trap the user).
+        self._close_btn = QPushButton("← Back to Dashboard")
+        qconnect(self._close_btn.clicked, self.accept)
+        layout.addWidget(self._close_btn)
 
         self._load_sim()
 
@@ -750,6 +796,15 @@ def _brand_main_window() -> None:
         return
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
+    # Keep the top bar (4 tabs + right-tray sync status + Sync) from clipping:
+    # enforce a minimum width, and widen the current window if it's narrower.
+    try:
+        min_w = 1120
+        mw.setMinimumWidth(min_w)
+        if mw.width() < min_w:
+            mw.resize(min_w, mw.height())
+    except Exception as exc:  # never block startup over sizing
+        print(f"RPCE window-size error: {exc}")
 
 
 def _apply_light_theme() -> None:
@@ -917,6 +972,19 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
     which keeps the question on screen with the answer shown + citation)."""
     from anki.rpce import render_js
 
+    # On the question side, completing the card (MCQ picked / every cloze blank
+    # revealed / order placed) triggers Anki's own answer-flip via pycmd('ans').
+    # That hides the "Show Answer" button and surfaces the rating buttons —
+    # matching the phone, where Show Answer is never shown for interactive cards.
+    # Small delay so the inline right/wrong marking registers before the flip.
+    opts = (
+        "{reveal:true}"
+        if reveal
+        else (
+            "{reveal:false,onComplete:function(){setTimeout(function(){"
+            "try{pycmd('ans');}catch(e){}},600);}}"
+        )
+    )
     return (
         "<style>" + render_js.RENDER_CSS + "</style>"
         "<div id='rpce-host'></div>"
@@ -924,9 +992,9 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
         + render_js.RENDER_JS
         + "(function(){try{var p=JSON.parse(decodeURIComponent(escape(atob('"
         + payload_b64
-        + "'))));window.RPCE.render(p,document.getElementById('rpce-host'),{reveal:"
-        + ("true" if reveal else "false")
-        + "});}catch(e){document.getElementById('rpce-host').textContent=''+e;}})();"
+        + "'))));window.RPCE.render(p,document.getElementById('rpce-host'),"
+        + opts
+        + ");}catch(e){document.getElementById('rpce-host').textContent=''+e;}})();"
         "</script>"
     )
 
@@ -1056,8 +1124,9 @@ _TOOLBAR_CSS = (
 
 
 def _on_toolbar_links(links, toolbar) -> None:
-    """Replace Anki's deck-management toolbar with themed RPCE tabs (keep Sync)."""
-    sync_link = links[-1] if links else None
+    """Replace Anki's deck-management toolbar with themed RPCE tabs. The sync
+    status indicator + Anki's Sync button live in the top-right tray instead
+    (see ``_on_right_tray``)."""
     links.clear()
     links.append(_TOOLBAR_CSS)
     links.append(
@@ -1096,13 +1165,18 @@ def _on_toolbar_links(links, toolbar) -> None:
             id="rpce_simulate",
         )
     )
-    # Sync status indicator (top-right, next to Sync) — mirrors the phone.
+
+
+def _on_right_tray(content, toolbar) -> None:
+    """Top-right corner: a live sync-status indicator followed by Anki's own
+    Sync button — mirrors the phone's top-right sync status. The indicator
+    recomputes signed-in state on every toolbar draw (see ``_on_sync_changed``)."""
     signed_in = False
     try:
         signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
     except Exception:
         pass
-    links.append(
+    content.append(
         toolbar.create_link(
             "rpce_sync_status",
             "🟢 Synced" if signed_in else "⚠️ Not signed in",
@@ -1111,8 +1185,17 @@ def _on_toolbar_links(links, toolbar) -> None:
             id="rpce_sync_in" if signed_in else "rpce_sync_out",
         )
     )
-    if sync_link is not None:
-        links.append(sync_link)
+    content.append(toolbar._create_sync_link())
+
+
+def _on_sync_changed(*args) -> None:
+    """Redraw the toolbar so the sync-status indicator recomputes signed-in
+    state right after login/sync (live update)."""
+    try:
+        if aqt.mw is not None:
+            aqt.mw.toolbar.draw()
+    except Exception as exc:  # never break sync over the indicator
+        print(f"RPCE sync-status refresh error: {exc}")
 
 
 def _remove_deck_browser_bottom_bar() -> None:
@@ -1132,6 +1215,12 @@ def _remove_deck_browser_bottom_bar() -> None:
 def setup() -> None:
     """Register all RPCE desktop integration hooks."""
     _remove_deck_browser_bottom_bar()
+    # Auto-proceed past the post-login "empty AnkiWeb collection — replace it?"
+    # prompt (the local RPCE deck is the source of truth). Only the empty-UPLOAD
+    # case is monkeypatched; download/conflict dialogs are left untouched.
+    import aqt.sync
+
+    aqt.sync.confirm_full_upload = _auto_full_upload
     gui_hooks.style_did_init.append(_on_style_init)
     gui_hooks.webview_will_set_content.append(_on_webview_content)
     gui_hooks.main_window_did_init.append(_brand_main_window)
@@ -1143,4 +1232,8 @@ def setup() -> None:
     gui_hooks.card_will_show.append(_on_card_will_show)
     gui_hooks.webview_did_receive_js_message.append(_on_webview_message)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
+    gui_hooks.top_toolbar_will_set_right_tray_content.append(_on_right_tray)
     gui_hooks.state_did_change.append(_on_state_change)
+    # Live-update the top-right sync-status indicator after login/sync.
+    gui_hooks.sync_did_finish.append(_on_sync_changed)
+    gui_hooks.sync_will_start.append(_on_sync_changed)
