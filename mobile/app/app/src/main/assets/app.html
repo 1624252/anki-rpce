@@ -164,6 +164,12 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <!-- REVIEW -->
   <div id="review" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="rev-count"></span></div>
+    <div id="rev-progress" class="hidden" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:5px">
+        <span id="rev-qnum"></span><span id="rev-left"></span></div>
+      <div style="height:8px;border-radius:999px;background:var(--track);overflow:hidden">
+        <i id="rev-bar" style="display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent1),var(--accent2))"></i></div>
+    </div>
     <div id="card" class="card"></div>
     <button id="show-btn" class="btn hidden" onclick="showAnswer()">Show answer</button>
     <div id="rate" class="rate hidden">
@@ -175,7 +181,8 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <div id="done" class="done hidden">
       <div class="big">✅</div><h2>All caught up</h2>
       <p class="sub">No more cards due right now.</p>
-      <button class="btn ghost" onclick="goHome()" style="margin-top:20px">Back to home</button>
+      <button class="btn hidden" id="new-session-btn" onclick="startStudy()" style="margin-top:16px">Start new session</button>
+      <button class="btn ghost" onclick="goHome()" style="margin-top:12px">Back to home</button>
     </div>
   </div>
 
@@ -295,7 +302,25 @@ function goHome(){ show('home'); refreshCounts(); updateNetStatus(); autoSync();
 
 /* ---- review loop (shared interactive renderer) ---- */
 var current=null;
-function startStudy(){ show('review'); loadCard(); }
+// A review session is capped; the user starts another afterward.
+var SESSION_LIMIT=20, sessDone=0;
+function startStudy(){ sessDone=0; show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
+function updateProgress(){
+  var p=el('rev-progress'); if(!p) return;
+  p.classList.remove('hidden');
+  var n=Math.min(sessDone+1, SESSION_LIMIT);
+  el('rev-qnum').textContent='Question '+n+' of '+SESSION_LIMIT;
+  el('rev-left').textContent=(SESSION_LIMIT-sessDone)+' left';
+  el('rev-bar').style.width=Math.round(100*Math.min(sessDone,SESSION_LIMIT)/SESSION_LIMIT)+'%';
+}
+function sessionComplete(){
+  resetReview(); el('card').classList.add('hidden'); el('rev-progress').classList.add('hidden');
+  var d=el('done'); d.classList.remove('hidden');
+  d.querySelector('.big').textContent='🎉';
+  d.querySelector('h2').textContent='Session complete';
+  d.querySelector('.sub').textContent=SESSION_LIMIT+' questions done. Ready for another?';
+  el('new-session-btn').classList.remove('hidden');
+}
 function resetReview(){
   el('rate').classList.add('hidden'); el('show-btn').classList.add('hidden');
   el('done').classList.add('hidden'); el('card').classList.remove('hidden');
@@ -305,8 +330,13 @@ function loadCard(){
   resetReview();
   var r=j(Engine.nextCard());
   if(!r.ok){ el('card').textContent=r.error||'error'; return; }
-  if(!r.hasCard){ el('card').classList.add('hidden');
+  if(!r.hasCard){ el('card').classList.add('hidden'); el('rev-progress').classList.add('hidden');
+    el('done').querySelector('.big').textContent='✅';
+    el('done').querySelector('h2').textContent='All caught up';
+    el('done').querySelector('.sub').textContent='No more cards due right now.';
+    el('new-session-btn').classList.add('hidden');
     el('done').classList.remove('hidden'); el('rev-count').textContent=''; return; }
+  updateProgress();
   current=r;
   var payload=extractPayload(r.question);
   if(payload && window.RPCE){
@@ -332,8 +362,10 @@ function extractPayload(html){
 function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
   el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; }
-  loadCard();      // show the next card first, then sync in the background
-  autoSync(); }
+  sessDone++;
+  autoSync();                              // sync reviews in the background
+  if(sessDone>=SESSION_LIMIT){ sessionComplete(); return; }  // cap the session
+  loadCard(); }                            // otherwise show the next card
 
 /* ---- reference tables (order of precedence, motion characteristics) ---- */
 function classPill(c){ return '<span class="pillc c-'+c+'">'+c+'</span>'; }

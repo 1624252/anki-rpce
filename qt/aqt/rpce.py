@@ -971,6 +971,13 @@ def _on_answer_card(reviewer, card, ease) -> None:
             mw.col._backend.bury_concept_siblings(card_id=card.id)
     except Exception as exc:  # never break reviewing over concept burying
         print(f"RPCE concept-bury error: {exc}")
+    # Cap the session at _SESSION_LIMIT cards, then return home for a new one.
+    global _session_done
+    _session_done += 1
+    if _session_done >= _SESSION_LIMIT:
+        from aqt.qt import QTimer
+
+        QTimer.singleShot(500, _end_session)
 
 
 def _is_rpce_card(card) -> bool:
@@ -1025,7 +1032,8 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
     )
     return (
         "<style>" + render_js.RENDER_CSS + "</style>"
-        "<div id='rpce-host'></div>"
+        + _session_progress_html()
+        + "<div id='rpce-host'></div>"
         "<script>"
         + render_js.RENDER_JS
         + "(function(){try{var p=JSON.parse(decodeURIComponent(escape(atob('"
@@ -1035,6 +1043,45 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
         + ");}catch(e){document.getElementById('rpce-host').textContent=''+e;}})();"
         "</script>"
     )
+
+
+#: A review session is capped at this many cards; the user starts a new session
+#: from the home screen afterward (spec-style focused sessions).
+_SESSION_LIMIT = 20
+_session_done = 0  # cards answered in the current session
+
+
+def _session_progress_html() -> str:
+    """A slim 'Question N of 20' progress bar shown atop each reviewer card."""
+    n = min(_session_done + 1, _SESSION_LIMIT)
+    pct = int(100 * min(_session_done, _SESSION_LIMIT) / _SESSION_LIMIT)
+    return (
+        "<div style='max-width:680px;margin:0 auto 14px'>"
+        "<div style='display:flex;justify-content:space-between;font-size:13px;"
+        "font-weight:700;color:#35548c;margin-bottom:5px'>"
+        f"<span>Question {n} of {_SESSION_LIMIT}</span>"
+        f"<span>{_SESSION_LIMIT - _session_done} left</span></div>"
+        "<div style='height:8px;border-radius:999px;background:#dbe8fb;overflow:hidden'>"
+        f"<i style='display:block;height:100%;width:{pct}%;"
+        "background:linear-gradient(90deg,#1d4ed8,#3b82f6)'></i></div></div>"
+    )
+
+
+def _end_session() -> None:
+    """End the review session at the cap and return home so the user can start a
+    fresh one from the Study button."""
+    global _session_done
+    _session_done = 0
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        mw.moveToState("deckBrowser")
+        from aqt.utils import tooltip
+
+        tooltip(f"Session complete — {_SESSION_LIMIT} questions. Tap Study for another.")
+    except Exception as exc:
+        print(f"RPCE end-session error: {exc}")
 
 
 def _on_card_will_show(text: str, card, kind: str) -> str:
@@ -1129,6 +1176,10 @@ def _on_state_change(new_state, old_state) -> None:
             mw.bottomWeb.hide()
         else:
             mw.bottomWeb.show()
+        # Starting review (from home/overview) begins a fresh session.
+        if new_state == "review" and old_state != "review":
+            global _session_done
+            _session_done = 0
         # A finished study session is a meaningful moment to record readiness
         # to the audit trail + refresh the last-updated stamp (§7.4).
         if (
