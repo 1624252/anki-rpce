@@ -183,12 +183,18 @@ RENDER_JS = r"""
     host.appendChild(el('div','rpce-q', p.stem));
     var box=el('div','rpce-opts rpce-multi'); var fb=el('div','rpce-fb');
     var letters='ABCDEFGH', graded=false;
-    // Fresh question: forget the previous card's selection (this JS context
-    // persists across the desktop question->answer content swap).
-    if(!(opts&&opts.reveal)){ try{window.__rpce_multi=null;}catch(e){} }
+    // Fresh question: start from an empty selection (this JS context persists
+    // across the desktop question->answer swap, so we track the live selection
+    // there and treat it as the submission if the user taps Show Answer).
+    if(!(opts&&opts.reveal)){ try{window.__rpce_multi=[];}catch(e){} }
+    function stashPicks(){
+      try{ var s=[],bs=box.querySelectorAll('button');
+        for(var k=0;k<bs.length;k++) if(bs[k].classList.contains('sel')) s.push(k);
+        window.__rpce_multi=s; }catch(e){}
+    }
     p.options.forEach(function(opt,i){
       var b=el('button','rpce-opt','<span class="box"></span><span class="k">'+letters[i]+'</span>'+opt);
-      b.onclick=function(){ if(graded) return; b.classList.toggle('sel'); };
+      b.onclick=function(){ if(graded) return; b.classList.toggle('sel'); stashPicks(); };
       box.appendChild(b);
     });
     host.appendChild(box);
@@ -255,6 +261,9 @@ RENDER_JS = r"""
     function renumber(){
       var rows=list.querySelectorAll('.rpce-slot');
       for(var i=0;i<rows.length;i++) rows[i].querySelector('.n').textContent=(i+1);
+      // Track the live arrangement on the question side so tapping Show Answer
+      // grades the current order as the user's submission.
+      if(!(opts&&opts.reveal)){ try{window.__rpce_order=currentOrder();}catch(e){} }
     }
     function currentOrder(){
       var rows=list.querySelectorAll('.rpce-slot'), out=[];
