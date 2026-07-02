@@ -1041,15 +1041,35 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
     try:
         if not _is_rpce_card(card):
             return text
-        # Each card template embeds its own payload in a hidden #rpce-payload
-        # element (data-p). Read it from the rendered card rather than a fixed
-        # field, so the per-format sibling templates (concept notetype) work too.
-        import re
-
-        m = re.search(r'id="rpce-payload"[^>]*data-p="([^"]*)"', text)
-        if not m:
+        note = card.note()
+        # Read the payload from the note's per-format field so BOTH sides render
+        # the interactive card. On the answer side this reveals in place — the
+        # question stays, blanks fill / the choice is marked, and the RONR
+        # citation shows — exactly like the phone (not Anki's plain answer). The
+        # concept notetype stores payload per format; the question notetype uses
+        # "Payload". Pick the field by the card's template name.
+        tmpl = ""
+        try:
+            tmpl = card.template()["name"]
+        except Exception:
+            pass
+        field = {
+            "cloze": "ClozePayload",
+            "mcq": "McqPayload",
+            "second": "SecondPayload",
+            "debatable": "DebatablePayload",
+        }.get(tmpl, "Payload")
+        payload = ""
+        for f in (field, "Payload"):
+            try:
+                if note[f]:
+                    payload = note[f]
+                    break
+            except Exception:
+                continue
+        if not payload:
             return text
-        return _rpce_render_html(m.group(1), reveal="Answer" in kind)
+        return _rpce_render_html(payload, reveal="Answer" in kind)
     except Exception as exc:  # never break reviewing over rendering
         print(f"RPCE format-render error: {exc}")
         return text
