@@ -43,37 +43,53 @@ DEFAULT_COUNT = 0  # 0 = full coverage (2-5 questions from every corpus paragrap
 # quality-gated by solving each cold. When present it REPLACES the retired
 # template generator; the generator stays only as an offline fallback.
 AUTHORED_JSON = Path(__file__).resolve().parents[2] / "data" / "rpce_authored_questions.json"
+# Objective ordering/multiselect questions generated from the canonical motion
+# knowledge (rpce_gen_precedence.py) — merged in so the round-robin shows every
+# type, not just MCQ/cloze.
+PRECEDENCE_JSON = Path(__file__).resolve().parents[2] / "data" / "rpce_precedence_questions.json"
+
+
+def _cloze_blanks(q: dict) -> list[dict]:
+    """Normalize a cloze record's blanks. Two authored shapes exist: an explicit
+    ``blanks`` list, or a comma-separated ``answer`` string. Hints are always ""
+    (rule R1)."""
+    if q.get("blanks"):
+        return [{"a": b["a"], "h": ""} for b in q["blanks"]]
+    ans = [a.strip() for a in str(q.get("answer", "")).split(",") if a.strip()]
+    return [{"a": a, "h": ""} for a in ans]
 
 
 def _authored_payload(q: dict) -> tuple[dict, str, str]:
     """Map one authored-question record to (render payload, plainQ, plainA)."""
     cite, quote = q.get("cite", ""), q.get("quote", "")
-    if q["kind"] == "mcq":
-        payload = {
-            "kind": "mcq",
-            "stem": q["stem"],
-            "options": list(q["options"]),
-            "answer": int(q["answer"]),
-            "cite": cite,
-            "quote": quote,
-        }
+    kind = q["kind"]
+    if kind == "mcq":
+        payload = {"kind": "mcq", "stem": q["stem"], "options": list(q["options"]),
+                   "answer": int(q["answer"]), "cite": cite, "quote": quote}
+    elif kind == "order":
+        payload = {"kind": "order", "prompt": q["prompt"], "order": list(q["order"]),
+                   "cite": cite, "quote": quote}
+    elif kind == "multi":
+        payload = {"kind": "multi", "stem": q["stem"], "options": list(q["options"]),
+                   "correct": list(q["correct"]), "cite": cite, "quote": quote}
     else:  # cloze
-        payload = {
-            "kind": "cloze",
-            "text": q["text"],
-            "blanks": [{"a": b["a"], "h": b.get("h", "")} for b in q.get("blanks", [])],
-            "cite": cite,
-            "quote": quote,
-        }
+        payload = {"kind": "cloze", "text": q["text"], "blanks": _cloze_blanks(q),
+                   "cite": cite, "quote": quote}
     return payload, q["plainQ"], q["plainA"]
 
 
+def _load(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data["questions"] if isinstance(data, dict) else data
+
+
 def add_authored_questions(col: Collection, deck_id: int) -> int:
-    """Load the model-authored bank and add each as a question note. Interleaves
-    by kind so a session mixes types instead of clustering (balanced order)."""
-    data = json.loads(AUTHORED_JSON.read_text(encoding="utf-8"))
-    questions = data["questions"] if isinstance(data, dict) else data
-    # Round-robin by kind for a balanced initial order (positions = add order).
+    """Load the authored bank + generated precedence set and add each as a note.
+    Round-robin by kind so a session mixes ALL types roughly equally instead of
+    clustering (positions come from add-order on import)."""
+    questions = _load(AUTHORED_JSON) + _load(PRECEDENCE_JSON)
     groups: dict[str, list[dict]] = {}
     for q in questions:
         groups.setdefault(q["kind"], []).append(q)
@@ -139,7 +155,9 @@ def main(out_path: str, count: int) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         col = Collection(str(Path(tmp) / "starter.anki2"))
         try:
-            deck_id = build_starter_deck(col)
+            # Precedence questions come from PRECEDENCE_JSON via the loader
+            # (round-robined with the authored bank), so don't front-load them.
+            deck_id = build_starter_deck(col, fallback_precedence=False)
             n = add_generated_questions(col, deck_id, count)
             total = len(col.find_cards('deck:"RPCE"'))
             col._backend.export_anki_package(

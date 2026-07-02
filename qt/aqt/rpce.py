@@ -415,6 +415,17 @@ def _banner_html(col) -> str:
         if signed_in
         else ""
     )
+    # Your activity totals (reviews combine across devices via sync; the two
+    # practice counters are stored in config, so they persist + sync too).
+    reviews_done = col.db.scalar("select count() from revlog") or 0
+    sec2_graded = int(col.get_config("rpce:section2_graded", 0))
+    sim_responses = int(col.get_config("rpce:sim_responses", 0))
+    activity_html = (
+        "<div class='rpce-foot' style='margin-top:22px'><b>Your activity</b><br>"
+        f"Reviews done: <b>{reviews_done}</b> · "
+        f"Section II answers graded: <b>{sec2_graded}</b> · "
+        f"Simulation responses: <b>{sim_responses}</b></div>"
+    )
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head">
@@ -430,6 +441,7 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
+  {activity_html}
   {logout_html}
   <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
@@ -531,6 +543,11 @@ class ScenarioDialog(QDialog):
             answer, s.gold_answer, self._corpus or s.gold_answer
         )
         scores.record_scenario(self._mw.col)
+        # Track total Section II answers graded (persists + syncs via config).
+        col = self._mw.col
+        col.set_config(
+            "rpce:section2_graded", int(col.get_config("rpce:section2_graded", 0)) + 1
+        )
         verdict = "pass" if result.passed else "keep practicing"
         self._result.setHtml(
             f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
@@ -802,6 +819,11 @@ class SimulationDialog(QDialog):
             answer, self._pending.gold, self._corpus or self._pending.gold
         )
         scores.record_scenario(self._mw.col)
+        # Track total simulation responses graded (persists + syncs via config).
+        col = self._mw.col
+        col.set_config(
+            "rpce:sim_responses", int(col.get_config("rpce:sim_responses", 0)) + 1
+        )
         verdict = "pass" if result.passed else "keep practicing"
         ref = self._pending.ref
         ref_html = _ref_block(ref.section, ref.quote) if ref else ""

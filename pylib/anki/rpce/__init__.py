@@ -440,7 +440,9 @@ def _precedence_notes(col: Collection, deck_id: int) -> None:
     )
 
 
-def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
+def build_starter_deck(
+    col: Collection, name: str = "RPCE", fallback_precedence: bool = True
+) -> int:
     """Build the offline starter deck. Each curated concept becomes ONE note with
     sibling cards (a cloze recall card + an applied-MCQ card, plus second/
     debatable characteristic cards for motions), so two formats of a concept
@@ -520,5 +522,10 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
             formats=formats,
         )
 
-    _precedence_notes(col, deck_id)
+    # Precedence (ordering + multiselect) questions ship via the generated
+    # data/rpce_precedence_questions.json, loaded and round-robined WITH the
+    # authored MCQ/cloze so every type is interleaved (rpce_export_starter.py).
+    # The tiny offline fallback (no apkg) still seeds a couple directly.
+    if fallback_precedence:
+        _precedence_notes(col, deck_id)
     return deck_id
