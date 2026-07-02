@@ -24,10 +24,8 @@ from aqt import gui_hooks
 from aqt.qt import (
     QDialog,
     QIcon,
-    QLabel,
     QPushButton,
     QTextBrowser,
-    QTextEdit,
     QVBoxLayout,
     qconnect,
 )
@@ -473,14 +471,27 @@ def _updated_str(col) -> str:
     return time.strftime("%b %d, %Y %H:%M", time.localtime(ts))
 
 
+#: Which page the deck-browser webview shows. Section II and Simulate are
+#: rendered IN-WINDOW (like the Dashboard) by branching on this flag in
+#: ``_on_deck_browser_content`` — not as separate popup dialogs.
+_RPCE_VIEW = "dashboard"  # "dashboard" | "section2" | "simulate"
+#: Which Section II scenario is on screen (index into ``all_scenarios()``).
+_S2_IDX = 0
+#: In-window simulation state (see ``_sim_reset``): sim_idx, turn, pending, log,
+#: done. ``None`` until first entered.
+_SIM: dict | None = None
+
+
 def _show_dashboard() -> None:
     """The readiness dashboard IS the home screen (the deck-browser banner) — no
     popup. Record a snapshot to refresh 'last updated', then return home."""
+    global _RPCE_VIEW
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     from anki.rpce import scores
 
+    _RPCE_VIEW = "dashboard"
     try:
         scores.record_readiness_snapshots(mw.col)
     except Exception as exc:
@@ -488,137 +499,171 @@ def _show_dashboard() -> None:
     mw.moveToState("deckBrowser")
 
 
-class ScenarioDialog(QDialog):
-    """Section II performance practice: read a scenario, write a ruling, and get
-    examiner-style feedback graded for accuracy."""
+# Injected once with the Section II page: shows a spinner immediately (so the UI
+# never looks frozen while grading, which may go online) then hands the base64
+# answer to Python. Encoded UTF-8-safe so accented text survives ``btoa``.
+_S2_SUBMIT_JS = """<script>
+function rpceGradeS2(){
+  var v = document.getElementById('s2ans').value;
+  document.getElementById('s2fb').innerHTML =
+    '<div style="color:#1d4ed8;font-weight:700;margin-top:14px">🤖 Grading your answer…</div>';
+  pycmd('rpce:s2grade:' + btoa(unescape(encodeURIComponent(v))));
+}
+</script>"""
 
-    def __init__(self, mw) -> None:
-        super().__init__(mw)
-        from anki.rpce import scenarios
 
-        self._mw = mw
-        self._corpus = _load_corpus()
-        self._scenarios = list(scenarios.all_scenarios())
-        self._idx = 0
+def _s2_scenario():
+    """The Section II scenario currently on screen (wraps ``_S2_IDX``)."""
+    from anki.rpce import scenarios
 
-        self.setWindowTitle("RPCE — Section II scenario practice")
-        self.resize(720, 660)
-        self.setMinimumSize(900, 700)  # full practice window, not a small popup
-        self.setStyleSheet(_DIALOG_QSS)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 22, 22, 22)
-        layout.setSpacing(14)
-        heading = QLabel("Section II — performance scenario")
-        heading.setStyleSheet("font-size:24px;font-weight:800;color:#0a1f44")
-        layout.addWidget(heading)
-        self._domain = QLabel()
-        layout.addWidget(self._domain)
-        self._prompt = QTextBrowser()
-        self._prompt.setMinimumHeight(90)
-        layout.addWidget(self._prompt)
-        layout.addWidget(QLabel("Your ruling & reasoning:"))
-        self._answer = QTextEdit()
-        layout.addWidget(self._answer, 2)  # roomy answer box
-        self._grade_btn = QPushButton("Grade my answer")
-        qconnect(self._grade_btn.clicked, self._grade)
-        layout.addWidget(self._grade_btn)
-        self._result = QTextBrowser()
-        self._result.setMinimumHeight(140)
-        layout.addWidget(self._result, 3)  # large feedback area
-        self._next_btn = QPushButton("Next scenario →")
-        qconnect(self._next_btn.clicked, self._next)
-        layout.addWidget(self._next_btn)
-        # Always give an explicit way back to the Dashboard (don't trap the user).
-        self._close_btn = QPushButton("← Back to Dashboard")
-        qconnect(self._close_btn.clicked, self.accept)
-        layout.addWidget(self._close_btn)
-        self._load()
+    scen = scenarios.all_scenarios()
+    return scen[_S2_IDX % len(scen)], _S2_IDX % len(scen), len(scen)
 
-    def _load(self) -> None:
-        from anki.rpce import domain_by_code
 
-        s = self._scenarios[self._idx]
-        d = domain_by_code(s.domain_code)
-        self._domain.setText(f"<i>Domain {d.code}: {d.name}</i>")
-        self._prompt.setText(s.prompt)
-        self._answer.clear()
-        self._result.clear()
+def _section2_html(col) -> str:
+    """Section II performance practice as an IN-WINDOW page (mirrors the
+    dashboard): domain label, prompt, answer box, Submit (async graded), a
+    feedback slot, Next scenario, and a Home link."""
+    from anki.rpce import domain_by_code
 
-    def _grade(self) -> None:
-        from anki.rpce import examiner, scores
+    s, i, total = _s2_scenario()
+    d = domain_by_code(s.domain_code)
+    return f"""{_theme_style()}{_S2_SUBMIT_JS}
+<div class="rpce-root"><div class="rpce-hero">
+  <div style="text-align:left;margin-bottom:8px">
+    <a href="#" onclick="pycmd('rpce:home');return false;"
+       style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
+  </div>
+  <div class="rpce-h1">Section II <small>performance scenario</small></div>
+  <div class="rpce-sub">Domain {d.code}: {d.name} · scenario {i + 1} of {total}</div>
+  <div style="margin-top:22px;padding:18px 20px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:16px;font-size:var(--fs-lead);
+    line-height:1.5;text-align:left">{s.prompt}</div>
+  <div style="margin-top:18px;font-weight:700;color:var(--ink2);text-align:left">
+    Your ruling &amp; reasoning:</div>
+  <textarea id="s2ans" rows="7" style="width:100%;margin-top:8px;padding:14px;
+    border:1px solid var(--border);border-radius:14px;background:var(--surface);
+    color:var(--ink);font-size:var(--fs-body);font-family:{_FONT};
+    box-sizing:border-box;resize:vertical"></textarea>
+  <div style="margin-top:14px">
+    <button onclick="rpceGradeS2();return false;"
+      style="background:var(--accent1);color:#fff;border:none;border-radius:14px;
+      padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer">
+      Submit for grading</button>
+  </div>
+  <div id="s2fb"></div>
+  <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
+    <button onclick="pycmd('rpce:s2next');return false;"
+      style="background:var(--surface);color:var(--accent1);border:1px solid var(--border);
+      border-radius:14px;padding:11px 22px;font-size:var(--fs-body);font-weight:800;
+      cursor:pointer">Next scenario →</button>
+  </div>
+</div></div>
+"""
 
-        answer = self._answer.toPlainText().strip()
-        if not answer:
-            return
-        s = self._scenarios[self._idx]
-        corpus = self._corpus or s.gold_answer
-        rubric = getattr(s, "rubric", None)
-        gold = s.gold_answer
 
-        # Show a loading state and lock the button so grading (which may go online
-        # and take a few seconds) can't freeze the UI or be double-submitted.
-        self._grade_btn.setEnabled(False)
-        self._result.setHtml(
-            "<div style='color:#1d4ed8;font-weight:700'>🤖 Grading your answer…</div>"
+def _s2_inject(html: str) -> None:
+    """Inject feedback HTML into the Section II page's ``#s2fb`` slot without a
+    full re-render (keeps the answer + spinner context)."""
+    import json
+
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        mw.web.eval(
+            f"var e=document.getElementById('s2fb');if(e)e.innerHTML={json.dumps(html)};"
         )
-
-        def op():
-            # Runs OFF the UI thread. Online AI examiner when a key is set +
-            # reachable; otherwise the offline grader (AutoExaminer handles the
-            # fallback so we always get a grade).
-            ex = examiner.make_examiner()
-            result = ex.grade(answer, gold, corpus, rubric)
-            return result, getattr(ex, "used", "offline")
-
-        def on_done(future) -> None:
-            # Runs back on the main thread.
-            try:
-                result, used = future.result()
-            except Exception as exc:
-                try:
-                    self._grade_btn.setEnabled(True)
-                    self._result.setHtml(
-                        "<div style='color:#b45309;font-weight:700'>"
-                        f"Grading failed: {exc}</div>"
-                    )
-                except RuntimeError:
-                    pass  # dialog closed meanwhile
-                return
-            # Persist the grade (collection, not UI — runs even if dialog closed).
-            col = self._mw.col
-            if col is not None:
-                scores.record_scenario(col)
-                col.set_config(
-                    "rpce:section2_graded",
-                    int(col.get_config("rpce:section2_graded", 0)) + 1,
-                )
-            try:
-                self._grade_btn.setEnabled(True)
-                verdict = "pass" if result.passed else "keep practicing"
-                self._result.setHtml(
-                    f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
-                    f"<b>Feedback:</b> {result.feedback}</div>"
-                    + _examiner_badge(used)
-                    + f"<div style='margin-top:8px'><b>Model ruling:</b> {gold}</div>"
-                    + _ref_block(s.ref.section, s.ref.quote)
-                )
-            except RuntimeError:
-                pass  # dialog was closed while grading
-
-        aqt.mw.taskman.run_in_background(op, on_done)
-
-    def _next(self) -> None:
-        self._idx = (self._idx + 1) % len(self._scenarios)
-        self._load()
+    except Exception as exc:
+        print(f"RPCE section2 inject error: {exc}")
 
 
-def _show_scenarios() -> None:
+def _s2_grade(answer_b64: str) -> None:
+    """Grade a Section II answer OFF the main thread (spinner shown in JS), then
+    inject the score/feedback/badge/model-ruling/citation via ``mw.web.eval``."""
+    from anki.rpce import examiner, scores
+
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    dlg = ScenarioDialog(mw)
-    dlg.showMaximized()  # Section II is a full-screen practice window
-    dlg.exec()
+    try:
+        answer = base64.b64decode(answer_b64).decode("utf-8").strip()
+    except Exception:
+        answer = ""
+    if not answer:
+        _s2_inject(
+            "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
+            "Write your ruling first.</div>"
+        )
+        return
+    s, _i, _total = _s2_scenario()
+    corpus = _load_corpus() or s.gold_answer
+    rubric = getattr(s, "rubric", None)
+    gold = s.gold_answer
+
+    def op():
+        # Runs OFF the UI thread. Online AI examiner when a key is set + reachable;
+        # otherwise the offline grader (AutoExaminer handles the fallback).
+        ex = examiner.make_examiner()
+        result = ex.grade(answer, gold, corpus, rubric)
+        return result, getattr(ex, "used", "offline")
+
+    def on_done(future) -> None:
+        # Runs back on the main thread.
+        try:
+            result, used = future.result()
+        except Exception as exc:
+            _s2_inject(
+                "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
+                f"Grading failed: {exc}</div>"
+            )
+            return
+        col = mw.col
+        if col is not None:
+            scores.record_scenario(col)
+            col.set_config(
+                "rpce:section2_graded",
+                int(col.get_config("rpce:section2_graded", 0)) + 1,
+            )
+        verdict = "pass" if result.passed else "keep practicing"
+        html = (
+            "<div style='margin-top:16px;padding:16px 18px;background:var(--surface2);"
+            "border:1px solid var(--border);border-radius:16px;text-align:left'>"
+            "<div style='font-size:20px;font-weight:800;color:var(--ink)'>"
+            f"Score: {result.score:.1f}/5 "
+            f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span></div>"
+            f"<div style='margin-top:8px;color:var(--ink)'>{result.feedback}</div>"
+            + _examiner_badge(used)
+            + f"<div style='margin-top:10px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
+            + _ref_block(s.ref.section, s.ref.quote)
+            + "</div>"
+        )
+        _s2_inject(html)
+
+    mw.taskman.run_in_background(op, on_done)
+
+
+def _s2_next() -> None:
+    """Advance to the next Section II scenario and re-render the page."""
+    global _S2_IDX
+    from anki.rpce import scenarios
+
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    _S2_IDX = (_S2_IDX + 1) % len(scenarios.all_scenarios())
+    mw.moveToState("deckBrowser")
+
+
+def _show_scenarios() -> None:
+    """Section II is an in-window page (like the Dashboard), rendered through the
+    deck-browser content hook — not a popup dialog."""
+    global _RPCE_VIEW
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    _RPCE_VIEW = "section2"
+    mw.moveToState("deckBrowser")
 
 
 # Motion-class colors (fg, bg) for the reference pills — shared look with mobile.
@@ -751,8 +796,9 @@ def _auto_full_sync(mw, out, on_done) -> None:
 
 
 def _on_webview_message(handled, message: str, context):
-    """Open the Reference dialog from the dashboard banner link (keeps it off the
-    top toolbar). Returns a filter result tuple."""
+    """Route dashboard/Section II/Simulate webview commands. The two practice
+    pages render in-window (no popups), so their Submit/Next/Home actions arrive
+    here as ``pycmd`` messages. Returns a filter result tuple."""
     if message == "rpce:reference":
         _show_reference()
         return (True, None)
@@ -762,187 +808,222 @@ def _on_webview_message(handled, message: str, context):
     if message == "rpce:session_length":
         _set_session_length()
         return (True, None)
+    if message == "rpce:home":
+        _show_dashboard()
+        return (True, None)
+    # Section II performance practice.
+    if message.startswith("rpce:s2grade:"):
+        _s2_grade(message[len("rpce:s2grade:"):])
+        return (True, None)
+    if message == "rpce:s2next":
+        _s2_next()
+        return (True, None)
+    # Simulation mode.
+    if message.startswith("rpce:simrespond:"):
+        _sim_respond(message[len("rpce:simrespond:"):])
+        return (True, None)
+    if message == "rpce:simnext":
+        _sim_next()
+        return (True, None)
     return handled
 
 
-class SimulationDialog(QDialog):
-    """Simulation mode: a scripted meeting plays out turn by turn — members and
-    the chair speak, and at decision points the candidate responds *as the
-    parliamentarian*. Each response is graded for accuracy with an immediate
-    debrief (SPOV 2 + Insight 4). No RONR citation is required of the candidate."""
+# Injected once with the Simulate page: shows a spinner immediately then hands
+# the base64 response to Python (UTF-8-safe, like the Section II submitter).
+_SIM_SUBMIT_JS = """<script>
+function rpceRespondSim(){
+  var v = document.getElementById('simans').value;
+  document.getElementById('simfb').innerHTML =
+    '<div style="color:#1d4ed8;font-weight:700;margin-top:14px">🤖 Grading your response…</div>';
+  pycmd('rpce:simrespond:' + btoa(unescape(encodeURIComponent(v))));
+}
+</script>"""
 
-    def __init__(self, mw) -> None:
-        super().__init__(mw)
-        from anki.rpce import simulations
 
-        self._mw = mw
-        self._corpus = _load_corpus()
-        self._sims = list(simulations.all_simulations())
-        self._sim_idx = 0
-        self._turn = 0
-        self._pending = None  # the turn awaiting a response
+def _sim_current():
+    """The Simulation currently on screen (wraps ``_SIM['sim_idx']``)."""
+    from anki.rpce import simulations
 
-        self.setWindowTitle("RPCE — Meeting simulation")
-        self.resize(760, 720)
-        self.setMinimumSize(900, 700)  # full simulation window, not a small popup
-        self.setStyleSheet(_DIALOG_QSS)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 22, 22, 22)
-        layout.setSpacing(12)
+    sims = simulations.all_simulations()
+    return sims[_SIM["sim_idx"] % len(sims)]
 
-        self._heading = QLabel()
-        self._heading.setStyleSheet("font-size:22px;font-weight:800;color:#0a1f44")
-        self._heading.setWordWrap(True)
-        layout.addWidget(self._heading)
 
-        self._transcript = QTextBrowser()
-        self._transcript.setMinimumHeight(320)
-        layout.addWidget(self._transcript, 4)  # large transcript area
+def _sim_play() -> None:
+    """Advance the current meeting, appending spoken lines to the transcript log
+    until the next decision point (sets ``pending``) or adjournment (``done``).
+    Mirrors ``SimulationDialog._play`` but drives module state instead of Qt
+    widgets, so the meeting survives across the re-renders that pycmd triggers."""
+    sim = _sim_current()
+    while _SIM["turn"] < len(sim.turns):
+        turn = sim.turns[_SIM["turn"]]
+        _SIM["log"].append(
+            "<p style='margin:10px 0'>"
+            f"<b style='color:#1d4ed8'>{turn.speaker}:</b> {turn.line}</p>"
+        )
+        if turn.needs_response:
+            _SIM["pending"] = turn
+            _SIM["turn"] += 1
+            return
+        _SIM["turn"] += 1
+    _SIM["pending"] = None
+    _SIM["done"] = True
 
-        self._prompt = QLabel()
-        self._prompt.setWordWrap(True)
-        layout.addWidget(self._prompt)
 
-        self._answer = QTextEdit()
-        self._answer.setPlaceholderText("Respond as the parliamentarian…")
-        self._answer.setMinimumHeight(90)
-        layout.addWidget(self._answer, 1)  # roomy response box
+def _sim_reset() -> None:
+    """Start the first meeting fresh and play to the first decision point."""
+    global _SIM
+    _SIM = {"sim_idx": 0, "turn": 0, "pending": None, "log": [], "done": False}
+    _sim_play()
 
-        self._respond_btn = QPushButton("Respond")
-        qconnect(self._respond_btn.clicked, self._respond)
-        layout.addWidget(self._respond_btn)
 
-        self._next_btn = QPushButton("Next meeting →")
-        qconnect(self._next_btn.clicked, self._next_sim)
-        layout.addWidget(self._next_btn)
+def _simulate_html(col) -> str:
+    """Simulation mode as an IN-WINDOW page (mirrors the dashboard): a scripted
+    meeting plays out turn by turn; at each decision point the candidate responds
+    as the parliamentarian and the response is graded for accuracy (async, with a
+    spinner). No RONR citation is required of the candidate."""
+    if _SIM is None:
+        _sim_reset()
+    sim = _sim_current()
+    transcript = "".join(_SIM["log"])
+    if _SIM["done"]:
+        controls = (
+            "<div style='margin-top:18px;font-size:20px;font-weight:800;"
+            "color:var(--ready)'>✅ Meeting adjourned. Well done.</div>"
+            "<div style='margin-top:14px'>"
+            "<button onclick=\"pycmd('rpce:simnext');return false;\" "
+            "style='background:var(--accent1);color:#fff;border:none;border-radius:14px;"
+            "padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer'>"
+            "Next meeting →</button></div>"
+        )
+    else:
+        pending = _SIM["pending"]
+        controls = (
+            "<div style='margin-top:18px;font-weight:800;color:var(--ink);"
+            f"text-align:left'>🎤 {pending.prompt}</div>"
+            "<textarea id='simans' rows='5' placeholder='Respond as the parliamentarian…' "
+            "style='width:100%;margin-top:8px;padding:14px;border:1px solid var(--border);"
+            "border-radius:14px;background:var(--surface);color:var(--ink);"
+            f"font-size:var(--fs-body);font-family:{_FONT};box-sizing:border-box;"
+            "resize:vertical'></textarea>"
+            "<div style='margin-top:14px'>"
+            "<button onclick=\"rpceRespondSim();return false;\" "
+            "style='background:var(--accent1);color:#fff;border:none;border-radius:14px;"
+            "padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer'>"
+            "Respond</button></div>"
+            "<div id='simfb'></div>"
+        )
+    return f"""{_theme_style()}{_SIM_SUBMIT_JS}
+<div class="rpce-root"><div class="rpce-hero">
+  <div style="text-align:left;margin-bottom:8px">
+    <a href="#" onclick="pycmd('rpce:home');return false;"
+       style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
+  </div>
+  <div class="rpce-h1">{sim.title}</div>
+  <div class="rpce-sub"><i>{sim.setting}</i></div>
+  <div style="margin-top:20px;padding:16px 20px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:16px;text-align:left;
+    font-size:var(--fs-body);line-height:1.5">{transcript}</div>
+  {controls}
+</div></div>
+"""
 
-        # Always give an explicit way back to the Dashboard (don't trap the user).
-        self._close_btn = QPushButton("← Back to Dashboard")
-        qconnect(self._close_btn.clicked, self.accept)
-        layout.addWidget(self._close_btn)
 
-        self._load_sim()
+def _sim_respond(answer_b64: str) -> None:
+    """Grade the parliamentarian's response OFF the main thread (spinner shown in
+    JS), append the debrief to the transcript, advance the meeting, and re-render
+    the page. Faithful to ``SimulationDialog._respond``'s auto-advance flow."""
+    from anki.rpce import examiner, scores
 
-    def _sim(self):
-        return self._sims[self._sim_idx]
+    mw = aqt.mw
+    if mw is None or mw.col is None or _SIM is None:
+        return
+    pending = _SIM.get("pending")
+    if pending is None:
+        return
+    try:
+        answer = base64.b64decode(answer_b64).decode("utf-8").strip()
+    except Exception:
+        answer = ""
+    if not answer:
+        return
+    corpus = _load_corpus() or pending.gold
+    rubric = getattr(pending, "rubric", None)
+    gold = pending.gold
+    # Echo the response into the transcript before grading.
+    _SIM["log"].append(
+        f"<p style='margin:10px 0'><b>You (parliamentarian):</b> {answer}</p>"
+    )
 
-    def _load_sim(self) -> None:
-        sim = self._sim()
-        self._turn = 0
-        self._pending = None
-        self._transcript.setHtml(f"<p style='color:#35548c'><i>{sim.setting}</i></p>")
-        self._heading.setText(f"{sim.title}")
-        self._answer.clear()
-        self._answer.setEnabled(True)
-        self._respond_btn.setEnabled(True)
-        self._play()
+    def op():
+        # Runs OFF the UI thread.
+        ex = examiner.make_examiner()
+        result = ex.grade(answer, gold, corpus, rubric)
+        return result, getattr(ex, "used", "offline")
 
-    def _append(self, html: str) -> None:
-        self._transcript.append(html)
-
-    def _play(self) -> None:
-        """Play spoken lines until the next response point (or the end)."""
-        sim = self._sim()
-        while self._turn < len(sim.turns):
-            turn = sim.turns[self._turn]
-            self._append(
-                f"<p><b style='color:#1d4ed8'>{turn.speaker}:</b> {turn.line}</p>"
+    def on_done(future) -> None:
+        # Runs back on the main thread.
+        try:
+            result, used = future.result()
+        except Exception as exc:
+            _SIM["log"].append(
+                f"<p style='color:#b45309'>Grading failed: {exc}</p>"
             )
-            if turn.needs_response:
-                self._pending = turn
-                self._turn += 1
-                self._prompt.setText(f"🎤 {turn.prompt}")
-                self._answer.setEnabled(True)
-                self._answer.setFocus()
-                self._respond_btn.setEnabled(True)
-                return
-            self._turn += 1
-        # Reached the end of the meeting.
-        self._pending = None
-        self._prompt.setText("✅ Meeting adjourned. Well done.")
-        self._answer.setEnabled(False)
-        self._respond_btn.setEnabled(False)
-
-    def _respond(self) -> None:
-        from anki.rpce import examiner, scores
-
-        if self._pending is None:
+            mw.moveToState("deckBrowser")
             return
-        answer = self._answer.toPlainText().strip()
-        if not answer:
-            return
-        pending = self._pending
-        corpus = self._corpus or pending.gold
-        rubric = getattr(pending, "rubric", None)
-        gold = pending.gold
+        col = mw.col
+        if col is not None:
+            scores.record_scenario(col)
+            col.set_config(
+                "rpce:sim_responses",
+                int(col.get_config("rpce:sim_responses", 0)) + 1,
+            )
+        verdict = "pass" if result.passed else "keep practicing"
+        ref = pending.ref
+        ref_html = _ref_block(ref.section, ref.quote) if ref else ""
+        _SIM["log"].append(
+            "<div style='margin:12px 0;padding:14px 16px;background:var(--surface);"
+            "border:1px solid var(--border);border-radius:14px'>"
+            "<div style='font-weight:800;color:var(--ink)'>"
+            f"Examiner: {result.score:.1f}/5 ({verdict})</div>"
+            f"<div style='margin-top:6px;color:var(--ink)'>{result.feedback}</div>"
+            + _examiner_badge(used)
+            + f"<div style='margin-top:8px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
+            + ref_html
+            + "</div>"
+        )
+        # Advance to the next decision point (or adjourn) and re-render.
+        _SIM["pending"] = None
+        _sim_play()
+        mw.moveToState("deckBrowser")
 
-        # Echo the response and show a loading state; lock inputs so grading
-        # (which may go online) can't freeze the UI or be double-submitted.
-        self._append(f"<p><b>You (parliamentarian):</b> {answer}</p>")
-        self._answer.clear()
-        self._answer.setEnabled(False)
-        self._respond_btn.setEnabled(False)
-        self._prompt.setText("🤖 Grading your response…")
-
-        def op():
-            # Runs OFF the UI thread.
-            ex = examiner.make_examiner()
-            result = ex.grade(answer, gold, corpus, rubric)
-            return result, getattr(ex, "used", "offline")
-
-        def on_done(future) -> None:
-            # Runs back on the main thread.
-            try:
-                result, used = future.result()
-            except Exception as exc:
-                try:
-                    self._answer.setEnabled(True)
-                    self._respond_btn.setEnabled(True)
-                    self._append(
-                        f"<p style='color:#b45309'>Grading failed: {exc}</p>"
-                    )
-                except RuntimeError:
-                    pass  # dialog closed meanwhile
-                return
-            # Persist the grade (collection, not UI — runs even if dialog closed).
-            col = self._mw.col
-            if col is not None:
-                scores.record_scenario(col)
-                col.set_config(
-                    "rpce:sim_responses",
-                    int(col.get_config("rpce:sim_responses", 0)) + 1,
-                )
-            try:
-                verdict = "pass" if result.passed else "keep practicing"
-                ref = pending.ref
-                ref_html = _ref_block(ref.section, ref.quote) if ref else ""
-                self._append(
-                    f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
-                    f"({verdict}) — {result.feedback}</p>"
-                    + _examiner_badge(used)
-                    + f"<p style='color:#35548c'><b>Model ruling:</b> {gold}</p>"
-                    + ref_html
-                )
-                # Advance the meeting — _play re-enables inputs at the next
-                # response point, or disables them once the meeting adjourns.
-                self._play()
-            except RuntimeError:
-                pass  # dialog was closed while grading
-
-        aqt.mw.taskman.run_in_background(op, on_done)
-
-    def _next_sim(self) -> None:
-        self._sim_idx = (self._sim_idx + 1) % len(self._sims)
-        self._load_sim()
+    mw.taskman.run_in_background(op, on_done)
 
 
-def _show_simulation() -> None:
+def _sim_next() -> None:
+    """Move on to the next meeting and re-render (like ``_next_sim``)."""
+    global _SIM
+    from anki.rpce import simulations
+
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    dlg = SimulationDialog(mw)
-    dlg.showMaximized()  # simulation is a full-screen practice window
-    dlg.exec()
+    sims = simulations.all_simulations()
+    idx = ((_SIM["sim_idx"] if _SIM else 0) + 1) % len(sims)
+    _SIM = {"sim_idx": idx, "turn": 0, "pending": None, "log": [], "done": False}
+    _sim_play()
+    mw.moveToState("deckBrowser")
+
+
+def _show_simulation() -> None:
+    """Simulate is an in-window page (like the Dashboard), rendered through the
+    deck-browser content hook — not a popup dialog. Starts a fresh meeting."""
+    global _RPCE_VIEW
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    _RPCE_VIEW = "simulate"
+    _sim_reset()
+    mw.moveToState("deckBrowser")
 
 
 def _brand_main_window() -> None:
@@ -1430,7 +1511,14 @@ def _on_deck_browser_content(deck_browser, content) -> None:
     if mw is None or mw.col is None:
         return
     try:
-        content.tree = _banner_html(mw.col)
+        # The deck-browser webview is the single in-window canvas: the Dashboard,
+        # Section II, and Simulate are all rendered here, switched by _RPCE_VIEW.
+        if _RPCE_VIEW == "section2":
+            content.tree = _section2_html(mw.col)
+        elif _RPCE_VIEW == "simulate":
+            content.tree = _simulate_html(mw.col)
+        else:
+            content.tree = _banner_html(mw.col)
         content.stats = ""
         # Hide Anki's gray deck-browser bottom bar (Get Shared / Create Deck /
         # Import File) — not part of the RPCE flow.
@@ -1512,9 +1600,12 @@ def _select_rpce_deck() -> bool:
 def _tab_study() -> None:
     """Start a review session straight away (like the phone) — skip Anki's
     intermediate overview/"Study Now" screen so 'Review session' always begins a session."""
+    global _RPCE_VIEW
     mw = aqt.mw
     if mw is None or not _select_rpce_deck():
         return
+    # Leaving to Review: the home screen returns to the Dashboard afterward.
+    _RPCE_VIEW = "dashboard"
     mw.moveToState("review")
 
 
