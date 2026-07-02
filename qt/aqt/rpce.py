@@ -503,6 +503,7 @@ class ScenarioDialog(QDialog):
 
         self.setWindowTitle("RPCE — Section II scenario practice")
         self.resize(720, 660)
+        self.setMinimumSize(900, 700)  # full practice window, not a small popup
         self.setStyleSheet(_DIALOG_QSS)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 22, 22, 22)
@@ -517,13 +518,13 @@ class ScenarioDialog(QDialog):
         layout.addWidget(self._prompt)
         layout.addWidget(QLabel("Your ruling & reasoning:"))
         self._answer = QTextEdit()
-        layout.addWidget(self._answer)
+        layout.addWidget(self._answer, 2)  # roomy answer box
         self._grade_btn = QPushButton("Grade my answer")
         qconnect(self._grade_btn.clicked, self._grade)
         layout.addWidget(self._grade_btn)
         self._result = QTextBrowser()
         self._result.setMinimumHeight(140)
-        layout.addWidget(self._result)
+        layout.addWidget(self._result, 3)  # large feedback area
         self._next_btn = QPushButton("Next scenario →")
         qconnect(self._next_btn.clicked, self._next)
         layout.addWidget(self._next_btn)
@@ -550,27 +551,61 @@ class ScenarioDialog(QDialog):
         if not answer:
             return
         s = self._scenarios[self._idx]
-        # Online AI examiner when a key is set + reachable; otherwise the offline
-        # grader (AutoExaminer handles the fallback so we always get a grade).
-        ex = examiner.make_examiner()
-        result = ex.grade(
-            answer, s.gold_answer, self._corpus or s.gold_answer,
-            getattr(s, "rubric", None),
-        )
-        scores.record_scenario(self._mw.col)
-        # Track total Section II answers graded (persists + syncs via config).
-        col = self._mw.col
-        col.set_config(
-            "rpce:section2_graded", int(col.get_config("rpce:section2_graded", 0)) + 1
-        )
-        verdict = "pass" if result.passed else "keep practicing"
+        corpus = self._corpus or s.gold_answer
+        rubric = getattr(s, "rubric", None)
+        gold = s.gold_answer
+
+        # Show a loading state and lock the button so grading (which may go online
+        # and take a few seconds) can't freeze the UI or be double-submitted.
+        self._grade_btn.setEnabled(False)
         self._result.setHtml(
-            f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
-            f"<b>Feedback:</b> {result.feedback}</div>"
-            + _examiner_badge(getattr(ex, "used", "offline"))
-            + f"<div style='margin-top:8px'><b>Model ruling:</b> {s.gold_answer}</div>"
-            + _ref_block(s.ref.section, s.ref.quote)
+            "<div style='color:#1d4ed8;font-weight:700'>🤖 Grading your answer…</div>"
         )
+
+        def op():
+            # Runs OFF the UI thread. Online AI examiner when a key is set +
+            # reachable; otherwise the offline grader (AutoExaminer handles the
+            # fallback so we always get a grade).
+            ex = examiner.make_examiner()
+            result = ex.grade(answer, gold, corpus, rubric)
+            return result, getattr(ex, "used", "offline")
+
+        def on_done(future) -> None:
+            # Runs back on the main thread.
+            try:
+                result, used = future.result()
+            except Exception as exc:
+                try:
+                    self._grade_btn.setEnabled(True)
+                    self._result.setHtml(
+                        "<div style='color:#b45309;font-weight:700'>"
+                        f"Grading failed: {exc}</div>"
+                    )
+                except RuntimeError:
+                    pass  # dialog closed meanwhile
+                return
+            # Persist the grade (collection, not UI — runs even if dialog closed).
+            col = self._mw.col
+            if col is not None:
+                scores.record_scenario(col)
+                col.set_config(
+                    "rpce:section2_graded",
+                    int(col.get_config("rpce:section2_graded", 0)) + 1,
+                )
+            try:
+                self._grade_btn.setEnabled(True)
+                verdict = "pass" if result.passed else "keep practicing"
+                self._result.setHtml(
+                    f"<div><b>Score:</b> {result.score:.1f}/5 ({verdict})<br>"
+                    f"<b>Feedback:</b> {result.feedback}</div>"
+                    + _examiner_badge(used)
+                    + f"<div style='margin-top:8px'><b>Model ruling:</b> {gold}</div>"
+                    + _ref_block(s.ref.section, s.ref.quote)
+                )
+            except RuntimeError:
+                pass  # dialog was closed while grading
+
+        aqt.mw.taskman.run_in_background(op, on_done)
 
     def _next(self) -> None:
         self._idx = (self._idx + 1) % len(self._scenarios)
@@ -581,7 +616,9 @@ def _show_scenarios() -> None:
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    ScenarioDialog(mw).exec()
+    dlg = ScenarioDialog(mw)
+    dlg.showMaximized()  # Section II is a full-screen practice window
+    dlg.exec()
 
 
 # Motion-class colors (fg, bg) for the reference pills — shared look with mobile.
@@ -747,6 +784,7 @@ class SimulationDialog(QDialog):
 
         self.setWindowTitle("RPCE — Meeting simulation")
         self.resize(760, 720)
+        self.setMinimumSize(900, 700)  # full simulation window, not a small popup
         self.setStyleSheet(_DIALOG_QSS)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 22, 22, 22)
@@ -759,7 +797,7 @@ class SimulationDialog(QDialog):
 
         self._transcript = QTextBrowser()
         self._transcript.setMinimumHeight(320)
-        layout.addWidget(self._transcript)
+        layout.addWidget(self._transcript, 4)  # large transcript area
 
         self._prompt = QLabel()
         self._prompt.setWordWrap(True)
@@ -768,7 +806,7 @@ class SimulationDialog(QDialog):
         self._answer = QTextEdit()
         self._answer.setPlaceholderText("Respond as the parliamentarian…")
         self._answer.setMinimumHeight(90)
-        layout.addWidget(self._answer)
+        layout.addWidget(self._answer, 1)  # roomy response box
 
         self._respond_btn = QPushButton("Respond")
         qconnect(self._respond_btn.clicked, self._respond)
@@ -833,30 +871,65 @@ class SimulationDialog(QDialog):
         answer = self._answer.toPlainText().strip()
         if not answer:
             return
-        ex = examiner.make_examiner()
-        result = ex.grade(
-            answer, self._pending.gold, self._corpus or self._pending.gold,
-            getattr(self._pending, "rubric", None),
-        )
-        scores.record_scenario(self._mw.col)
-        # Track total simulation responses graded (persists + syncs via config).
-        col = self._mw.col
-        col.set_config(
-            "rpce:sim_responses", int(col.get_config("rpce:sim_responses", 0)) + 1
-        )
-        verdict = "pass" if result.passed else "keep practicing"
-        ref = self._pending.ref
-        ref_html = _ref_block(ref.section, ref.quote) if ref else ""
-        self._append(
-            f"<p><b>You (parliamentarian):</b> {answer}</p>"
-            f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
-            f"({verdict}) — {result.feedback}</p>"
-            + _examiner_badge(getattr(ex, "used", "offline"))
-            + f"<p style='color:#35548c'><b>Model ruling:</b> {self._pending.gold}</p>"
-            + ref_html
-        )
+        pending = self._pending
+        corpus = self._corpus or pending.gold
+        rubric = getattr(pending, "rubric", None)
+        gold = pending.gold
+
+        # Echo the response and show a loading state; lock inputs so grading
+        # (which may go online) can't freeze the UI or be double-submitted.
+        self._append(f"<p><b>You (parliamentarian):</b> {answer}</p>")
         self._answer.clear()
-        self._play()
+        self._answer.setEnabled(False)
+        self._respond_btn.setEnabled(False)
+        self._prompt.setText("🤖 Grading your response…")
+
+        def op():
+            # Runs OFF the UI thread.
+            ex = examiner.make_examiner()
+            result = ex.grade(answer, gold, corpus, rubric)
+            return result, getattr(ex, "used", "offline")
+
+        def on_done(future) -> None:
+            # Runs back on the main thread.
+            try:
+                result, used = future.result()
+            except Exception as exc:
+                try:
+                    self._answer.setEnabled(True)
+                    self._respond_btn.setEnabled(True)
+                    self._append(
+                        f"<p style='color:#b45309'>Grading failed: {exc}</p>"
+                    )
+                except RuntimeError:
+                    pass  # dialog closed meanwhile
+                return
+            # Persist the grade (collection, not UI — runs even if dialog closed).
+            col = self._mw.col
+            if col is not None:
+                scores.record_scenario(col)
+                col.set_config(
+                    "rpce:sim_responses",
+                    int(col.get_config("rpce:sim_responses", 0)) + 1,
+                )
+            try:
+                verdict = "pass" if result.passed else "keep practicing"
+                ref = pending.ref
+                ref_html = _ref_block(ref.section, ref.quote) if ref else ""
+                self._append(
+                    f"<p style='color:#35548c'><b>Examiner:</b> {result.score:.1f}/5 "
+                    f"({verdict}) — {result.feedback}</p>"
+                    + _examiner_badge(used)
+                    + f"<p style='color:#35548c'><b>Model ruling:</b> {gold}</p>"
+                    + ref_html
+                )
+                # Advance the meeting — _play re-enables inputs at the next
+                # response point, or disables them once the meeting adjourns.
+                self._play()
+            except RuntimeError:
+                pass  # dialog was closed while grading
+
+        aqt.mw.taskman.run_in_background(op, on_done)
 
     def _next_sim(self) -> None:
         self._sim_idx = (self._sim_idx + 1) % len(self._sims)
@@ -867,7 +940,9 @@ def _show_simulation() -> None:
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    SimulationDialog(mw).exec()
+    dlg = SimulationDialog(mw)
+    dlg.showMaximized()  # simulation is a full-screen practice window
+    dlg.exec()
 
 
 def _brand_main_window() -> None:
@@ -891,6 +966,7 @@ def _brand_main_window() -> None:
     # Tools ▸ RPCE actions: session length + AnkiWeb logout.
     try:
         from aqt.qt import QAction
+        from anki.rpce import ai
 
         act = QAction("Review session length…", mw)
         qconnect(act.triggered, _set_session_length)
@@ -898,6 +974,14 @@ def _brand_main_window() -> None:
         aikey = QAction("Set AI examiner key…", mw)
         qconnect(aikey.triggered, _set_ai_key)
         mw.form.menuTools.addAction(aikey)
+        # Checkable AI on/off — only meaningful once a key is configured. Toggling
+        # flips online grading (offline examiner is the fallback either way).
+        ai_toggle = QAction("AI examiner (online grading)", mw)
+        ai_toggle.setCheckable(True)
+        ai_toggle.setChecked(ai.ai_enabled())
+        ai_toggle.setEnabled(ai.ai_configured())
+        qconnect(ai_toggle.toggled, _toggle_ai_examiner)
+        mw.form.menuTools.addAction(ai_toggle)
         logout = QAction("Log out of AnkiWeb", mw)
         qconnect(logout.triggered, _logout_ankiweb)
         mw.form.menuTools.addAction(logout)
@@ -1229,6 +1313,20 @@ def _set_ai_key() -> None:
     ai.set_openai_key(key.strip())
     tooltip("AI examiner enabled — online grading with offline fallback."
             if key.strip() else "AI key cleared — using the offline examiner.")
+
+
+def _toggle_ai_examiner(checked: bool) -> None:
+    """Turn online AI grading on/off (works even when online). The offline
+    examiner is the fallback either way; only meaningful when a key is set."""
+    from aqt.utils import tooltip
+    from anki.rpce import ai
+
+    ai.set_ai_enabled(checked)
+    tooltip(
+        "AI grading on — online with offline fallback."
+        if checked
+        else "AI grading off — using the offline examiner."
+    )
 
 
 def _logout_ankiweb() -> None:
