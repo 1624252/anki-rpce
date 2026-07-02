@@ -929,9 +929,13 @@ def _on_profile_open() -> None:
             # ones); idempotent so it's cheap on every open.
             try:
                 conf = mw.col.decks.config_dict_for_deck_id(deck["id"])
-                if conf.get("new", {}).get("perDay", 0) < 9999:
+                if (
+                    conf.get("new", {}).get("perDay", 0) < 9999
+                    or conf.get("newSortOrder", 0) != 4
+                ):
                     conf["new"]["perDay"] = 9999
                     conf["rev"]["perDay"] = 9999
+                    conf["newSortOrder"] = 4  # RANDOM_CARD — interleave types
                     mw.col.decks.update_config(conf)
             except Exception:
                 pass

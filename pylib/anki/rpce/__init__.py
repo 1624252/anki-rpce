@@ -466,9 +466,13 @@ def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
         conf = col.decks.config_dict_for_deck_id(deck_id)
         conf["new"]["perDay"] = 9999
         conf["rev"]["perDay"] = 9999
+        # RANDOM_CARD: with one card shown per concept (siblings buried), a fully
+        # random new order makes each concept lead with a random question type,
+        # so a session moves between cloze / MCQ / ordering / etc. (spec §14).
+        conf["newSortOrder"] = 4
         col.decks.update_config(conf)
     except Exception as exc:  # never block deck build over limits
-        print(f"RPCE deck-limit config error: {exc}")
+        print(f"RPCE deck-config error: {exc}")
     _concept_notetype(col)
     _question_notetype(col)
 
