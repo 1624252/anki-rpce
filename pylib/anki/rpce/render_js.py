@@ -82,6 +82,9 @@ RENDER_CSS = """
 .rpce-order .rpce-slot.drag{opacity:.6;box-shadow:0 4px 12px rgba(0,0,0,.18)}
 .rpce-order .rpce-slot .lbl{flex:1}
 .rpce-slot .rpce-omark{margin-left:8px;font-weight:800;font-size:13px;white-space:nowrap}
+/* correct-order reference list shown with the answer (vertical, top = higher) */
+.rpce-correct-order{margin:6px 0 0;padding-left:24px;font-weight:700;line-height:1.5}
+.rpce-correct-order li{margin:2px 0}
 .rpce-grip{color:#94a3b8;font-size:17px;cursor:grab;line-height:1}
 /* ▲/▼ side-by-side (accessible fallback to dragging) so the row stays one line tall */
 .rpce-moves{display:flex;flex-direction:row;gap:3px}
@@ -335,8 +338,10 @@ RENDER_JS = r"""
       mv.appendChild(up); mv.appendChild(dn); row.appendChild(mv);
       return row;
     }
-    // The correct sequence, always shown below the graded rows for reference.
-    var correctLine='Correct order (highest → lowest): <b>'+order.join(' → ')+'</b>';
+    // The correct sequence, always shown below the graded rows for reference —
+    // as a vertical numbered list (top = higher precedence), matching the rows.
+    var correctLine='Correct order (highest → lowest):<ol class="rpce-correct-order">'
+      +order.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ol>';
     // fromUser=true: grade the arrangement the user submitted. fromUser=false: the
     // user tapped Show Answer without submitting — just show the correct order,
     // never claim "your order matches".
