@@ -1805,6 +1805,13 @@ def _on_answer_card(reviewer, card, ease) -> None:
         _session_stats["ratings"][bucket] += 1
     kind = _rpce_card_kind(card)
     _session_stats["by_type"][kind] = _session_stats["by_type"].get(kind, 0) + 1
+    concept, domain = _rpce_card_concept_domain(card)
+    if concept:
+        _session_stats["concepts"].add(concept)
+    if domain:
+        _session_stats["by_domain"][domain] = (
+            _session_stats["by_domain"].get(domain, 0) + 1
+        )
     # Cap the session at the configured length, then return home for a new one.
     _session_done += 1
     if _session_done >= _session_limit():
@@ -1907,7 +1914,29 @@ def _new_session_stats() -> dict:
         "total": 0,
         "ratings": {"again": 0, "hard": 0, "good": 0, "easy": 0},
         "by_type": {},
+        "concepts": set(),  # distinct concept ids practised this session
+        "by_domain": {},  # readable domain name -> answers
     }
+
+
+def _rpce_card_concept_domain(card) -> tuple[str | None, str | None]:
+    """The card's concept id and readable domain name from its rpce tags, for the
+    session breakdown ('rpce::concept::<id>' and 'rpce::domain::<code>')."""
+    from anki.rpce import domain_by_code
+
+    concept = domain = None
+    try:
+        for t in card.note().tags:
+            if t.startswith("rpce::concept::"):
+                concept = t.rsplit("::", 1)[-1]
+            elif t.startswith("rpce::domain::"):
+                try:
+                    domain = domain_by_code(int(t.rsplit("::", 1)[-1])).name
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return concept, domain
 
 
 def _rpce_card_kind(card) -> str:
@@ -2074,31 +2103,35 @@ def _session_done_html(col) -> str:
     missed = r["again"]
     acc = round(100 * recalled / total) if total else 0
 
-    # Big stat tiles: total, recalled, needed effort, missed.
+    concepts = len(st.get("concepts") or ())
+    # Big stat tiles: total, recalled, needed effort, missed, distinct concepts.
     tiles = "".join(
         [
             _stat_pill(str(total), "questions", "var(--ink)"),
             _stat_pill(str(recalled), "recalled", "#15803d"),
             _stat_pill(str(struggled), "needed effort", "#b45309"),
             _stat_pill(str(missed), "missed", "#be123c"),
+            _stat_pill(str(concepts), "concepts", "var(--accent1)"),
         ]
     )
 
-    # Per-format breakdown (Cloze / Multiple choice / Select-all / Ordering).
-    by_type = st.get("by_type") or {}
-    type_rows = "".join(
-        f"<div style='display:flex;justify-content:space-between;padding:6px 0;"
-        f"border-bottom:1px solid var(--border)'><span>{name}</span>"
-        f"<b>{cnt}</b></div>"
-        for name, cnt in sorted(by_type.items(), key=lambda kv: -kv[1])
-    )
-    type_html = (
-        "<div style='margin-top:24px'><div style='font-weight:800;color:var(--ink);"
-        "margin-bottom:6px'>By question type</div>"
-        f"{type_rows}</div>"
-        if type_rows
-        else ""
-    )
+    def _breakdown(title: str, data: dict) -> str:
+        rows = "".join(
+            f"<div style='display:flex;justify-content:space-between;gap:12px;"
+            f"padding:6px 0;border-bottom:1px solid var(--border)'>"
+            f"<span>{name}</span><b>{cnt}</b></div>"
+            for name, cnt in sorted(data.items(), key=lambda kv: -kv[1])
+        )
+        return (
+            "<div style='margin-top:24px'><div style='font-weight:800;"
+            f"color:var(--ink);margin-bottom:6px'>{title}</div>{rows}</div>"
+            if rows
+            else ""
+        )
+
+    # Breakdowns by question type and by domain (the named concept groupings).
+    type_html = _breakdown("By question type", st.get("by_type") or {})
+    domain_html = _breakdown("Concepts by domain", st.get("by_domain") or {})
 
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
@@ -2108,6 +2141,7 @@ def _session_done_html(col) -> str:
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px">{tiles}</div>
   {type_html}
+  {domain_html}
   <div style="text-align:center;margin-top:30px">
     <button onclick="pycmd('rpce:newsession');return false;"
       style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;
