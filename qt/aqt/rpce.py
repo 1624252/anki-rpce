@@ -645,6 +645,24 @@ def _auto_full_upload(mw, server_usn, on_done) -> None:
     mw.closeAllWindows(lambda: aqt.sync.full_upload(mw, server_usn, on_done))
 
 
+def _auto_full_sync(mw, out, on_done) -> None:
+    """Resolve Anki's full-sync conflict without the scary Download/Upload dialog.
+
+    A full sync is forced only when the device and AnkiWeb schemas differ (the
+    two apps each seed their own deck). It can't merge, so we apply a documented
+    conflict rule: the desktop holds the authoritative generated deck, so on a
+    conflict it UPLOADS (desktop wins); the phone then downloads once. If the
+    server is strictly newer (FULL_DOWNLOAD, local behind), take its copy. After
+    this one alignment, every later sync is incremental and reviews combine."""
+    import aqt.sync
+
+    server_usn = out.server_media_usn if mw.pm.media_syncing_enabled() else None
+    if out.required == out.FULL_DOWNLOAD:
+        mw.closeAllWindows(lambda: aqt.sync.full_download(mw, server_usn, on_done))
+    else:  # FULL_UPLOAD or FULL_SYNC conflict → desktop is the source of truth
+        mw.closeAllWindows(lambda: aqt.sync.full_upload(mw, server_usn, on_done))
+
+
 def _on_webview_message(handled, message: str, context):
     """Open the Reference dialog from the dashboard banner link (keeps it off the
     top toolbar). Returns a filter result tuple."""
@@ -1417,6 +1435,7 @@ def setup() -> None:
     import aqt.sync
 
     aqt.sync.confirm_full_upload = _auto_full_upload
+    aqt.sync.full_sync = _auto_full_sync
     gui_hooks.style_did_init.append(_on_style_init)
     gui_hooks.webview_will_set_content.append(_on_webview_content)
     gui_hooks.main_window_did_init.append(_brand_main_window)
