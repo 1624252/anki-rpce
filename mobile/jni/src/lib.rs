@@ -677,7 +677,19 @@ fn scores_json() -> String {
                 "evidence": format!("Not enough data: {}", missing.join("; ")),
             });
         }
-        let p = perf_p.unwrap_or(0.0);
+        // The review/coverage gates can pass while performance has no recall
+        // history to score from (they measure different things) — abstain
+        // rather than report a bogus 0% pass probability (mirrors desktop).
+        let p = match perf_p {
+            Some(p) => p,
+            None => {
+                return serde_json::json!({
+                    "abstained": true,
+                    "confidence": "abstain",
+                    "evidence": "Not enough performance data yet — practise more to score.",
+                });
+            }
+        };
         let scen_note = if needs_scenarios {
             format!(", {scenarios} graded scenarios")
         } else {

@@ -217,7 +217,8 @@ def _performance_prose(point: float | None, cov: float, weakest: str | None) -> 
     if point >= 0.6:
         return (
             "You're getting close to exam-ready on the material you've covered "
-            f"({cov:.0%} of the blueprint), with clear room to firm up weak spots." + focus
+            f"({cov:.0%} of the blueprint), with clear room to firm up weak spots."
+            + focus
         )
     return (
         "You're still building toward exam-ready; broaden your coverage and "
@@ -304,7 +305,9 @@ def performance_score(col: Collection) -> ScoreRange:
             "exam-style questions once you have practised.",
         )
         sr.confidence_label = confidence_label(sr.confidence)
-        sr.elaboration = _performance_prose(None, coverage_pct(col), best_next_topic(col))
+        sr.elaboration = _performance_prose(
+            None, coverage_pct(col), best_next_topic(col)
+        )
         return sr
     cov = coverage_pct(col)
     # Wider band when coverage is low (less certain about unseen material).
@@ -430,7 +433,25 @@ def readiness(
         )
 
     perf = performance_score(col)
-    assert perf.point is not None
+    # The review/coverage gates above can pass while performance still has no
+    # recall history to score from (they measure different things) — abstain
+    # rather than crash the whole dashboard.
+    if perf.point is None:
+        return ReadinessSnapshot(
+            section=section,
+            p_pass=None,
+            range_low=None,
+            range_high=None,
+            confidence=CONFIDENCE_ABSTAIN,
+            pct_covered=cov,
+            graded_reviews=reviews,
+            graded_scenarios=scenarios,
+            evidence="Not enough performance data yet — practise more to score.",
+            best_next_topic=next_topic,
+            abstained=True,
+            confidence_label=confidence_label(CONFIDENCE_ABSTAIN),
+            elaboration=_readiness_prose(True, None, section),
+        )
     p_pass = _logistic_pass_probability(perf.point)
     low = _logistic_pass_probability(perf.low or perf.point)
     high = _logistic_pass_probability(perf.high or perf.point)
