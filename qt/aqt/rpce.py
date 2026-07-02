@@ -955,7 +955,10 @@ def _is_rpce_card(card) -> bool:
     from anki.rpce import CONCEPT_NOTETYPE, QUESTION_NOTETYPE
 
     try:
-        return card.note_type()["name"] in (QUESTION_NOTETYPE, CONCEPT_NOTETYPE)
+        # Prefix match: an earlier bug could leave name-collision duplicates
+        # (e.g. "RPCE Q 1++"), which must still render.
+        name = card.note_type()["name"]
+        return name.startswith(QUESTION_NOTETYPE) or name.startswith(CONCEPT_NOTETYPE)
     except Exception:
         return False
 
@@ -1187,19 +1190,46 @@ def _on_toolbar_links(links, toolbar) -> None:
     )
 
 
+def _last_sync_label() -> str:
+    """Relative time since the last successful sync (persisted per collection),
+    e.g. 'just now' / '5m ago' — mirrors the phone's last-synced indicator."""
+    try:
+        col = aqt.mw.col if aqt.mw else None
+        ts = col.get_config("rpce:last_sync", None) if col else None
+        if not ts:
+            return ""
+        import time
+
+        delta = int(time.time()) - int(ts)
+        if delta < 60:
+            return "just now"
+        if delta < 3600:
+            return f"{delta // 60}m ago"
+        if delta < 86400:
+            return f"{delta // 3600}h ago"
+        return f"{delta // 86400}d ago"
+    except Exception:
+        return ""
+
+
 def _on_right_tray(content, toolbar) -> None:
-    """Top-right corner: a live sync-status indicator followed by Anki's own
-    Sync button — mirrors the phone's top-right sync status. The indicator
-    recomputes signed-in state on every toolbar draw (see ``_on_sync_changed``)."""
+    """Top-right corner: a live sync-status indicator (with last-synced time)
+    followed by Anki's own Sync button — mirrors the phone's top-right sync
+    status. Recomputes on every toolbar draw (see ``_on_sync_changed``)."""
     signed_in = False
     try:
         signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
     except Exception:
         pass
+    if signed_in:
+        when = _last_sync_label()
+        label = f"🟢 Synced · {when}" if when else "🟢 Synced"
+    else:
+        label = "⚠️ Not signed in"
     content.append(
         toolbar.create_link(
             "rpce_sync_status",
-            "🟢 Synced" if signed_in else "⚠️ Not signed in",
+            label,
             _trigger_sync,
             tip="AnkiWeb sync — click to sign in and sync with your phone",
             id="rpce_sync_in" if signed_in else "rpce_sync_out",
@@ -1216,6 +1246,19 @@ def _on_sync_changed(*args) -> None:
             aqt.mw.toolbar.draw()
     except Exception as exc:  # never break sync over the indicator
         print(f"RPCE sync-status refresh error: {exc}")
+
+
+def _on_sync_finished(*args) -> None:
+    """Stamp the last-synced time on a successful sync, then refresh the
+    indicator so it shows 'Synced · just now'."""
+    try:
+        if aqt.mw and aqt.mw.col:
+            import time
+
+            aqt.mw.col.set_config("rpce:last_sync", int(time.time()))
+    except Exception as exc:
+        print(f"RPCE last-sync stamp error: {exc}")
+    _on_sync_changed()
 
 
 def _remove_deck_browser_bottom_bar() -> None:
@@ -1255,5 +1298,5 @@ def setup() -> None:
     gui_hooks.top_toolbar_will_set_right_tray_content.append(_on_right_tray)
     gui_hooks.state_did_change.append(_on_state_change)
     # Live-update the top-right sync-status indicator after login/sync.
-    gui_hooks.sync_did_finish.append(_on_sync_changed)
+    gui_hooks.sync_did_finish.append(_on_sync_finished)
     gui_hooks.sync_will_start.append(_on_sync_changed)
