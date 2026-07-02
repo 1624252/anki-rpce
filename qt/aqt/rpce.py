@@ -374,6 +374,21 @@ def _banner_html(col) -> str:
     # the score cards + coverage already say enough.
     note = ""
     chips_row = ""
+    # Sign-in status lives in the top-right; here we only offer Log out when
+    # signed in (the redundant "Signed in to AnkiWeb" banner is gone).
+    signed_in = False
+    try:
+        signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
+    except Exception:
+        pass
+    logout_html = (
+        "<div style='margin-top:10px'><a href='#' "
+        "onclick=\"pycmd('rpce:logout');return false;\" "
+        "style='color:#b45309;font-weight:700;text-decoration:underline;cursor:pointer'>"
+        "Log out of AnkiWeb</a></div>"
+        if signed_in
+        else ""
+    )
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head">
@@ -392,13 +407,7 @@ def _banner_html(col) -> str:
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — <b>Study</b> flashcards,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
-  <div style="margin-top:10px">{_sync_status_html()}</div>
-  <div style="margin-top:16px">
-    <a href="#" onclick="pycmd('rpce:reference');return false;"
-       style="display:inline-block;padding:11px 20px;border-radius:12px;font-weight:700;
-       text-decoration:none;color:#1d4ed8;background:#eef4ff;border:1px solid #caddf7">
-       📋 Reference tables — order of precedence &amp; motion characteristics</a>
-  </div>
+  {logout_html}
   <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
@@ -654,6 +663,9 @@ def _on_webview_message(handled, message: str, context):
     top toolbar). Returns a filter result tuple."""
     if message == "rpce:reference":
         _show_reference()
+        return (True, None)
+    if message == "rpce:logout":
+        _logout_ankiweb()
         return (True, None)
     return handled
 
@@ -1037,14 +1049,11 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
     # revealed / order placed) triggers Anki's own answer-flip via pycmd('ans').
     # That hides the "Show Answer" button and surfaces the rating buttons —
     # matching the phone, where Show Answer is never shown for interactive cards.
-    # Small delay so the inline right/wrong marking registers before the flip.
+    # Flip immediately on completion — no delay.
     opts = (
         "{reveal:true}"
         if reveal
-        else (
-            "{reveal:false,onComplete:function(){setTimeout(function(){"
-            "try{pycmd('ans');}catch(e){}},600);}}"
-        )
+        else "{reveal:false,onComplete:function(){try{pycmd('ans');}catch(e){}}}"
     )
     return (
         "<style>" + render_js.RENDER_CSS + "</style>"
@@ -1106,6 +1115,8 @@ def _logout_ankiweb() -> None:
     try:
         mw.pm.clear_sync_auth()
         _redraw_toolbar()
+        if mw.state == "deckBrowser":  # refresh so the Log out link disappears
+            mw.deckBrowser.refresh()
         tooltip("Logged out of AnkiWeb. Your local reviews are kept.")
     except Exception as exc:
         print(f"RPCE logout error: {exc}")
@@ -1375,6 +1386,19 @@ def _last_sync_label() -> str:
 _syncing = False  # True while a sync is in progress (drives the orange state)
 
 
+def _on_left_tray(content, toolbar) -> None:
+    """Top-left corner: quick access to the RONR reference tables."""
+    content.append(
+        toolbar.create_link(
+            "rpce_reference",
+            "📋 Reference",
+            _show_reference,
+            tip="RONR reference tables — order of precedence & motion characteristics",
+            id="rpce_reference",
+        )
+    )
+
+
 def _on_right_tray(content, toolbar) -> None:
     """Top-right corner: a live sync-status indicator (with last-synced time)
     followed by Anki's own Sync button — mirrors the phone's top-right sync
@@ -1482,6 +1506,7 @@ def setup() -> None:
     gui_hooks.card_will_show.append(_on_card_will_show)
     gui_hooks.webview_did_receive_js_message.append(_on_webview_message)
     gui_hooks.top_toolbar_did_init_links.append(_on_toolbar_links)
+    gui_hooks.top_toolbar_will_set_left_tray_content.append(_on_left_tray)
     gui_hooks.top_toolbar_will_set_right_tray_content.append(_on_right_tray)
     gui_hooks.state_did_change.append(_on_state_change)
     # Live-update the top-right sync-status indicator after login/sync.
