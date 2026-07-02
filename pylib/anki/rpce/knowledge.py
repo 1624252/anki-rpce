@@ -35,6 +35,22 @@ CLASS_SUBSIDIARY = "subsidiary"
 CLASS_MAIN = "main"
 CLASS_INCIDENTAL = "incidental"
 
+#: Human-readable class labels (used as options in classification MCQs).
+CLASS_LABELS = {
+    CLASS_PRIVILEGED: "Privileged motion",
+    CLASS_SUBSIDIARY: "Subsidiary motion",
+    CLASS_INCIDENTAL: "Incidental motion",
+    CLASS_MAIN: "Main motion",
+}
+
+#: Keywords that help find a class-defining quote in a motion's own section.
+CLASS_KEYWORDS = {
+    CLASS_PRIVILEGED: ["privileged", "precedence"],
+    CLASS_SUBSIDIARY: ["subsidiary", "pending"],
+    CLASS_INCIDENTAL: ["incidental", "arise", "arising"],
+    CLASS_MAIN: ["main motion", "main"],
+}
+
 
 @dataclass(frozen=True)
 class Motion:
@@ -283,7 +299,11 @@ def characteristic_mcq(motion: Motion, which: str) -> dict:
             "answer": 0 if motion.amendable else 1,
         }
     if which == "vote":
-        opts = [VOTE_LABELS[VOTE_MAJORITY], VOTE_LABELS[VOTE_TWO_THIRDS], VOTE_LABELS[VOTE_NONE]]
+        opts = [
+            VOTE_LABELS[VOTE_MAJORITY],
+            VOTE_LABELS[VOTE_TWO_THIRDS],
+            VOTE_LABELS[VOTE_NONE],
+        ]
         return {
             "stem": f"What vote does {phrase} require to be adopted?",
             "options": opts,

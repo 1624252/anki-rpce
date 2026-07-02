@@ -20,8 +20,10 @@ phone. Keeping it here (not copied by hand) is what keeps the two in sync.
   sequence and shows the correct order. Completes when all are placed.
 
 Every answer reveals the RONR (12th ed.) citation + verbatim quote (never in the
-question). ``opts.reveal`` renders straight into the fully-answered state (used
-for the desktop reviewer's answer side).
+question). A payload may carry a single ``cite``/``quote`` or a LIST of them in
+``cites`` (select-all questions cite every relevant motion); ``refBlock`` renders
+all. ``opts.reveal`` renders straight into the fully-answered state (used for the
+desktop reviewer's answer side).
 """
 
 from __future__ import annotations
@@ -79,10 +81,19 @@ RENDER_JS = r"""
 (function(){
   function el(tag, cls, html){ var e=document.createElement(tag);
     if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
-  function refBlock(p){ if(!p.cite) return null;
+  // Answer-side citation block. A payload may carry a LIST of citations in
+  // p.cites (e.g. select-all questions cite every relevant motion); otherwise
+  // we fall back to the single p.cite/p.quote. All are rendered.
+  function refBlock(p){
+    var cites = (p.cites && p.cites.length) ? p.cites
+      : (p.cite ? [{cite:p.cite, quote:p.quote}] : null);
+    if(!cites) return null;
     var d=el('div','rpce-ref');
-    d.appendChild(el('div','rpce-cite','RONR (12th ed.) §'+p.cite));
-    if(p.quote) d.appendChild(el('div','rpce-quote','“'+p.quote+'”'));
+    cites.forEach(function(c){
+      if(!c || !c.cite) return;
+      d.appendChild(el('div','rpce-cite','RONR (12th ed.) §'+c.cite));
+      if(c.quote) d.appendChild(el('div','rpce-quote','“'+c.quote+'”'));
+    });
     return d; }
   function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){
     var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t;} return a; }
@@ -151,6 +162,8 @@ RENDER_JS = r"""
   }
 
   // ---- select-multiple: pick ALL that apply, then Check --------------------
+  // On reveal, done()->refBlock() shows every citation in p.cites (one per
+  // relevant motion/fact), not just a single reference.
   function renderMulti(p, host, opts){
     host.appendChild(el('div','rpce-q', p.stem));
     var box=el('div','rpce-opts rpce-multi'); var fb=el('div','rpce-fb');

@@ -20,11 +20,16 @@ Question types (the shared renderer draws each identically on desktop + phone):
 - **cloze**  — fill a key span blanked from a real RONR sentence; the blank
   carries a hint (length + first letter, or "a voting threshold") so it stays
   answerable (spec §7.1).
-- **mcq**    — applied multiple choice grounded in the corpus (exactly one right).
-- **multi**  — select ALL that apply (e.g. all motions ranking higher than X).
+- **mcq**    — applied multiple choice grounded in the corpus, always with at
+  least four options, exactly one correct. EVERY substantive paragraph yields at
+  least one MCQ (a guaranteed section-stripped fallback covers the few that no
+  marked-up span fits). Short-option knowledge MCQs are padded to four.
+- **multi**  — select ALL that apply (e.g. all motions ranking higher than X);
+  the answer carries a LIST of citations, one per relevant motion.
 - **order**  — put a random set of motions in order of precedence (top = higher).
 - motion **characteristics** (vote / debatable / second / amendable) and
-  **precedence** ranking / which-is-higher, from :mod:`anki.rpce.knowledge`.
+  **classification** (which class a motion belongs to), plus **precedence**
+  ranking, from :mod:`anki.rpce.knowledge`.
 
 Precedence and characteristic questions come from structured knowledge (a motion
 bank + the saved order of precedence) because prose cloze can't test them — too
@@ -72,6 +77,29 @@ _SECTION_RE = re.compile(r"\b\d+:\d+\b|§|\bRONR\b|\bsections?\s+\d+", re.I)
 # Sentences about order of precedence can't be a fair fill-in-the-blank (too many
 # possible motions) — those go to ranking/ordering/select-all, never cloze/MCQ.
 _PRECEDENCE_RE = re.compile(r"\bprecedence\b|\byield(s|ed)?\b|\boutrank", re.I)
+
+# Strip inline RONR section references so a leaking sentence can still seed an
+# MCQ stem (the section stays in the answer's quote, never in the stem).
+_PAREN_RE = re.compile(r"\(([^()]*)\)")
+_SEE_REF_RE = re.compile(r"\bsee(?:\s+also)?\b[^.;)]*\d+:\d+[^.;)]*", re.I)
+_EMPTY_PAREN_RE = re.compile(r"\(\s*[,;.\s]*\)")
+
+# Plausible parliamentary noun phrases, a last-resort pad so a forced MCQ always
+# reaches four options even when the corpus term pool is thin.
+_GENERIC_DISTRACTORS = [
+    "a quorum",
+    "the bylaws",
+    "a standing rule",
+    "previous notice",
+    "the agenda",
+    "a ballot vote",
+    "the minutes",
+    "adjournment",
+    "the presiding officer",
+    "a special committee",
+    "the parliamentary authority",
+    "a point of order",
+]
 
 # Voting thresholds usable as answer spans (word -> option label).
 _VOTE_LABEL = {
@@ -371,6 +399,102 @@ def _pick_distractors(
     return rng.sample(near, n) if len(near) >= n else None
 
 
+def _mcq_options(
+    answer: str, pool: list[str], rng: random.Random, n: int = 4
+) -> tuple[list[str], int]:
+    """``n`` unique options including ``answer`` — always succeeds (spec §7 4b:
+    an MCQ never has fewer than four options). Prefers same-shape corpus terms,
+    then any pool term, then a generic parliamentary phrase as a last resort."""
+    al = answer.lower()
+    picks = _pick_distractors(answer, pool, rng, n - 1) or []
+    if len(picks) < n - 1:  # relax the shape/length preference
+        cand = [
+            t
+            for t in pool
+            if t.lower() != al
+            and al not in t.lower()
+            and t.lower() not in al
+            and not mentions_section(t)
+        ]
+        rng.shuffle(cand)
+        picks = cand[: n - 1]
+    opts, seen = [answer], {al}
+    for t in [*picks, *_GENERIC_DISTRACTORS]:
+        if len(opts) >= n:
+            break
+        if t.lower() not in seen:
+            seen.add(t.lower())
+            opts.append(t)
+    rng.shuffle(opts)
+    return opts, opts.index(answer)
+
+
+def _pad_to_four(
+    options: list[str], correct: str, rng: random.Random, distractors: list[str]
+) -> tuple[list[str], int]:
+    """Pad a short option list up to four with the given plausible distractors,
+    shuffle, and return (options, answer-index). Used for the motion-trait MCQs
+    whose natural form has only two choices (spec §7 4b)."""
+    opts, seen = list(options), {o.lower() for o in options}
+    for d in distractors:
+        if len(opts) >= 4:
+            break
+        if d.lower() not in seen and d.lower() != correct.lower():
+            seen.add(d.lower())
+            opts.append(d)
+    rng.shuffle(opts)
+    return opts, opts.index(correct)
+
+
+def _citation_only(inner: str) -> bool:
+    """True if a parenthetical is nothing but a cross-reference, e.g. ``(23–33)``
+    or ``(4:45, 10:1323)`` — safe to drop entirely from an MCQ stem."""
+    t = re.sub(r"\b(?:see|also|and)\b", "", inner, flags=re.I)
+    t = _SECTION_RE.sub("", t)
+    t = re.sub(r"[\d:,;.–—()\s\-]", "", t)
+    return t.strip() == ""
+
+
+def _strip_sections(text: str) -> str:
+    """Remove inline RONR references (``(4:45)``, ``see 18:8``, ``§``, ``sections
+    4``) so even a section-citing sentence can seed a fair MCQ stem. The section
+    stays in the answer's verbatim quote — never in the stem."""
+    t = _PAREN_RE.sub(lambda m: "" if _citation_only(m.group(1)) else m.group(0), text)
+    t = _SEE_REF_RE.sub("", t)
+    t = _SECTION_RE.sub("", t)
+    t = _EMPTY_PAREN_RE.sub("", t)
+    t = re.sub(r",\s*([.;])", r"\1", t)
+    t = re.sub(r"\s+([.;,])", r"\1", t)
+    return _MULTISPACE_RE.sub(" ", t).strip(" ,;")
+
+
+#: Words that name a motion — never blanked in a precedence sentence (that would
+#: make an unfair which-motion fill-in). Used only by the last-resort fallback.
+_MOTION_WORDS = {w.lower() for m in kb.MOTIONS for w in m.name.split()}
+
+
+def _blank_term(text: str) -> str | None:
+    """A distinctive word to blank in a fallback stem, skipping motion names and
+    precedence verbs so the item stays a fair vocabulary fill-in."""
+
+    def usable(w: str) -> bool:
+        wl = w.lower()
+        return (
+            wl not in _MOTION_WORDS
+            and not _PRECEDENCE_RE.search(w)
+            and not mentions_section(w)
+        )
+
+    words = [
+        w
+        for w in re.findall(r"[A-Za-z][A-Za-z\-]{6,19}", text)
+        if w.lower() not in _COMMON and usable(w)
+    ]
+    if not words:  # relax the length floor
+        words = [w for w in re.findall(r"[A-Za-z][A-Za-z\-]{4,}", text) if usable(w)]
+    return max(words, key=len) if words else None
+
+
 def _sentence_ok(kind: str, sentence: str) -> bool:
     if mentions_section(sentence) or _PRECEDENCE_RE.search(sentence):
         return False
@@ -464,6 +588,58 @@ def make_mcq_span(
     )
 
 
+def make_mcq_fallback(
+    p: Para, cid: str, term_pool: list[str], rng: random.Random
+) -> Question | None:
+    """A guaranteed applied MCQ for a paragraph that yielded none — so EVERY
+    substantive paragraph has at least one multiple-choice item (spec §7 1).
+    First retries every candidate span; then blanks a key phrase from a
+    section-stripped sentence and pads to four options."""
+    for kind, term in candidate_spans(p):
+        q = make_mcq_span(p, cid, kind, term, term_pool, rng)
+        if q is not None:
+            return q
+    # Blank a neutral key phrase from a section-stripped sentence. Pass 1 avoids
+    # precedence prose; pass 2 allows it (blanking only a non-motion word).
+    for allow_precedence in (False, True):
+        for s in sentences(p.text):
+            if not allow_precedence and _PRECEDENCE_RE.search(s):
+                continue
+            stem_src = _strip_sections(s)
+            if len(stem_src) < 40 or mentions_section(stem_src):
+                continue
+            term = _blank_term(stem_src)
+            if not term:
+                continue
+            pat = re.compile(r"\b" + re.escape(term))
+            if not pat.search(stem_src):
+                continue
+            options, answer = _mcq_options(term, term_pool, rng)
+            stem = "Fill in the blank: " + pat.sub("_____", stem_src, count=1)
+            if mentions_section(stem):
+                continue
+            payload = {
+                "kind": "mcq",
+                "stem": stem,
+                "options": options,
+                "answer": answer,
+                "cite": p.citation,
+                "quote": s,
+            }
+            return Question(
+                p.domain,
+                "mcq",
+                cid,
+                "Applied multiple-choice",
+                payload,
+                stem,
+                f"{'ABCD'[answer]}) {options[answer]}",
+                p.citation,
+                s,
+            )
+    return None
+
+
 def candidate_spans(p: Para) -> list[tuple[str, str]]:
     """Ordered (kind, term) answer spans for a paragraph, best first, de-duped."""
     spans: list[tuple[str, str]] = []
@@ -510,7 +686,7 @@ def build_corpus(
             plan.append(("cloze" if i % 2 == 0 else "mcq", kind, term))
         for i, (kind, term) in enumerate(spans):
             plan.append(("mcq" if i % 2 == 0 else "cloze", kind, term))
-        made = 0
+        made = made_mcq = 0
         per_sentence: dict[str, int] = {}  # ≤2 blanks from any one sentence
         for typ, kind, term in plan:
             if made >= per_para:
@@ -527,6 +703,12 @@ def build_corpus(
             per_sentence[q.quote] = per_sentence.get(q.quote, 0) + 1
             out.append(q)
             made += 1
+            made_mcq += q.kind == "mcq"
+        # Spec §7 1: at least one MCQ from every substantive paragraph.
+        if made_mcq == 0:
+            fb = make_mcq_fallback(p, cid, term_pool, rng)
+            if fb is not None:
+                out.append(fb)
     return out
 
 
@@ -562,6 +744,7 @@ def make_characteristic(
         m.section, _trait_keywords(which, m), sents, secq, m.name
     )
     phrase = kb.motion_phrase(m.name)
+    rng = random.Random(f"{m.name}:{which}")  # deterministic per motion+trait
     if which == "vote":
         stem = f"What vote does {phrase} require to be adopted?"
         opts = [
@@ -573,16 +756,31 @@ def make_characteristic(
         ans = opts.index(kb.VOTE_LABELS[m.vote])
     elif which == "debatable":
         stem = f"Is {phrase} debatable?"
-        opts = ["Debatable", "Not debatable"]
-        ans = 0 if m.debatable else 1
+        correct = "Debatable" if m.debatable else "Not debatable"
+        opts, ans = _pad_to_four(
+            ["Debatable", "Not debatable"],
+            correct,
+            rng,
+            ["Debatable only with a two-thirds vote", "Debatable for two minutes only"],
+        )
     elif which == "second":
         stem = f"Does {phrase} require a second?"
-        opts = ["Requires a second", "No second required"]
-        ans = 0 if m.second else 1
+        correct = "Requires a second" if m.second else "No second required"
+        opts, ans = _pad_to_four(
+            ["Requires a second", "No second required"],
+            correct,
+            rng,
+            ["Requires two seconds", "May be seconded only by the chair"],
+        )
     else:  # amendable
         stem = f"Can {phrase} be amended?"
-        opts = ["Amendable", "Not amendable"]
-        ans = 0 if m.amendable else 1
+        correct = "Amendable" if m.amendable else "Not amendable"
+        opts, ans = _pad_to_four(
+            ["Amendable", "Not amendable"],
+            correct,
+            rng,
+            ["Amendable only by the maker", "Amendable only as to time"],
+        )
     payload = {
         "kind": "mcq",
         "stem": stem,
@@ -599,6 +797,51 @@ def make_characteristic(
     }[which]
     return Question(
         _motion_domain(m), "mcq", cid, label, payload, stem, opts[ans], cite, quote
+    )
+
+
+def make_classification(
+    m: kb.Motion,
+    cid: str,
+    sents: dict[int, list[tuple[str, str]]],
+    secq: dict[int, tuple[str, str]],
+) -> Question:
+    """Applied MCQ: which class a motion belongs to (main / subsidiary /
+    privileged / incidental). A core RPCE skill and always four options — the
+    fifth item type (spec §7 5)."""
+    phrase = kb.motion_phrase(m.name)
+    stem = f"To which class of motions does {phrase} belong?"
+    opts = [
+        kb.CLASS_LABELS[c]
+        for c in (
+            kb.CLASS_PRIVILEGED,
+            kb.CLASS_SUBSIDIARY,
+            kb.CLASS_INCIDENTAL,
+            kb.CLASS_MAIN,
+        )
+    ]
+    ans = opts.index(kb.CLASS_LABELS[m.klass])
+    cite, quote = supporting_quote(
+        m.section, kb.CLASS_KEYWORDS[m.klass], sents, secq, m.name
+    )
+    payload = {
+        "kind": "mcq",
+        "stem": stem,
+        "options": opts,
+        "answer": ans,
+        "cite": cite,
+        "quote": quote,
+    }
+    return Question(
+        _motion_domain(m),
+        "mcq",
+        cid,
+        "Motion classification",
+        payload,
+        stem,
+        opts[ans],
+        cite,
+        quote,
     )
 
 
@@ -641,39 +884,6 @@ def make_ranking(
     )
 
 
-def make_pair(
-    a: kb.Motion,
-    b: kb.Motion,
-    cid: str,
-    sents: dict[int, list[tuple[str, str]]],
-    secq: dict[int, tuple[str, str]],
-) -> Question:
-    higher = a if a.rank < b.rank else b
-    opts = [a.name, b.name]
-    stem = f"Which motion takes precedence \u2014 {a.name} or {b.name}?"
-    ans = opts.index(higher.name)
-    cite, quote = _precedence_ref(higher, sents, secq)
-    payload = {
-        "kind": "mcq",
-        "stem": stem,
-        "options": opts,
-        "answer": ans,
-        "cite": cite,
-        "quote": quote,
-    }
-    return Question(
-        2,
-        "mcq",
-        cid,
-        "Precedence (which is higher)",
-        payload,
-        stem,
-        higher.name,
-        cite,
-        quote,
-    )
-
-
 def make_multi(
     pivot: kb.Motion,
     others: list[kb.Motion],
@@ -695,6 +905,17 @@ def make_multi(
         verb = "rank lower than (yield to)"
     stem = f"Select ALL of these motions that {verb} {kb.motion_phrase(pivot.name)}."
     cite, quote = _precedence_ref(pivot, sents, secq)
+    # One citation per relevant motion (spec §7 4): the pivot's own precedence
+    # rule, then each correctly-selected motion's, de-duped by section.
+    cites: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for ref_cite, ref_quote in [
+        _precedence_ref(pivot, sents, secq),
+        *(_precedence_ref(by_name[names[i]], sents, secq) for i in correct),
+    ]:
+        if ref_cite not in seen:
+            seen.add(ref_cite)
+            cites.append({"cite": ref_cite, "quote": ref_quote})
     payload = {
         "kind": "multi",
         "stem": stem,
@@ -702,6 +923,7 @@ def make_multi(
         "correct": correct,
         "cite": cite,
         "quote": quote,
+        "cites": cites,
     }
     plain_a = ", ".join(names[i] for i in correct) or "(none)"
     return Question(
@@ -752,10 +974,11 @@ def build_knowledge(
         n += 1
         return f"K{n:04d}"
 
-    # Characteristic questions: every motion × four traits.
+    # Characteristic questions: every motion × four traits, plus its class.
     for m in kb.MOTIONS:
         for which in ("vote", "debatable", "second", "amendable"):
             qs.append(make_characteristic(m, which, cid(), sents, secq))
+        qs.append(make_classification(m, cid(), sents, secq))
     ranked = kb.ranked_motions()
     # Ranking (highest + lowest) and ordering over sliding windows + random subsets.
     subsets: list[list[kb.Motion]] = []
@@ -765,13 +988,11 @@ def build_knowledge(
     for _ in range(50):
         subsets.append(rng.sample(ranked, rng.choice((3, 4, 5))))
     for subset in subsets:
-        qs.append(make_ranking(subset, cid(), sents, secq, rng, "highest"))
-        qs.append(make_ranking(subset, cid(), sents, secq, rng, "lowest"))
+        # Ranking MCQs need ≥4 options (spec §7 4b); ordering has no such limit.
+        if len(subset) >= 4:
+            qs.append(make_ranking(subset, cid(), sents, secq, rng, "highest"))
+            qs.append(make_ranking(subset, cid(), sents, secq, rng, "lowest"))
         qs.append(make_order(subset, cid(), sents, secq))
-    # Pairwise "which is higher".
-    for _ in range(60):
-        a, b = rng.sample(ranked, 2)
-        qs.append(make_pair(a, b, cid(), sents, secq))
     # Select-all-that-rank-higher / lower than a pivot.
     for _ in range(120):
         pivot = rng.choice(ranked)
