@@ -122,16 +122,25 @@ def coverage_pct(col: Collection) -> float:
     return covered / len(cov)
 
 
-#: Notetype for every RPCE question. One note = one question of a given Kind
-#: (cloze | mcq | order), fully described by a base64-JSON Payload the shared
-#: renderer reads. PlainQ/PlainA are the no-JS fallback (and what the browser and
-#: search show); Citation/Quote are the RONR (12th ed.) source shown with the
-#: answer. Bumping the name triggers a clean deck rebuild on profile open.
+#: Notetype for every stand-alone RPCE question. One note = one question of a
+#: given Kind (cloze | mcq | multi | order), fully described by a base64-JSON
+#: Payload the shared renderer reads. PlainQ/PlainA are the no-JS fallback (and
+#: what the browser and search show); Citation/Quote are the RONR (12th ed.)
+#: source shown with the answer. Used for the generated bank and the precedence
+#: question types. Bumping the name triggers a clean deck rebuild on profile open.
 QUESTION_NOTETYPE = "RPCE Q 1"
+
+#: Notetype for a taught *concept*: one note carries every format that teaches
+#: it (a cloze recall card + applied-MCQ card, plus second/debatable
+#: characteristic cards where the concept is a motion). Each format is its own
+#: card **template**, so the cards are Anki **siblings** of one note — Anki
+#: buries siblings and spaces them, so two formats of the same concept never show
+#: back-to-back (spec §14). One concept = one note keeps GUIDs stable for sync.
+CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "6"
+RPCE_DECK_VERSION = "7"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -145,6 +154,15 @@ _CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)\}\}")
 def payload_b64(payload: dict) -> str:
     """Encode a render payload as base64 JSON (safe in an HTML attribute)."""
     return base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+
+
+def stable_guid(key: str) -> str:
+    """A deterministic note GUID from a stable key, so re-seeding the generated
+    deck updates the same notes (clean two-way sync) instead of duplicating."""
+    import hashlib
+
+    digest = hashlib.sha256(key.encode("utf-8")).digest()[:9]
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
 
 def hint_for(term: str) -> str:
@@ -218,6 +236,7 @@ def add_question_note(
 
     model = _question_notetype(col)
     note = col.new_note(model)
+    note.guid = stable_guid(f"q|{concept_id}|{payload['kind']}|{plain_q}")
     note["Kind"] = payload["kind"]
     note["Payload"] = payload_b64(payload)
     note["PlainQ"] = plain_q
@@ -233,54 +252,263 @@ def add_question_note(
     col.add_note(note, deck_id)
 
 
+#: Concept-note format → (payload field, plain-question field, plain-answer
+#: field, payload kind). Each format is one card template; a concept note only
+#: generates the cards whose payload field is filled (Anki skips empty fronts).
+_CONCEPT_FORMATS: tuple[tuple[str, str, str, str, str], ...] = (
+    ("cloze", "ClozePayload", "ClozeQ", "ClozeA", KIND_CLOZE),
+    ("mcq", "McqPayload", "McqQ", "McqA", KIND_MCQ),
+    ("second", "SecondPayload", "SecondQ", "SecondA", KIND_MCQ),
+    ("debatable", "DebatablePayload", "DebatableQ", "DebatableA", KIND_MCQ),
+)
+
+_CONCEPT_FIELDS: tuple[str, ...] = ("Concept", "Citation", "Quote") + tuple(
+    f for _, pf, qf, af, _k in _CONCEPT_FORMATS for f in (pf, qf, af)
+)
+
+
+def _concept_notetype(col: Collection):
+    """One notetype, one card template per format; the cards of a concept are
+    siblings of a single note so Anki buries/spaces them (spec §14)."""
+    from . import render_js
+
+    mm = col.models
+    existing = mm.by_name(CONCEPT_NOTETYPE)
+    if existing is not None:
+        return existing
+    m = mm.new(CONCEPT_NOTETYPE)
+    for field in _CONCEPT_FIELDS:
+        mm.add_field(m, mm.new_field(field))
+    ref = (
+        "{{#Citation}}<div class=rpce-ref>"
+        "<div class=rpce-cite>RONR (12th ed.) &sect;{{Citation}}</div>"
+        "<div class=rpce-quote>&ldquo;{{Quote}}&rdquo;</div></div>{{/Citation}}"
+    )
+    for name, pf, qf, af, kind in _CONCEPT_FORMATS:
+        tmpl = mm.new_template(name)
+        # {{#pf}} gates card generation: no payload → empty front → no card.
+        tmpl["qfmt"] = (
+            f"{{{{#{pf}}}}}"
+            f'<div class="rpce-plain">{{{{{qf}}}}}</div>'
+            f'<div id="rpce-payload" data-kind="{kind}" data-p="{{{{{pf}}}}}" '
+            f'style="display:none"></div>{{{{/{pf}}}}}'
+        )
+        tmpl["afmt"] = f"{{{{#{pf}}}}}{{{{{af}}}}}{ref}{{{{/{pf}}}}}"
+        mm.add_template(m, tmpl)
+    m["css"] = render_js.RENDER_CSS + ".card{font-size:18px;color:#0a1f44}"
+    mm.add(m)
+    return mm.by_name(CONCEPT_NOTETYPE)
+
+
+def add_concept_note(
+    col: Collection,
+    deck_id: int,
+    *,
+    concept_id: str,
+    domain: int,
+    cite: str,
+    quote: str,
+    formats: dict[str, tuple[dict, str, str]],
+) -> None:
+    """Add one concept note whose formats become sibling cards.
+
+    ``formats`` maps a format key (``cloze`` | ``mcq`` | ``second`` |
+    ``debatable``) to ``(payload, plain_q, plain_a)``. The GUID is derived from
+    the concept id so re-seeding updates the same note (clean sync)."""
+    from .transfer_ladder import concept_tag
+
+    model = _concept_notetype(col)
+    note = col.new_note(model)
+    note.guid = stable_guid(f"concept|{concept_id}")
+    note["Concept"] = concept_id
+    note["Citation"] = cite
+    note["Quote"] = quote
+    for _name, pf, qf, af, _kind in _CONCEPT_FORMATS:
+        entry = formats.get(_name)
+        if entry is None:
+            continue
+        payload, plain_q, plain_a = entry
+        note[pf] = payload_b64(payload)
+        note[qf] = plain_q
+        note[af] = plain_a
+    # One note = one concept; no single format tag (formats are per-card).
+    note.tags = [
+        domain_tag(domain),
+        concept_tag(concept_id),
+        f"rpce::ver::{RPCE_DECK_VERSION}",
+    ]
+    col.add_note(note, deck_id)
+
+
+def _characteristic_payload(char: dict, cite: str, quote: str) -> dict:
+    """A render payload for a motion-characteristic MCQ (from knowledge)."""
+    payload = {
+        "kind": KIND_MCQ,
+        "stem": char["stem"],
+        "options": list(char["options"]),
+        "answer": char["answer"],
+        "cite": cite,
+        "quote": quote,
+    }
+    if char.get("hint"):
+        payload["hint"] = char["hint"]
+    return payload
+
+
+def _mcq_plain(char: dict) -> tuple[str, str]:
+    """No-JS question/answer text for a characteristic MCQ (with any hint)."""
+    q = char["stem"]
+    if char.get("hint"):
+        q += f" (Hint: {char['hint']})"
+    a = f"{'ABCD'[char['answer']]}) {char['options'][char['answer']]}"
+    return q, a
+
+
+def _precedence_notes(col: Collection, deck_id: int) -> None:
+    """Add dedicated motion-precedence questions (ordering + multiselect), graded
+    against the canonical order in :mod:`knowledge` — never cloze (spec §15).
+
+    Ordering: put a random subset in order of precedence. Multiselect: which of a
+    set rank higher / lower than a pivot. Both are verified against
+    :data:`knowledge.PRECEDENCE_ORDER` for any subset, so they stay correct."""
+    from . import knowledge as kb
+    from . import refs
+
+    ref = refs.PRECEDENCE
+    ranked = [m.name for m in kb.ranked_motions()]
+
+    def order_q(subset: list[str], n: int) -> None:
+        ordered = kb.canonical_order(subset)
+        assert kb.is_ordered_by_precedence(ordered)  # self-check against canon
+        payload = {
+            "kind": KIND_ORDER,
+            "prompt": "Put these motions in order of precedence "
+            "(top = higher, bottom = lower).",
+            "order": ordered,
+            "cite": ref.section,
+            "quote": ref.quote,
+        }
+        add_question_note(
+            col,
+            deck_id,
+            payload=payload,
+            plain_q=payload["prompt"],
+            plain_a=" → ".join(ordered),
+            domain=2,
+            concept_id=f"prec-order-{n}",
+        )
+
+    def multi_q(pivot: str, pool: list[str], direction: str, n: int) -> None:
+        winners = (
+            kb.motions_higher_than(pivot, pool)
+            if direction == "higher"
+            else kb.motions_lower_than(pivot, pool)
+        )
+        correct = [i for i, name in enumerate(pool) if name in winners]
+        verb = (
+            "rank higher than (take precedence over)"
+            if direction == "higher"
+            else "rank lower than (yield to)"
+        )
+        stem = f"Select ALL of these motions that {verb} {kb.motion_phrase(pivot)}."
+        payload = {
+            "kind": KIND_MULTI,
+            "stem": stem,
+            "options": list(pool),
+            "correct": correct,
+            "cite": ref.section,
+            "quote": ref.quote,
+        }
+        add_question_note(
+            col,
+            deck_id,
+            payload=payload,
+            plain_q=stem,
+            plain_a=", ".join(pool[i] for i in correct) or "(none)",
+            domain=2,
+            concept_id=f"prec-{direction}-{n}",
+        )
+
+    order_q(ranked[0:5], 1)  # the five privileged motions
+    order_q(ranked[5:10], 2)  # a subsidiary window
+    multi_q(
+        "Postpone to a Certain Time",
+        ["Amend", "Recess", "Commit or Refer", "Previous Question", "Postpone Indefinitely"],
+        "higher",
+        1,
+    )
+    multi_q(
+        "Recess",
+        ["Adjourn", "Amend", "Lay on the Table", "Fix the Time to Which to Adjourn"],
+        "lower",
+        1,
+    )
+
+
 def build_starter_deck(col: Collection, name: str = "RPCE") -> int:
-    """Build the offline starter deck: a cloze and an applied-MCQ question for
-    each curated concept, covering all seven domains. Used as the no-corpus
-    fallback and by tests; the full 1000-question deck is imported from the
-    starter ``.apkg`` (see ``pylib/tools/rpce_export_starter.py``). Returns the
-    deck id."""
+    """Build the offline starter deck. Each curated concept becomes ONE note with
+    sibling cards (a cloze recall card + an applied-MCQ card, plus second/
+    debatable characteristic cards for motions), so two formats of a concept
+    never show back-to-back (spec §14). Adds dedicated motion-precedence question
+    types (ordering + multiselect, spec §15). Covers all seven domains; used as
+    the no-corpus fallback and by tests (the full deck ships as an ``.apkg`` —
+    see ``pylib/tools/rpce_export_starter.py``). Returns the deck id."""
     from . import flashcards
+    from . import knowledge as kb
 
     deck_id = col.decks.id(name)
     assert deck_id is not None
     # FSRS on so the memory score uses real retrievability (spec §8).
     col.set_config("fsrs", True)
+    _concept_notetype(col)
     _question_notetype(col)
 
     for card in flashcards.all_flashcards():
         text, blanks = cloze_to_payload_text(card.cloze)
         cid = str(card.concept_id)
-        cloze_payload = {
-            "kind": KIND_CLOZE,
-            "text": text,
-            "blanks": blanks,
-            "cite": card.ref.section,
-            "quote": card.ref.quote,
+        cite, quote = card.ref.section, card.ref.quote
+        formats: dict[str, tuple[dict, str, str]] = {
+            "cloze": (
+                {
+                    "kind": KIND_CLOZE,
+                    "text": text,
+                    "blanks": blanks,
+                    "cite": cite,
+                    "quote": quote,
+                },
+                "Fill the blank(s): " + _CLOZE_RE.sub("_____", card.cloze),
+                ", ".join(b["a"] for b in blanks),
+            ),
+            "mcq": (
+                {
+                    "kind": KIND_MCQ,
+                    "stem": card.mcq_question,
+                    "options": list(card.mcq_options),
+                    "answer": card.mcq_answer_index,
+                    "cite": cite,
+                    "quote": quote,
+                },
+                card.mcq_question,
+                flashcards.mcq_back(card),
+            ),
         }
-        add_question_note(
+        # Motion concepts also get second/debatable characteristic cards (§16):
+        # the second card carries a hint; debatable uses short wording.
+        if card.motion_name:
+            motion = kb.by_name(card.motion_name)
+            for which in ("second", "debatable"):
+                char = kb.characteristic_mcq(motion, which)
+                q, a = _mcq_plain(char)
+                formats[which] = (_characteristic_payload(char, cite, quote), q, a)
+        add_concept_note(
             col,
             deck_id,
-            payload=cloze_payload,
-            plain_q="Fill the blank(s): " + _CLOZE_RE.sub("_____", card.cloze),
-            plain_a=", ".join(b["a"] for b in blanks),
-            domain=card.domain_code,
             concept_id=cid,
-        )
-        mcq_payload = {
-            "kind": KIND_MCQ,
-            "stem": card.mcq_question,
-            "options": list(card.mcq_options),
-            "answer": card.mcq_answer_index,
-            "cite": card.ref.section,
-            "quote": card.ref.quote,
-        }
-        add_question_note(
-            col,
-            deck_id,
-            payload=mcq_payload,
-            plain_q=card.mcq_question,
-            plain_a=flashcards.mcq_back(card),
             domain=card.domain_code,
-            concept_id=cid,
+            cite=cite,
+            quote=quote,
+            formats=formats,
         )
+
+    _precedence_notes(col, deck_id)
     return deck_id

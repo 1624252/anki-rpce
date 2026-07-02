@@ -138,11 +138,30 @@ def test_readiness_summary_bundles_all_dashboard_data():
         "section_I",
         "section_II",
         "coverage",
+        "confidence_label",
+        "elaboration",
     }
     # Fresh collection abstains everywhere and lists all seven domains.
     assert summary["section_I"].abstained is True
     assert summary["section_II"].abstained is True
     assert len(summary["coverage"]) == 7
+
+
+def test_summary_exposes_confidence_label_and_preparedness_elaboration():
+    """Spec §10: the dashboard reads `confidence_label` (contains the word
+    'confidence') and `elaboration` (preparedness prose) from the summary."""
+    col = getEmptyCol()
+    _build_and_study(col, 7)
+    summary = scores.readiness_summary(col)
+    assert "confidence" in summary["confidence_label"].lower()
+    elab = summary["elaboration"]
+    assert len(elab) > 20
+    # Preparedness-focused, not a description of the calculation.
+    assert any(w in elab.lower() for w in ("prepared", "recall", "memory", "study"))
+    # Each score object also carries the fields the phone reads per-score.
+    for key in ("memory", "performance"):
+        assert "confidence" in summary[key].confidence_label.lower()
+        assert summary[key].elaboration
 
 
 def test_best_next_topic_follows_weight_times_gap():

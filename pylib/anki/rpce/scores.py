@@ -55,16 +55,36 @@ class GiveUpRule:
     min_scenarios: int = 10
 
 
+CONFIDENCE_LABELS = {
+    "high": "High confidence",
+    "medium": "Moderate confidence",
+    "low": "Low confidence",
+    CONFIDENCE_ABSTAIN: "Not enough data yet — low confidence",
+}
+
+
+def confidence_label(confidence: str) -> str:
+    """A human confidence label; always contains the word "confidence" (spec §10)."""
+    return CONFIDENCE_LABELS.get(confidence, f"{confidence} confidence")
+
+
 @dataclass
 class ScoreRange:
     """A point estimate with a likely range, a confidence label, and the main
-    reasons behind the number (spec §4: every score explains itself)."""
+    reasons behind the number (spec §4: every score explains itself).
+
+    ``confidence_label`` (contains "confidence") and ``elaboration`` (prose about
+    how prepared/strong the user's memory is, not how the number is computed) are
+    the fields the desktop and phone dashboards surface in a dropdown (spec §10).
+    """
 
     point: float | None
     low: float | None
     high: float | None
     confidence: str  # abstain | low | medium | high
     explanation: str = ""
+    confidence_label: str = ""
+    elaboration: str = ""
 
 
 @dataclass
@@ -82,6 +102,8 @@ class ReadinessSnapshot:
     evidence: str
     best_next_topic: str | None
     abstained: bool
+    confidence_label: str = ""
+    elaboration: str = ""
 
 
 def _recall_estimate(reps: int, lapses: int) -> float:
@@ -147,6 +169,82 @@ def record_scenario(col: Collection) -> None:
     col.set_config(SCENARIO_COUNT_KEY, graded_scenarios(col) + 1)
 
 
+def _memory_prose(point: float | None) -> str:
+    """How strong the user's memory is right now (preparedness, not maths)."""
+    if point is None:
+        return (
+            "There isn't enough review history yet to say how well the material is "
+            "sticking. Study a few flashcard sessions and this will show how strong "
+            "your recall is."
+        )
+    if point >= 0.85:
+        return (
+            "Your recall is strong — the facts you've studied are well retained and "
+            "should hold up under exam pressure. Keep light reviews going so they stay fresh."
+        )
+    if point >= 0.7:
+        return (
+            "Your recall is solid on what you've studied, with a few facts still "
+            "settling in. A bit more spaced review will lock them in."
+        )
+    if point >= 0.5:
+        return (
+            "Your memory of the material is still forming — you remember much of it, "
+            "but enough is slipping that more spaced review would pay off before the exam."
+        )
+    return (
+        "The material hasn't stuck yet. Short, frequent review sessions will build "
+        "durable recall faster than cramming."
+    )
+
+
+def _performance_prose(point: float | None, cov: float, weakest: str | None) -> str:
+    """How prepared the user is across the exam blueprint (not how it's computed)."""
+    focus = f" Your weakest area is {weakest}." if weakest else ""
+    if point is None:
+        return (
+            "You haven't practised enough exam-style questions yet to gauge how "
+            "prepared you are across the blueprint." + focus
+        )
+    if point >= 0.8:
+        return (
+            "You're performing at or above the exam bar across the domains you've "
+            f"covered ({cov:.0%} of the blueprint)." + focus
+        )
+    if point >= 0.6:
+        return (
+            "You're getting close to exam-ready on the material you've covered "
+            f"({cov:.0%} of the blueprint), with clear room to firm up weak spots." + focus
+        )
+    return (
+        "You're still building toward exam-ready; broaden your coverage and "
+        f"strengthen recall (currently {cov:.0%} of the blueprint covered)." + focus
+    )
+
+
+def _readiness_prose(snap_abstained: bool, p_pass: float | None, section: str) -> str:
+    """How prepared the user is to pass this section (preparedness, not maths)."""
+    if snap_abstained or p_pass is None:
+        return (
+            f"There isn't enough evidence yet to judge your chances on Section {section}. "
+            "Keep studying and practising until the dashboard has enough to go on."
+        )
+    if p_pass >= 0.8:
+        return (
+            f"You look well prepared for Section {section} — on current evidence you'd "
+            "most likely clear the 80% bar. Keep your reviews ticking over."
+        )
+    if p_pass >= 0.5:
+        return (
+            f"You're on the cusp for Section {section}. A focused push on your weak "
+            "areas should tip you over the 80% pass bar."
+        )
+    return (
+        f"You're not yet prepared to pass Section {section} with confidence. Steady "
+        "study across the weak domains is what will move this."
+    )
+
+
 def memory_score(col: Collection) -> ScoreRange:
     """P(recall a taught fact now), averaged over reviewed cards."""
     recalls = _reviewed_recalls(col)
@@ -166,6 +264,8 @@ def memory_score(col: Collection) -> ScoreRange:
             f"Mean recall over {n} reviewed card(s) using {method}. The range is a "
             "95% interval; confidence rises as you accumulate reviews."
         )
+    sr.confidence_label = confidence_label(sr.confidence)
+    sr.elaboration = _memory_prose(sr.point)
     return sr
 
 
@@ -192,7 +292,7 @@ def performance_score(col: Collection) -> ScoreRange:
             point += w * recall
         # unseen domain contributes 0, penalising incomplete coverage
     if seen == 0:
-        return ScoreRange(
+        sr = ScoreRange(
             None,
             None,
             None,
@@ -200,6 +300,9 @@ def performance_score(col: Collection) -> ScoreRange:
             "No domain has review history yet — this bridges memory to new "
             "exam-style questions once you have practised.",
         )
+        sr.confidence_label = confidence_label(sr.confidence)
+        sr.elaboration = _performance_prose(None, coverage_pct(col), best_next_topic(col))
+        return sr
     cov = coverage_pct(col)
     # Wider band when coverage is low (less certain about unseen material).
     margin = 0.1 + 0.4 * (1.0 - cov)
@@ -210,13 +313,16 @@ def performance_score(col: Collection) -> ScoreRange:
         f"lowers the score). Weakest area: {weakest}. The range widens when "
         f"coverage is low ({cov:.0%} covered)."
     )
-    return ScoreRange(
+    sr = ScoreRange(
         point,
         max(0.0, point - margin),
         min(1.0, point + margin),
         "high" if cov >= 0.8 else "medium" if cov >= 0.5 else "low",
         explanation,
     )
+    sr.confidence_label = confidence_label(sr.confidence)
+    sr.elaboration = _performance_prose(point, cov, weakest)
+    return sr
 
 
 def best_next_topic(col: Collection) -> str | None:
@@ -240,17 +346,40 @@ def _logistic_pass_probability(performance: float) -> float:
     return 1.0 / (1.0 + math.exp(-k * (performance - 0.8)))
 
 
+def _overall_elaboration(
+    mem: ScoreRange, perf: ScoreRange, sec1: ReadinessSnapshot
+) -> str:
+    """One preparedness-focused paragraph for the dashboard dropdown (spec §10):
+    how prepared the user is and how strong their memory is — not the formulae."""
+    if not sec1.abstained and sec1.p_pass is not None:
+        return f"{_readiness_prose(False, sec1.p_pass, 'I')} {perf.elaboration}"
+    if perf.point is not None:
+        return f"{perf.elaboration} {mem.elaboration}"
+    return mem.elaboration
+
+
 def readiness_summary(col: Collection, rule: GiveUpRule | None = None) -> dict:
     """All dashboard data in one call: the three scores plus both sections'
-    readiness and per-domain coverage. Used by the desktop dashboard."""
+    readiness and per-domain coverage. Used by the desktop dashboard.
+
+    ``confidence_label`` (a string containing "confidence") and ``elaboration``
+    (preparedness-focused prose) are surfaced for the UI dropdown (spec §10);
+    the original per-score keys are kept for backward compatibility."""
     from . import coverage as _coverage
 
+    mem = memory_score(col)
+    perf = performance_score(col)
+    sec1 = readiness(col, "I", rule)
+    sec2 = readiness(col, "II", rule)
+    overall = perf.confidence if perf.point is not None else mem.confidence
     return {
-        "memory": memory_score(col),
-        "performance": performance_score(col),
-        "section_I": readiness(col, "I", rule),
-        "section_II": readiness(col, "II", rule),
+        "memory": mem,
+        "performance": perf,
+        "section_I": sec1,
+        "section_II": sec2,
         "coverage": _coverage(col),
+        "confidence_label": confidence_label(overall),
+        "elaboration": _overall_elaboration(mem, perf, sec1),
     }
 
 
@@ -287,6 +416,8 @@ def readiness(
             evidence="Not enough data: " + "; ".join(missing),
             best_next_topic=next_topic,
             abstained=True,
+            confidence_label=confidence_label(CONFIDENCE_ABSTAIN),
+            elaboration=_readiness_prose(True, None, section),
         )
 
     perf = performance_score(col)
@@ -312,6 +443,8 @@ def readiness(
         evidence=evidence,
         best_next_topic=next_topic,
         abstained=False,
+        confidence_label=confidence_label(perf.confidence),
+        elaboration=_readiness_prose(False, p_pass, section),
     )
 
 

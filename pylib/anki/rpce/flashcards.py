@@ -32,6 +32,10 @@ class Flashcard:
     mcq_answer_index: int
     #: RONR (12th ed.) citation + verbatim quote backing this concept.
     ref: refs.Ref
+    #: When the concept is a motion, its name in ``knowledge.MOTIONS``. The
+    #: starter deck then adds second/debatable characteristic cards as siblings
+    #: (spec §16) so the whole concept shares one note's schedule (spec §14).
+    motion_name: str | None = None
 
 
 FLASHCARDS: tuple[Flashcard, ...] = (
@@ -48,6 +52,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
         ),
         0,
         refs.MAJORITY,
+        motion_name="Main Motion",
     ),
     Flashcard(
         2,
@@ -57,18 +62,11 @@ FLASHCARDS: tuple[Flashcard, ...] = (
         ("A majority", "Two-thirds", "Unanimous consent", "One-third"),
         1,
         refs.PREVIOUS_QUESTION,
+        motion_name="Previous Question",
     ),
-    # Order-of-precedence example (Spiky idea): MCQ is appropriate once the
-    # learner has practised the full precedence chart in recall form first.
-    Flashcard(
-        2,
-        103,
-        "In order of precedence, the motion to {{c1::Adjourn}} ranks higher than the motion to {{c2::Lay on the Table}}.",
-        "Which of these privileged/subsidiary motions takes precedence (is decided first)?",
-        ("Lay on the Table", "Postpone Indefinitely", "Adjourn", "Amend"),
-        2,
-        refs.PRECEDENCE,
-    ),
+    # Precedence is taught by dedicated ordering / multiselect question types
+    # (graded against knowledge.PRECEDENCE_ORDER), never cloze — there are too
+    # many valid orderings to fill a single blank (spec §15).
     Flashcard(
         3,
         104,
@@ -82,6 +80,7 @@ FLASHCARDS: tuple[Flashcard, ...] = (
         ),
         1,
         refs.POINT_OF_ORDER,
+        motion_name="Point of Order",
     ),
     Flashcard(
         4,

@@ -192,6 +192,43 @@ def by_name(name: str) -> Motion:
     raise KeyError(name)
 
 
+# --- Canonical order of precedence (persisted so any subset can be verified) --
+#
+# Precedence is NOT a cloze fact (too many valid orderings/combinations to fill a
+# blank). This tuple is the single persisted source of truth, highest → lowest;
+# ordering / which-ranks-higher questions grade any random subset against it.
+PRECEDENCE_ORDER: tuple[str, ...] = tuple(m.name for m in ranked_motions())
+
+
+def precedence_index(name: str) -> int:
+    """Position of a ranked motion in the canonical order (0 = highest)."""
+    return PRECEDENCE_ORDER.index(name)
+
+
+def canonical_order(names: list[str]) -> list[str]:
+    """The given motions sorted by canonical precedence (highest first)."""
+    return sorted(names, key=precedence_index)
+
+
+def is_ordered_by_precedence(names: list[str]) -> bool:
+    """True if ``names`` are already in canonical precedence order (highest first).
+    Verifies an arbitrary subset without assuming which motions it contains."""
+    idx = [precedence_index(n) for n in names]
+    return idx == sorted(idx)
+
+
+def motions_higher_than(pivot: str, pool: list[str]) -> list[str]:
+    """Names in ``pool`` that outrank ``pivot`` (take precedence over it)."""
+    p = precedence_index(pivot)
+    return [n for n in pool if precedence_index(n) < p]
+
+
+def motions_lower_than(pivot: str, pool: list[str]) -> list[str]:
+    """Names in ``pool`` that yield to ``pivot`` (lower precedence)."""
+    p = precedence_index(pivot)
+    return [n for n in pool if precedence_index(n) > p]
+
+
 # Names like "Adjourn" read fine as "the motion to Adjourn"; these do not
 # ("the motion to Main Motion"), so a question stem refers to them naturally.
 _PHRASE_OVERRIDE = {
@@ -209,6 +246,50 @@ _PHRASE_OVERRIDE = {
 def motion_phrase(name: str) -> str:
     """How to refer to a motion inside a question stem, in natural English."""
     return _PHRASE_OVERRIDE.get(name, f"the motion to {name}")
+
+
+#: Hint for a needs-a-second MCQ. Positive framing ("second"), never the answer.
+SECOND_HINT = "a second — or no second?"
+
+
+def characteristic_mcq(motion: Motion, which: str) -> dict:
+    """Build an applied MCQ about one motion attribute, from the motion data.
+
+    ``which`` is ``second`` | ``debatable`` | ``amendable`` | ``vote``. The
+    second card carries a HINT; the debatable card uses the short
+    "Debatable / Not debatable" wording (spec §16). Returns the render-payload
+    fields (stem/options/answer, plus ``hint`` where set); the caller adds the
+    citation + quote.
+    """
+    phrase = motion_phrase(motion.name)
+    if which == "second":
+        return {
+            "stem": f"Does {phrase} require a second?",
+            "options": ["Requires a second", "No second required"],
+            "answer": 0 if motion.second else 1,
+            "hint": SECOND_HINT,
+        }
+    if which == "debatable":
+        # Short "debatable / not debatable" form (shorter than a full sentence).
+        return {
+            "stem": f"{motion.name}: debatable or not debatable?",
+            "options": ["Debatable", "Not debatable"],
+            "answer": 0 if motion.debatable else 1,
+        }
+    if which == "amendable":
+        return {
+            "stem": f"Can {phrase} be amended?",
+            "options": ["Amendable", "Not amendable"],
+            "answer": 0 if motion.amendable else 1,
+        }
+    if which == "vote":
+        opts = [VOTE_LABELS[VOTE_MAJORITY], VOTE_LABELS[VOTE_TWO_THIRDS], VOTE_LABELS[VOTE_NONE]]
+        return {
+            "stem": f"What vote does {phrase} require to be adopted?",
+            "options": opts,
+            "answer": opts.index(VOTE_LABELS[motion.vote]),
+        }
+    raise ValueError(f"unknown characteristic: {which}")
 
 
 def yn(value: bool) -> str:

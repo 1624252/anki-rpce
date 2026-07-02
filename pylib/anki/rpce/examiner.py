@@ -88,10 +88,35 @@ _STOPWORDS = {
 }
 
 
+# Discriminative RONR phrases collapsed to single keyword tokens *before*
+# tokenizing. This keeps the offline grader robust: negation and threshold
+# phrases survive (they'd otherwise lose "no"/"not" to the stopword list and
+# split on the hyphen), so "no second" no longer matches a positive "second",
+# and "two-thirds" / "no debate" score as one positive keyword each (§12).
+_PHRASES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\btwo[\s-]thirds\b"), " twothirds "),
+    (re.compile(r"\bno second\b|\bwithout a second\b|\bno seconder\b"), " nosecond "),
+    (
+        re.compile(r"\bnot debatable\b|\bno debate\b|\bundebatable\b|\bcannot be debated\b"),
+        " nodebate ",
+    ),
+    (re.compile(r"\bno vote\b|\bwithout a vote\b"), " novote "),
+)
+
+
+def _normalize(text: str) -> str:
+    """Collapse discriminative phrases so polarity/thresholds survive tokenizing."""
+    t = text.lower()
+    for pat, repl in _PHRASES:
+        t = pat.sub(repl, t)
+    return t
+
+
 def _tokens(text: str) -> set[str]:
-    """Content tokens: lowercased words of length ≥ 3 that aren't stopwords."""
+    """Content keywords: length ≥ 3, not stopwords, with RONR phrases collapsed
+    to positive keyword tokens (``twothirds``/``nodebate``/``nosecond``)."""
     return {
-        w for w in _WORD_RE.findall(text.lower()) if len(w) >= 3 and w not in _STOPWORDS
+        w for w in _WORD_RE.findall(_normalize(text)) if len(w) >= 3 and w not in _STOPWORDS
     }
 
 

@@ -109,6 +109,28 @@ def test_make_examiner_falls_back_to_baseline_without_key(monkeypatch):
     assert isinstance(ex.make_examiner(lambda _p: "{}"), ex.LLMExaminer)
 
 
+def test_offline_grader_distinguishes_second_polarity():
+    """Spec §12: 'no second' must not match a positive 'second'. The offline
+    grader keys on positive phrases (second / no debate / two-thirds)."""
+    examiner = ex.BaselineExaminer(pass_score=2.5)
+    corpus = "A Point of Order needs no second and is not debatable. 23:1."
+    gold = "A Point of Order needs no second and is not debatable."
+    right = examiner.grade("It needs no second and is not debatable.", gold, corpus)
+    wrong = examiner.grade("It requires a second and is debatable.", gold, corpus)
+    assert right.score > wrong.score
+    assert right.passed and not wrong.passed
+
+
+def test_positive_phrase_keywords_normalize():
+    # 'two-thirds' is one positive keyword (not split on the hyphen).
+    assert "twothirds" in ex._tokens("a two-thirds vote")
+    assert "twothirds" in ex._tokens("two thirds")
+    # 'no debate' and 'not debatable' collapse to the same positive keyword.
+    assert ex._tokens("no debate") == ex._tokens("not debatable")
+    # 'no second' is its own keyword, distinct from a positive 'second'.
+    assert ex._tokens("no second") != ex._tokens("a second")
+
+
 def test_find_leaks_flags_near_duplicates_and_passes_when_clean():
     train = ["The Previous Question requires a two-thirds vote and is not debatable."]
     # Near-identical to a held-out item -> must be flagged.

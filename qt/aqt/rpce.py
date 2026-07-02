@@ -894,7 +894,7 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
-    from anki.rpce import QUESTION_NOTETYPE, RPCE_DECK_VERSION
+    from anki.rpce import CONCEPT_NOTETYPE, QUESTION_NOTETYPE, RPCE_DECK_VERSION
 
     if mw.col.decks.by_name("RPCE") is None:
         _build_or_import_rpce_deck(mw)
@@ -907,7 +907,9 @@ def _on_profile_open() -> None:
     # bumped, so the desktop always matches the phone. Safe: the RPCE deck is
     # generated for the candidate (no user-authored notes to lose).
     try:
-        stale = mw.col.find_notes(f'deck:RPCE -note:"{QUESTION_NOTETYPE}"')
+        stale = mw.col.find_notes(
+            f'deck:RPCE -note:"{QUESTION_NOTETYPE}" -note:"{CONCEPT_NOTETYPE}"'
+        )
         if stale:
             mw.col.remove_notes(stale)
         current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
@@ -916,7 +918,9 @@ def _on_profile_open() -> None:
             if notes:
                 mw.col.remove_notes(notes)
             _build_or_import_rpce_deck(mw)
-        elif not mw.col.find_cards(f'note:"{QUESTION_NOTETYPE}"'):
+        elif not mw.col.find_cards(
+            f'note:"{QUESTION_NOTETYPE}" OR note:"{CONCEPT_NOTETYPE}"'
+        ):
             _build_or_import_rpce_deck(mw)
         deck = mw.col.decks.by_name("RPCE")
         if deck is not None:
@@ -933,16 +937,25 @@ def _on_answer_card(reviewer, card, ease) -> None:
     try:
         from anki.rpce import transfer_ladder
 
-        transfer_ladder.record_review(mw.col, card.note().tags)
+        # Legacy question notes carry a rpce::fmt tag; concept sibling cards
+        # encode the format in their card-template name instead.
+        rung = transfer_ladder.rung_of_tags(card.note().tags)
+        if rung is None:
+            try:
+                rung = card.template()["name"]
+            except Exception:
+                rung = None
+        if rung:
+            transfer_ladder.record_rung(mw.col, rung)
     except Exception as exc:  # never break reviewing over the tally
         print(f"RPCE format-tally error: {exc}")
 
 
 def _is_rpce_card(card) -> bool:
-    from anki.rpce import QUESTION_NOTETYPE
+    from anki.rpce import CONCEPT_NOTETYPE, QUESTION_NOTETYPE
 
     try:
-        return card.note_type()["name"] == QUESTION_NOTETYPE
+        return card.note_type()["name"] in (QUESTION_NOTETYPE, CONCEPT_NOTETYPE)
     except Exception:
         return False
 
@@ -1007,8 +1020,15 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
     try:
         if not _is_rpce_card(card):
             return text
-        note = card.note()
-        return _rpce_render_html(note["Payload"], reveal="Answer" in kind)
+        # Each card template embeds its own payload in a hidden #rpce-payload
+        # element (data-p). Read it from the rendered card rather than a fixed
+        # field, so the per-format sibling templates (concept notetype) work too.
+        import re
+
+        m = re.search(r'id="rpce-payload"[^>]*data-p="([^"]*)"', text)
+        if not m:
+            return text
+        return _rpce_render_html(m.group(1), reveal="Answer" in kind)
     except Exception as exc:  # never break reviewing over rendering
         print(f"RPCE format-render error: {exc}")
         return text

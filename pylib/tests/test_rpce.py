@@ -24,22 +24,65 @@ def test_starter_deck_populates_every_domain():
     assert rpce.coverage_pct(col) == 1.0
 
 
-def test_concept_becomes_cloze_and_mcq_questions():
+def test_concept_becomes_sibling_cards_of_one_note():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
 
-    # Each curated concept yields two question notes: a cloze and an applied MCQ.
+    # A motion concept (Main Motion) is ONE note with sibling cards: cloze,
+    # applied MCQ, and second/debatable characteristic cards (spec §14/§16).
+    cids = col.find_cards("tag:rpce::concept::101")
+    assert len(cids) == 4
+    nids = {col.get_card(c).nid for c in cids}
+    assert len(nids) == 1, "same-concept cards must be siblings of one note"
+    note = col.get_card(cids[0]).note()
+    for pf in ("ClozePayload", "McqPayload", "SecondPayload", "DebatablePayload"):
+        assert note[pf], f"{pf} render payload present"
+
+    # A non-motion concept (quorum) is one note with just cloze + MCQ siblings.
+    cids2 = col.find_cards("tag:rpce::concept::105")
+    assert len(cids2) == 2
+    assert len({col.get_card(c).nid for c in cids2}) == 1
+
+
+def test_starter_deck_card_and_note_counts():
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
     from anki.rpce import flashcards
 
-    assert col.card_count() == 2 * len(flashcards.all_flashcards())
-    cids = col.find_cards("tag:rpce::concept::101")
-    assert len(cids) == 2
-    kinds = {col.get_card(c).note()["Kind"] for c in cids}
-    assert kinds == {rpce.KIND_CLOZE, rpce.KIND_MCQ}
-    for c in cids:
-        note = col.get_card(c).note()
-        assert note["Payload"], "render payload present"
-        assert note["PlainQ"] and note["PlainA"], "no-JS fallback present"
+    fcs = flashcards.all_flashcards()
+    concept_cards = sum(4 if f.motion_name else 2 for f in fcs)
+    # Plus 4 dedicated precedence questions (2 ordering + 2 multiselect, spec §15).
+    assert col.card_count() == concept_cards + 4
+    # One note per concept + one per precedence question (stable-GUID notes).
+    assert len(col.find_notes("deck:RPCE")) == len(fcs) + 4
+
+
+def test_concept_note_guids_are_deterministic_for_clean_sync():
+    from anki.rpce import stable_guid
+
+    col1 = getEmptyCol()
+    rpce.build_starter_deck(col1)
+    col2 = getEmptyCol()
+    rpce.build_starter_deck(col2)
+    g1 = col1.get_card(col1.find_cards("tag:rpce::concept::101")[0]).note().guid
+    g2 = col2.get_card(col2.find_cards("tag:rpce::concept::101")[0]).note().guid
+    assert g1 == g2 == stable_guid("concept|101")
+
+
+def test_second_card_hint_and_short_debatable_wording():
+    import base64
+    import json
+
+    col = getEmptyCol()
+    rpce.build_starter_deck(col)
+    # Point of Order: no second required, not debatable.
+    note = col.get_card(col.find_cards("tag:rpce::concept::104")[0]).note()
+    second = json.loads(base64.b64decode(note["SecondPayload"]))
+    assert second["hint"], "needs-a-second MCQ carries a hint (spec §16)"
+    assert second["options"][second["answer"]] == "No second required"
+    deb = json.loads(base64.b64decode(note["DebatablePayload"]))
+    assert deb["options"] == ["Debatable", "Not debatable"], "short wording"
+    assert deb["options"][deb["answer"]] == "Not debatable"
 
 
 def test_every_concept_card_carries_ronr_citation_and_quote():
