@@ -402,11 +402,9 @@ def _banner_html(col) -> str:
     )
 
     def section_value(snap) -> str:
-        return (
-            "—"  # dash when abstaining, matching Memory/Performance
-            if snap.abstained
-            else _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
-        )
+        # Always render the range — abstaining shows "— range 0%–100%", matching
+        # Memory/Performance, so every score carries a range.
+        return _fmt_range(snap.p_pass, snap.range_low, snap.range_high)
 
     def section_needs(snap) -> str:
         """The concrete requirement text for an abstaining section: the give-up

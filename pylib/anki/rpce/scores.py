@@ -305,8 +305,8 @@ def performance_score(col: Collection) -> ScoreRange:
     if seen == 0:
         sr = ScoreRange(
             None,
-            None,
-            None,
+            0.0,  # abstain, but still carry the full-uncertainty 0-100% range
+            1.0,
             CONFIDENCE_ABSTAIN,
             "No domain has review history yet — this bridges memory to new "
             "exam-style questions once you have practised.",
@@ -426,8 +426,8 @@ def readiness(
         return ReadinessSnapshot(
             section=section,
             p_pass=None,
-            range_low=None,
-            range_high=None,
+            range_low=0.0,  # abstain, but still show the full-uncertainty range
+            range_high=1.0,
             confidence=CONFIDENCE_ABSTAIN,
             pct_covered=cov,
             graded_reviews=reviews,
@@ -447,8 +447,8 @@ def readiness(
         return ReadinessSnapshot(
             section=section,
             p_pass=None,
-            range_low=None,
-            range_high=None,
+            range_low=0.0,  # abstain, but still show the full-uncertainty range
+            range_high=1.0,
             confidence=CONFIDENCE_ABSTAIN,
             pct_covered=cov,
             graded_reviews=reviews,

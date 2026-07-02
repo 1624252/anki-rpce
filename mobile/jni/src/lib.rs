@@ -729,6 +729,8 @@ fn scores_json() -> String {
             return serde_json::json!({
                 "abstained": true,
                 "confidence": "abstain",
+                "low": 0.0,  // full-uncertainty range so every score shows one
+                "high": 1.0,
                 "evidence": format!("Not enough data: {}", missing.join("; ")),
             });
         }
@@ -741,6 +743,8 @@ fn scores_json() -> String {
                 return serde_json::json!({
                     "abstained": true,
                     "confidence": "abstain",
+                    "low": 0.0,  // full-uncertainty range so every score shows one
+                    "high": 1.0,
                     "evidence": "Not enough performance data yet — practise more to score.",
                 });
             }
