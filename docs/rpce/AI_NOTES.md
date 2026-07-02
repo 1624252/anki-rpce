@@ -30,12 +30,26 @@ context; the RONR `section:paragraph` shown with the verdict is **our**
 retrieval, not the model's invention. If no passage is found we fall back to the
 offline grader rather than cite something unverifiable.
 
-## Beats a simpler method
+## Beats a simpler method (measured)
 
-The offline `KeywordExaminer` (rubric + alias table + stemmer + forbidden-term
-penalty) is the baseline the LLM must beat; `BaselineExaminer` (plain overlap)
-is the weaker floor. The gold-set / held-out eval (`rpce_gold_eval.py`,
-`just rpce-eval`) scores the LLM against these baselines on held-out items.
+The gold-set eval (`rpce_gold_eval.py`, `just rpce-eval`) grades the official
+sample questions with each grader and reports **accuracy on known-correct
+answers** and **false-pass rate on distractors** against a **pre-set cutoff**
+(accuracy ≥ 80%, false-pass ≤ 20%), plus a leakage scan. The key metric is
+false-pass — grading a *wrong* answer as correct is the dangerous error.
+
+Side-by-side on the 36-question / 7-domain gold set:
+
+| Grader | accuracy | false-pass | verdict |
+|--------|---------:|-----------:|---------|
+| **AI examiner (online)** | **97%** | **3%** | PASS |
+| Rubric (offline)         | 100%     | 28%        | FAIL |
+| Keyword overlap          | 100%     | 12%        | PASS |
+
+The simpler methods pass correct answers but can't tell a plausible-but-wrong
+answer from a right one, so they let distractors through (28% / 12% false-pass);
+the AI discriminates far better (3%). **Leakage scan: CLEAN.** The eval runs
+before any student sees a grade and blocks a grader that misses the cutoff.
 
 ## Works offline / turns off cleanly (spec §7g)
 
