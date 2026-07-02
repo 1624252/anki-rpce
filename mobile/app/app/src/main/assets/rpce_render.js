@@ -102,34 +102,49 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       box.appendChild(b);
     });
     host.appendChild(box);
-    function grade(){
+    // fromUser=true: grade the user's OWN selection (mark ✓/✗ you picked, missed).
+    // fromUser=false: the user never submitted (they tapped Show Answer) — just
+    // show the key marked ✓, and NEVER claim they picked anything.
+    function grade(fromUser){
       if(graded) return; graded=true;
       var correct=p.correct||[], btns=box.querySelectorAll('button'), ok=true, picks=[];
       for(var j=0;j<btns.length;j++){
         var isC=correct.indexOf(j)>=0, sel=btns[j].classList.contains('sel');
         if(sel) picks.push(j);
         btns[j].disabled=true; btns[j].classList.remove('sel');
-        if(isC && sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓ you picked</span>'; }
-        else if(isC && !sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">← missed</span>'; ok=false; }
-        else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗ you picked</span>'; ok=false; }
+        if(fromUser){
+          if(isC && sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓ you picked</span>'; }
+          else if(isC && !sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark" style="color:#be123c">← you missed</span>'; ok=false; }
+          else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗ you picked</span>'; ok=false; }
+        } else if(isC){
+          btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓ correct answer</span>';
+        }
       }
-      try{window.__rpce_multi=picks;}catch(e){}   // remember picks across the answer flip
-      fb.style.color=ok?'#15803d':'#be123c';
-      fb.textContent=ok?'✓ Correct — you selected all and only the right ones.'
-        :'✗ Not quite — the ones you picked are marked ✓/✗ and the ones you missed are marked.';
+      if(fromUser){
+        try{window.__rpce_multi=picks;}catch(e){}   // remember picks across the answer flip
+        fb.style.color=ok?'#15803d':'#be123c';
+        fb.textContent=ok?'✓ Correct — you selected all and only the right ones.'
+          :'✗ Not quite — the ones you picked are marked ✓/✗ and the ones you missed are marked ←.';
+      } else {
+        fb.style.color='#1b3faa';
+        fb.textContent='The correct answers are marked ✓.';
+      }
       done(host,p,opts);
     }
-    // Answer side: replay the user's OWN selection graded (so they see what they
-    // chose + right/wrong), not just the key. No prior selection => show the key.
+    // Answer side: replay the user's OWN selection if they graded one (survives
+    // the desktop question->answer swap via window.__rpce_multi); otherwise show
+    // the key WITHOUT fabricating picks (fixes "says I picked things I didn't").
     if(opts&&opts.reveal){
-      var saved=null; try{ if(window.__rpce_multi && window.__rpce_multi.length!=null) saved=window.__rpce_multi; }catch(e){}
-      var sel=saved!=null?saved:(p.correct||[]);
-      var mbtns=box.querySelectorAll('button');
-      sel.forEach(function(i){ if(mbtns[i]) mbtns[i].classList.add('sel'); });
-      grade(); return;
+      var saved=null; try{ if(window.__rpce_multi!=null && window.__rpce_multi.length!=null) saved=window.__rpce_multi; }catch(e){}
+      if(saved!=null){
+        var mbtns=box.querySelectorAll('button');
+        saved.forEach(function(i){ if(mbtns[i]) mbtns[i].classList.add('sel'); });
+        grade(true);
+      } else { grade(false); }
+      return;
     }
     var ctr=el('div','rpce-controls'); var chk=el('button','rpce-btn','Check answers');
-    chk.onclick=grade; ctr.appendChild(chk); host.appendChild(ctr); host.appendChild(fb);
+    chk.onclick=function(){ grade(true); }; ctr.appendChild(chk); host.appendChild(ctr); host.appendChild(fb);
   }
 
   // ---- order: drag the items into precedence order (top = higher) -----------
@@ -221,15 +236,19 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       mv.appendChild(up); mv.appendChild(dn); row.appendChild(mv);
       return row;
     }
-    function submit(){
+    // The correct sequence, always shown below the graded rows for reference.
+    var correctLine='Correct order (highest → lowest): <b>'+order.join(' → ')+'</b>';
+    // fromUser=true: grade the arrangement the user submitted. fromUser=false: the
+    // user tapped Show Answer without submitting — just show the correct order,
+    // never claim "your order matches".
+    function submit(fromUser){
       if(graded) return; graded=true;
-      // Rows stay in the user's submitted arrangement; mark each position right
-      // or wrong so the user sees THEIR OWN answer graded, not just the key.
       var got=currentOrder(), rows=list.querySelectorAll('.rpce-slot'), allRight=true;
-      try{window.__rpce_order=got.slice();}catch(e){}   // remember across the answer flip
+      if(fromUser){ try{window.__rpce_order=got.slice();}catch(e){} }  // remember across the flip
       for(var i=0;i<rows.length;i++){
         var mv=rows[i].querySelector('.rpce-moves'), mk=el('span','rpce-omark');
-        if(got[i]===order[i]){ rows[i].classList.add('ok'); mk.style.color='#15803d';
+        if(!fromUser){ rows[i].classList.add('ok'); mk.style.color='#15803d'; mk.textContent='✓'; }
+        else if(got[i]===order[i]){ rows[i].classList.add('ok'); mk.style.color='#15803d';
           mk.textContent='✓'; }
         else { rows[i].classList.add('no'); mk.style.color='#be123c'; allRight=false;
           // Show where this item actually belongs (its rank in the key).
@@ -238,23 +257,27 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
         var mb=rows[i].querySelectorAll('.rpce-move');
         for(var k=0;k<mb.length;k++) mb[k].disabled=true;   // stop nudging
       }
-      fb.style.color=allRight?'#15803d':'#be123c';
-      fb.innerHTML=allRight?'✓ Correct — your order matches.'
-        :'✗ Not quite — your order is graded above. The correct order (highest → lowest) is: <b>'+order.join(' → ')+'</b>';
+      if(!fromUser){ fb.style.color='#1b3faa'; fb.innerHTML=correctLine; }
+      else { fb.style.color=allRight?'#15803d':'#be123c';
+        fb.innerHTML=(allRight?'✓ Correct — your order matches.'
+          :'✗ Not quite — your order is graded above.')+'<br>'+correctLine; }
       done(host,p,opts);
     }
 
     if(opts&&opts.reveal){
-      // Answer side: rebuild the user's OWN submitted order and grade it, so they
-      // see what they arranged + which rows were wrong. No prior submit => show key.
+      // Answer side: rebuild the user's OWN submitted order and grade it if they
+      // submitted; otherwise show the correct order (no fabricated "correct").
       var saved=null; try{ if(window.__rpce_order && window.__rpce_order.length) saved=window.__rpce_order; }catch(e){}
-      (saved||order).forEach(function(label){ list.appendChild(makeRow(label)); });
-      renumber(); host.appendChild(fb); submit(); return;
+      if(saved){ saved.forEach(function(label){ list.appendChild(makeRow(label)); });
+        renumber(); host.appendChild(fb); submit(true); }
+      else { order.forEach(function(label){ list.appendChild(makeRow(label)); });
+        renumber(); host.appendChild(fb); submit(false); }
+      return;
     }
     shuffle(p.order.slice()).forEach(function(label){ list.appendChild(makeRow(label)); });
     renumber();
     var ctr=el('div','rpce-controls'); var sub=el('button','rpce-btn','Submit');
-    sub.onclick=submit; ctr.appendChild(sub); host.appendChild(ctr);
+    sub.onclick=function(){ submit(true); }; ctr.appendChild(sub); host.appendChild(ctr);
     host.appendChild(fb);
   }
 
