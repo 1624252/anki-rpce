@@ -94,6 +94,14 @@ html,body{margin:0;min-height:100%;
 .pill{display:inline-block;font-size:var(--fs-label);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 11px;border-radius:999px}
 .pill.abstain{color:var(--muted);background:rgba(125,211,252,.18)}
 .needbox{margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:9px 12px;color:#9a3412;font-size:13px;line-height:1.45;text-align:left}
+/* session-complete statistics */
+.stiles{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.stile{flex:1;min-width:88px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:12px 8px;text-align:center}
+.stile .sval{font-size:26px;font-weight:900;color:var(--ink);line-height:1}
+.stile .slabel{margin-top:5px;font-size:12px;font-weight:700;color:var(--ink2)}
+.sgroup{margin-top:20px;text-align:left}
+.sgroup .stitle{font-weight:800;color:var(--ink);margin-bottom:4px}
+.sgroup .srow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)}
 .pill.low{color:var(--warn);background:rgba(251,191,36,.2)}
 .pill.medium{color:var(--mid);background:rgba(96,165,250,.22)}
 .pill.high{color:var(--ready);background:rgba(74,222,128,.2)}
@@ -195,6 +203,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <div id="done" class="done hidden">
       <div class="big">✅</div><h2>All caught up</h2>
       <p class="sub">No more cards due right now.</p>
+      <div id="done-stats"></div>
       <button class="btn hidden" id="new-session-btn" onclick="startStudy()" style="margin-top:16px">Start new session</button>
       <button class="btn ghost" onclick="goHome()" style="margin-top:12px">Back to home</button>
     </div>
@@ -336,6 +345,11 @@ function goHome(){ show('home'); refreshCounts(); updateNetStatus(); autoSync();
 var current=null;
 // A review session is capped; the user starts another afterward.
 var SESSION_LIMIT=Math.max(1,Math.min(500, parseInt(localStorage.getItem('rpce_session_limit'),10)||20)), sessDone=0;
+// Per-session tally for the completion screen (mirrors the desktop).
+var KIND_LABEL={cloze:'Cloze',mcq:'Multiple choice',multi:'Select-all',order:'Ordering'};
+var sessStats=newSessStats();
+function newSessStats(){ return {ratings:{again:0,hard:0,good:0,easy:0}, byType:{}, byDomain:{}, concepts:{}}; }
+var RATING_BUCKET=['again','hard','good','easy'];  // answer(0..3)
 function setSessionLength(){
   var v=prompt('Questions per review session:', SESSION_LIMIT);
   if(v===null) return;
@@ -343,7 +357,7 @@ function setSessionLength(){
   try{ localStorage.setItem('rpce_session_limit', SESSION_LIMIT); }catch(e){}
   var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;
 }
-function startStudy(){ sessDone=0; show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
+function startStudy(){ sessDone=0; sessStats=newSessStats(); show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
 function updateProgress(){
   var p=el('rev-progress'); if(!p) return;
   p.classList.remove('hidden');
@@ -357,8 +371,26 @@ function sessionComplete(){
   var d=el('done'); d.classList.remove('hidden');
   d.querySelector('.big').textContent='🎉';
   d.querySelector('h2').textContent='Session complete';
-  d.querySelector('.sub').textContent=SESSION_LIMIT+' questions done. Ready for another?';
+  var total=sessDone||SESSION_LIMIT, rt=sessStats.ratings;
+  var recalled=rt.good+rt.easy, acc=total?Math.round(100*recalled/total):0;
+  d.querySelector('.sub').textContent='You recalled '+acc+'% of this session confidently.';
+  el('done-stats').innerHTML=sessStatsHtml(total, recalled, rt.hard, rt.again,
+    Object.keys(sessStats.concepts).length, sessStats.byType, sessStats.byDomain);
   el('new-session-btn').classList.remove('hidden');
+}
+function statTile(v,label){ return '<div class="stile"><div class="sval">'+v+'</div>'+
+  '<div class="slabel">'+label+'</div></div>'; }
+function breakdown(title,data){
+  var keys=Object.keys(data); if(!keys.length) return '';
+  keys.sort(function(a,b){return data[b]-data[a];});
+  var rows=keys.map(function(k){return '<div class="srow"><span>'+escapeHtml(k)+'</span><b>'+data[k]+'</b></div>';}).join('');
+  return '<div class="sgroup"><div class="stitle">'+title+'</div>'+rows+'</div>';
+}
+function sessStatsHtml(total,recalled,effort,missed,concepts,byType,byDomain){
+  return '<div class="stiles">'+
+    statTile(total,'questions')+statTile(recalled,'recalled')+
+    statTile(effort,'needed effort')+statTile(missed,'missed')+statTile(concepts,'concepts')+
+    '</div>'+breakdown('By question type',byType)+breakdown('Concepts by domain',byDomain);
 }
 function resetReview(){
   el('rate').classList.add('hidden'); el('show-btn').classList.add('hidden');
@@ -378,6 +410,7 @@ function loadCard(){
   updateProgress();
   current=r;
   var payload=extractPayload(r.question);
+  current.kind = payload ? payload.kind : null;  // for the session by-type tally
   if(payload && window.RPCE){
     // Renderer gates completion: rating buttons appear once the user has
     // answered (MCQ/order) or revealed every cloze blank ("Reveal all" too).
@@ -401,6 +434,13 @@ function extractPayload(html){
 function showAnswer(){ if(!current) return; el('card').innerHTML=current.answer;
   el('show-btn').classList.add('hidden'); el('rate').classList.remove('hidden'); }
 function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textContent=res.error||'answer failed'; return; }
+  // Tally this answer for the completion screen (rating / type / concept / domain).
+  if(current){
+    var bkt=RATING_BUCKET[r]; if(bkt) sessStats.ratings[bkt]++;
+    var lbl=KIND_LABEL[current.kind]||'Question'; sessStats.byType[lbl]=(sessStats.byType[lbl]||0)+1;
+    if(current.concept) sessStats.concepts[current.concept]=1;
+    if(current.domain) sessStats.byDomain[current.domain]=(sessStats.byDomain[current.domain]||0)+1;
+  }
   sessDone++;
   bump("rpce_reviews_count");               // local fallback tally (home prefers engine's revlog total)
   autoSync();                              // sync reviews in the background

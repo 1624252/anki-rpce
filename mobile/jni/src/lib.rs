@@ -258,15 +258,20 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_nextCard(
         Ok(bytes) => match anki_proto::card_rendering::RenderCardResponse::decode(bytes.as_slice()) {
             Ok(r) => reply(
                 env,
-                serde_json::json!({
-                    "ok": true,
-                    "hasCard": true,
-                    "cardId": card_id,
-                    "question": nodes_to_html(&r.question_nodes),
-                    "answer": nodes_to_html(&r.answer_nodes),
-                    "css": r.css,
-                })
-                .to_string(),
+                {
+                    let (concept, domain) = card_concept_domain(card_id);
+                    serde_json::json!({
+                        "ok": true,
+                        "hasCard": true,
+                        "cardId": card_id,
+                        "question": nodes_to_html(&r.question_nodes),
+                        "answer": nodes_to_html(&r.answer_nodes),
+                        "css": r.css,
+                        "concept": concept,
+                        "domain": domain,
+                    })
+                    .to_string()
+                },
             ),
             Err(_) => reply(env, err("decode render failed")),
         },
@@ -553,6 +558,41 @@ fn scalar_i64(sql: &str) -> i64 {
         .ok()
         .and_then(|v| v.as_array()?.first()?.as_array()?.first()?.as_i64())
         .unwrap_or(0)
+}
+
+/// The RPCE concept id + readable domain name for a card, from its note tags
+/// ('rpce::concept::<id>' / 'rpce::domain::<code>'). Empty strings when unknown;
+/// feeds the session-complete concept breakdown (mirrors the desktop).
+fn card_concept_domain(card_id: i64) -> (String, String) {
+    let tags = db_query(
+        "SELECT n.tags FROM notes n JOIN cards c ON c.nid = n.id WHERE c.id = ?",
+        serde_json::json!([card_id]),
+    )
+    .ok()
+    .and_then(|v| {
+        Some(
+            v.as_array()?
+                .first()?
+                .as_array()?
+                .first()?
+                .as_str()?
+                .to_string(),
+        )
+    })
+    .unwrap_or_default();
+    let (mut concept, mut domain) = (String::new(), String::new());
+    for t in tags.split_whitespace() {
+        if let Some(id) = t.strip_prefix("rpce::concept::") {
+            concept = id.to_string();
+        } else if let Some(code) = t.strip_prefix("rpce::domain::") {
+            if let Ok(c) = code.parse::<i64>() {
+                if let Some((_, name)) = DOMAINS.iter().find(|(dc, _)| *dc == c) {
+                    domain = (*name).to_string();
+                }
+            }
+        }
+    }
+    (concept, domain)
 }
 
 fn logistic_pass(performance: f64) -> f64 {
