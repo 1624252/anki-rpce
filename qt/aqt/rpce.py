@@ -973,32 +973,52 @@ def _on_profile_open() -> None:
         if stale:
             mw.col.remove_notes(stale)
         current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
+        did_reseed = False
         if _rpce_starter_apkg() and not current:
             notes = mw.col.find_notes("deck:RPCE")
             if notes:
                 mw.col.remove_notes(notes)
             _build_or_import_rpce_deck(mw)
+            did_reseed = True
         elif not mw.col.find_cards(
             f'note:"{QUESTION_NOTETYPE}" OR note:"{CONCEPT_NOTETYPE}"'
         ):
             _build_or_import_rpce_deck(mw)
+            did_reseed = True
         deck = mw.col.decks.by_name("RPCE")
         if deck is not None:
             mw.col.decks.set_current(deck["id"])
             # Lift the daily cap on the existing deck too (build sets it for new
-            # ones); idempotent so it's cheap on every open.
+            # ones); idempotent so it's cheap on every open. NO_SORT keeps the
+            # deck's built-in add-order, which the exporter lays out round-robin
+            # by question type (a uniform RANDOM_CARD order over-showed MCQs).
             try:
                 conf = mw.col.decks.config_dict_for_deck_id(deck["id"])
                 if (
                     conf.get("new", {}).get("perDay", 0) < 9999
-                    or conf.get("newSortOrder", 0) != 4
+                    or conf.get("newSortOrder", 0) != 1
                 ):
                     conf["new"]["perDay"] = 9999
                     conf["rev"]["perDay"] = 9999
-                    conf["newSortOrder"] = 4  # RANDOM_CARD — interleave types
+                    conf["newSortOrder"] = 1  # NEW_CARD_SORT_ORDER_NO_SORT
                     mw.col.decks.update_config(conf)
             except Exception:
                 pass
+        # A re-seed bulk-imports/removes notes and bumps the schema, which can
+        # leave Anki's counts inconsistent so the pre-sync sanity check aborts
+        # with "please use Check Database, then sync". Run that check (same as
+        # Tools > Check Database) ONCE per deck version — covers both a fresh
+        # re-seed and a collection reseeded by an older build that never ran it.
+        # After it, the next sync is a clean one-time full alignment (desktop is
+        # the content source of truth); every later sync is incremental, so
+        # reviews/scores from both devices combine two-way.
+        try:
+            checked = mw.col.get_config("rpce:integrity_version", default="")
+            if did_reseed or checked != RPCE_DECK_VERSION:
+                mw.col.fix_integrity()
+                mw.col.set_config("rpce:integrity_version", RPCE_DECK_VERSION)
+        except Exception as exc:
+            print(f"RPCE integrity check failed: {exc}")
     except Exception as exc:
         print(f"RPCE deck migration error: {exc}")
 
