@@ -131,9 +131,11 @@ _REVIEWER_CSS = (
     "color:#0a1f44 !important;text-align:left !important}"
     "hr{border:none;border-top:1px solid #caddf7 !important}"
     "a{color:#1d4ed8 !important}"
-    # Larger question + multiple-choice text on the bigger desktop screen.
+    # Larger question + multiple-choice text on the bigger desktop screen,
+    # with tighter spacing between the answer choices.
     ".rpce-q{font-size:23px !important;line-height:1.55 !important}"
-    ".rpce-opt{font-size:20px !important}"
+    ".rpce-opts{gap:6px !important;margin-top:12px !important}"
+    ".rpce-opt{font-size:20px !important;padding:11px 16px !important}"
     ".rpce-opt .k{font-size:20px !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
     # Revealed cloze blank — green, matching the phone.
@@ -371,28 +373,28 @@ def _banner_html(col) -> str:
                 _fmt_range(mem.point, mem.low, mem.high),
                 mem.confidence,
                 mem.point,
-                mem.explanation,
+                mem.elaboration or mem.explanation,
             ),
             _score_card(
                 "Performance",
                 _fmt_range(perf.point, perf.low, perf.high),
                 perf.confidence,
                 perf.point,
-                perf.explanation,
+                perf.elaboration or perf.explanation,
             ),
             _score_card(
                 "Pass Section I",
                 section_value(sec1),
                 sec1.confidence,
                 None if sec1.abstained else sec1.p_pass,
-                sec1.evidence,
+                sec1.elaboration or sec1.evidence,
             ),
             _score_card(
                 "Pass Section II",
                 section_value(sec2),
                 sec2.confidence,
                 None if sec2.abstained else sec2.p_pass,
-                sec2.evidence,
+                sec2.elaboration or sec2.evidence,
             ),
         ]
     )
