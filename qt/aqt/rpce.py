@@ -1492,6 +1492,15 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
+    # This is a rebranded fork pointed at its own sync host, so Anki's background
+    # update check just hits AnkiWeb and logs "update check failed". We already
+    # hide the manual "check for updates" UI; disable the automatic one too.
+    # Idempotent + persisted in the profile meta, so it also covers next launch.
+    try:
+        if mw.pm.check_for_updates():
+            mw.pm.set_update_check(False)
+    except Exception:
+        pass
     from anki.rpce import CONCEPT_NOTETYPE, QUESTION_NOTETYPE, RPCE_DECK_VERSION
 
     if mw.col.decks.by_name("RPCE") is None:
