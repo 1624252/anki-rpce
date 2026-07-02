@@ -33,7 +33,9 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       if(m){ var i=+m[1]; var b=p.blanks[i]||{a:'',h:''};
         total++;
         var span=el('span','rpce-blank');
-        span.textContent='?';            // no give-away hint on the blank
+        // Show a category hint only where the sentence can't give it away
+        // (debatable/undebatable, amendable/not) — never a spelling hint.
+        span.textContent = b.h ? ('? ('+b.h+')') : '?';
         span.title='Tap to reveal';
         span.dataset.a=b.a;
         wrap.appendChild(span); blanks.push(span);

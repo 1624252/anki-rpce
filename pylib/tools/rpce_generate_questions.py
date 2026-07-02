@@ -1012,6 +1012,48 @@ def build_knowledge(
     return qs
 
 
+#: Clozes flagged by a reviewer audit as impossible to answer without external
+#: context (the blank is a generic word the sentence doesn't determine, e.g.
+#: "...report its findings and ___" → "recommendations"). Dropped from the bank.
+_IMPOSSIBLE_CLOZE_GUIDS = frozenset({
+    "S13KpwRQmB83", "R95PDvr5LBPZ", "O__HNI1jIp2X", "88bLFEGrniOq", "2p3oTn_12Ibc",
+    "F9hapz7phd9C", "Mw3HiumFP_xS", "8MRcPD6G6EXV", "4QJc9xFNmUun", "ugf2ctPl0PXD",
+    "XpGKcCeqaXQN", "eb2Gan8WIPMQ", "aHd5kj0CABcq", "jFP3S-Iarfg0", "eCHC4cS9nlEJ",
+    "vIucLBB96ZNw", "m_TlUZjYXEaz", "BDGbfschcEnM", "mF5rVYpmHS8B", "eAT04hB3i9nU",
+    "kBg6zu9GyWol", "xKs8Qct1cMoZ", "XNd6-xAcPtkS", "1M3yzEhg0dwo", "oJgiAugfKFhR",
+    "VOW_7oA_pU1P", "qEHCwVo3VXy1", "Vjokm0c4pZ6I", "nTYhNLk5ebiK", "3phx2C0sDVI7",
+    "qvd7YzFnrgfd", "2J3cdiDbIGuf", "g_UQVUDRdyVJ", "0rxswsCfo2Pf", "_p6yB9GKQsIl",
+    "X-7AgD9pgRwU", "YFQjqV_0Padc", "sqg543Xszeu6", "ZmrH4svv6efV", "uEhk3Jo4sgy9",
+    "7Kbrk3_781L2", "OEneoqd8GjHl", "hJq0-2fRdwXG", "NIotMvH2xMqT", "k68AFQRIafl4",
+    "ggTx1Lw8rpnP", "RgP9LER9RBYo", "TqFk8SXDGPgi", "d-Ys3ER_nIx_", "O1X3jkl2y5RJ",
+    "PJmDqjnPwIWs", "S4VdT9b5LSVT", "JHC-c7CD-67i", "m1gtkqwSLe2A", "9XqRjmknZpgo",
+    "Vmz4q7YyvNdN", "7Mlq6KPUMtdk", "yPwv-CDCsgC6", "b4tlcWUWveCW", "8SVMDv4sjsyE",
+    "nhY_qQnbH_5A", "_i-wi_hGDXt2", "BDevL2NNlh0Q", "K10VTckDd8kn", "Igk5p2Kda_UJ",
+    "2OedwQs2QJaR", "BIAiRnzdw7vh", "Xp5M2PEIvs6e", "g3GdNvNX8plh", "z83OJrqm_iv7",
+    "JYeKTkUdgRkU", "eRd__-QSxfXw", "TF_LgNTnaUk5", "UMzkRYxGBWA2", "JHhTm5jId-68",
+    "LO1sFTyeN2FC", "yUYTKPFi1eV_", "AAbvJH54JYQd", "gAO88mcxT0lx", "EHnyynIqarqq",
+    "jznOs1NhSLrA", "o3wmHjcS8JfJ", "jbsbLRWEhe7w", "WT6zJZA_lwCN", "WKoVGBUHB0DB",
+    "RpAoWfGH804v", "7Oyteb0AzLMv", "vc9DRwMNW91k", "iOH-kBWF-qWe", "qpWDb4JTm00I",
+    "miGdvDtoPg--", "kuR3aR-zFhkn", "zuyuZTcTdhfn", "lhFUyPj5pgqC", "VZJlzDSLK_q3",
+    "sVq0Hdd8-hXo", "uGDZZfX7l8kx", "9gLVEKI2Q7kX", "Cl5FxiywGgbA", "tALRusFm3TKa",
+    "TtEPlEjs349v", "3iulJ0DKEyj-", "hKGFiWUhh4Lt", "bR-J-H-LXhyM", "aad5PcdyoIOJ",
+    "cYeMRv_ja975", "JJoABEqbWMjE", "A0lGTSXrkU2S", "HYvEIYINCKzA", "CO3xZDIXeVX4",
+    "U5vmJE0FJ-xB", "3A_Pi6uOsBrC", "ss3Q1Cj17jhn", "IRFjHlWZTZ4j", "zurd3Tahl_F8",
+    "5U6RfCMna0cL", "1iCc6rvUJ10k", "HbSbF_aekww0", "QO4fjU8Eg8iA", "eizbwNf3o2F2",
+    "QSyikOH92Cp3", "GjbhMfVJci7P", "QEHXNu40k6vP", "Y-5lc0LcV6v-", "qmP8lYRvDBiQ",
+    "CHFcICatI6zd", "7QXcMN5twLh6", "2NkrAR3UnKId",
+})
+
+
+def _cloze_guid(concept_id: str, plain_q: str) -> str:
+    """Match anki.rpce.stable_guid('q|<concept>|cloze|<plainq>') for blocklisting."""
+    import base64
+    import hashlib
+
+    key = f"q|{concept_id}|cloze|{plain_q}"
+    return base64.urlsafe_b64encode(hashlib.sha256(key.encode("utf-8")).digest()[:9]).decode("ascii").rstrip("=")
+
+
 def _norm_opt(s: str) -> str:
     """Aggressive key for near-duplicate options: case-, space- and
     punctuation-insensitive, so "Point of Order" / "point of order," collapse."""
@@ -1066,6 +1108,15 @@ def build(count: int = 0, per_para: int = PER_PARA) -> list[Question]:
     term_pool = sorted({t for p in paras for t in (*p.emphases, *p.bold)})
     questions: list[Question] = list(build_knowledge(sents, secq, rng))
     questions.extend(build_corpus(paras, term_pool, rng, per_para))
+    # Drop clozes an audit flagged as impossible without external context.
+    questions = [
+        q
+        for q in questions
+        if not (
+            q.kind == "cloze"
+            and _cloze_guid(q.concept_id, q.plain_q) in _IMPOSSIBLE_CLOZE_GUIDS
+        )
+    ]
     for q in questions:  # scrub near-duplicate answer choices
         _dedup_options(q, rng)
     return questions[:count] if count else questions
