@@ -300,20 +300,15 @@ def _elaboration_html(s: dict) -> str:
     ``elaboration`` (preparedness-focused prose) when present, and tucks the prose
     into a ``<details>`` so the dashboard stays uncluttered. Falls back to a
     generic confidence label so the word "confidence" is always shown."""
-    label = str(s.get("confidence_label") or "").strip()
     body = str(s.get("elaboration") or "").strip()
     if not body:
         return ""
-    if not label:
-        label = "Overall confidence"
-    elif "confidence" not in label.lower():
-        label = f"{label} confidence"
     return (
         "<details class='rpce-elab' style='margin-top:22px;background:var(--surface2);"
         "border:1px solid var(--border);border-radius:16px;padding:2px 18px'>"
         "<summary style='cursor:pointer;font-weight:800;color:var(--ink);"
         "font-size:var(--fs-body);padding:14px 0'>"
-        f"ℹ️ {label} — why these scores</summary>"
+        "ℹ️ Why these scores</summary>"
         "<div style='color:var(--ink2);font-size:var(--fs-small);line-height:1.5;"
         f"padding:0 0 16px'>{body}</div></details>"
     )
@@ -375,19 +370,10 @@ def _banner_html(col) -> str:
             ),
         ]
     )
+    # Dashboard kept clean: no phase/next chips or "readiness hidden" note —
+    # the score cards + coverage already say enough.
     note = ""
-    if sec1.abstained or sec2.abstained:
-        note = (
-            "<div class='rpce-note'>"
-            f"⚠ Readiness stays hidden until there's enough data — {sec1.evidence}</div>"
-        )
-    from anki.rpce import progression
-
-    phase = progression.current_phase(col)
-    chips = _chip(f"📈 Phase: <b>{phase.title}</b> — {phase.focus}")
-    if sec1.best_next_topic:
-        chips += _chip(f"🎯 Next: <b>{sec1.best_next_topic}</b>")
-    chips_row = f"<div class='rpce-chips'>{chips}</div>" if chips else ""
+    chips_row = ""
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
   <div class="rpce-head">
@@ -823,13 +809,16 @@ def _brand_main_window() -> None:
             mw.resize(min_w, mw.height())
     except Exception as exc:  # never block startup over sizing
         print(f"RPCE window-size error: {exc}")
-    # Tools ▸ set how many questions a review session is.
+    # Tools ▸ RPCE actions: session length + AnkiWeb logout.
     try:
         from aqt.qt import QAction
 
         act = QAction("Review session length…", mw)
         qconnect(act.triggered, _set_session_length)
         mw.form.menuTools.addAction(act)
+        logout = QAction("Log out of AnkiWeb", mw)
+        qconnect(logout.triggered, _logout_ankiweb)
+        mw.form.menuTools.addAction(logout)
     except Exception as exc:
         print(f"RPCE menu error: {exc}")
 
@@ -1107,6 +1096,21 @@ def _set_session_length() -> None:
         tooltip(f"Review sessions are now {n} questions.")
 
 
+def _logout_ankiweb() -> None:
+    """Log out of AnkiWeb (clear saved sync auth); local reviews are kept."""
+    from aqt.utils import tooltip
+
+    mw = aqt.mw
+    if mw is None:
+        return
+    try:
+        mw.pm.clear_sync_auth()
+        _redraw_toolbar()
+        tooltip("Logged out of AnkiWeb. Your local reviews are kept.")
+    except Exception as exc:
+        print(f"RPCE logout error: {exc}")
+
+
 def _session_progress_html() -> str:
     """A slim 'Question N of M' progress bar shown atop each reviewer card."""
     limit = _session_limit()
@@ -1288,11 +1292,16 @@ _TOOLBAR_CSS = (
     "box-shadow:0 4px 14px rgba(29,78,216,.30) !important}"
     ".hitem:hover{background:linear-gradient(135deg,#2563eb,#60a5fa) !important;"
     "color:#fff !important;border-color:#1d4ed8 !important}"
-    # Sync-status indicator: amber when not signed in, green when signed in.
+    # Sync-status indicator: amber not-signed-in, green signed-in, orange syncing.
     "#rpce_sync_out{background:#fef3c7 !important;color:#b45309 !important;"
     "border-color:#f0c674 !important;box-shadow:none !important}"
     "#rpce_sync_in{background:#e7f6ec !important;color:#15803d !important;"
     "border-color:#9fd8b3 !important;box-shadow:none !important}"
+    "#rpce_sync_busy{background:#fff1e0 !important;color:#c2410c !important;"
+    "border-color:#fdba74 !important;box-shadow:none !important}"
+    # Anki's own Sync button turns orange while a sync is in progress.
+    "#sync.rpce-syncing{background:linear-gradient(135deg,#ea580c,#f97316) !important;"
+    "color:#fff !important;border-color:#ea580c !important}"
     "</style>"
 )
 
@@ -1363,35 +1372,40 @@ def _last_sync_label() -> str:
         return ""
 
 
+_syncing = False  # True while a sync is in progress (drives the orange state)
+
+
 def _on_right_tray(content, toolbar) -> None:
     """Top-right corner: a live sync-status indicator (with last-synced time)
     followed by Anki's own Sync button — mirrors the phone's top-right sync
-    status. Recomputes on every toolbar draw (see ``_on_sync_changed``)."""
-    signed_in = False
-    try:
-        signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
-    except Exception:
-        pass
-    if signed_in:
-        when = _last_sync_label()
-        label = f"🟢 Synced · {when}" if when else "🟢 Synced"
+    status. Orange while syncing, green signed-in, amber not-signed-in."""
+    if _syncing:
+        label, ident = "🔄 Syncing…", "rpce_sync_busy"
     else:
-        label = "⚠️ Not signed in"
+        signed_in = False
+        try:
+            signed_in = bool(aqt.mw and aqt.mw.pm.sync_auth())
+        except Exception:
+            pass
+        if signed_in:
+            when = _last_sync_label()
+            label = f"🟢 Synced · {when}" if when else "🟢 Synced"
+            ident = "rpce_sync_in"
+        else:
+            label, ident = "⚠️ Not signed in", "rpce_sync_out"
     content.append(
         toolbar.create_link(
             "rpce_sync_status",
             label,
             _trigger_sync,
             tip="AnkiWeb sync — click to sign in and sync with your phone",
-            id="rpce_sync_in" if signed_in else "rpce_sync_out",
+            id=ident,
         )
     )
     content.append(toolbar._create_sync_link())
 
 
-def _on_sync_changed(*args) -> None:
-    """Redraw the toolbar so the sync-status indicator recomputes signed-in
-    state right after login/sync (live update)."""
+def _redraw_toolbar() -> None:
     try:
         if aqt.mw is not None:
             aqt.mw.toolbar.draw()
@@ -1399,9 +1413,30 @@ def _on_sync_changed(*args) -> None:
         print(f"RPCE sync-status refresh error: {exc}")
 
 
+def _on_sync_will_start(*args) -> None:
+    """Turn the sync status + Sync button orange while a sync runs."""
+    global _syncing
+    _syncing = True
+    _redraw_toolbar()
+    try:  # tint Anki's own Sync button orange after the redraw recreates it
+        from aqt.qt import QTimer
+
+        QTimer.singleShot(
+            60,
+            lambda: aqt.mw.toolbar.web.eval(
+                "var b=document.getElementById('sync');"
+                "if(b)b.classList.add('rpce-syncing');"
+            ),
+        )
+    except Exception:
+        pass
+
+
 def _on_sync_finished(*args) -> None:
-    """Stamp the last-synced time on a successful sync, then refresh the
-    indicator so it shows 'Synced · just now'."""
+    """Clear the syncing state, stamp the last-synced time, refresh the
+    indicator back to 'Synced · just now'."""
+    global _syncing
+    _syncing = False
     try:
         if aqt.mw and aqt.mw.col:
             import time
@@ -1409,7 +1444,7 @@ def _on_sync_finished(*args) -> None:
             aqt.mw.col.set_config("rpce:last_sync", int(time.time()))
     except Exception as exc:
         print(f"RPCE last-sync stamp error: {exc}")
-    _on_sync_changed()
+    _redraw_toolbar()
 
 
 def _remove_deck_browser_bottom_bar() -> None:
@@ -1451,4 +1486,4 @@ def setup() -> None:
     gui_hooks.state_did_change.append(_on_state_change)
     # Live-update the top-right sync-status indicator after login/sync.
     gui_hooks.sync_did_finish.append(_on_sync_finished)
-    gui_hooks.sync_will_start.append(_on_sync_changed)
+    gui_hooks.sync_will_start.append(_on_sync_will_start)
