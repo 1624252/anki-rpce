@@ -11,10 +11,15 @@ The candidate is never required to cite.
 This module is deliberately **LLM-agnostic and offline-capable** (spec: the app
 must score with AI off):
 
-- :class:`BaselineExaminer` uses keyword retrieval only — no network — and is
-  both the **AI-off fallback** and the **baseline the LLM must beat** (spec §7f).
+- :class:`KeywordExaminer` is the **AI-off fallback**: a deterministic rubric
+  grader (alias table + light stemmer + forbidden-term penalty) that scores an
+  answer against per-element rubrics — explicit where authored, else derived
+  from the gold ruling — so a confidently *wrong* threshold fails even when the
+  other words overlap.
+- :class:`BaselineExaminer` is the older keyword-overlap grader, kept as the
+  **baseline the LLM/rubric grader must beat** (spec §7f).
 - :class:`Examiner` is the interface an LLM-backed grader implements; with no
-  API key configured the app uses the baseline.
+  API key configured the app uses :class:`KeywordExaminer`.
 - :func:`find_leaks` and :func:`evaluate` implement the leakage check (§7e) and
   the held-out gold-set eval with a pre-set cutoff (§7f).
 
@@ -120,6 +125,194 @@ def _tokens(text: str) -> set[str]:
     }
 
 
+# --- Rubric grading: alias table + stemmer + forbidden-term penalty ----------
+#
+# The offline grader turns recall-only overlap into precision+recall by scoring
+# a free-text answer against a small per-element rubric. Paraphrases are folded
+# to canonical single tokens (aliases + phrase map) and morphology is collapsed
+# by a dependency-free suffix stemmer, so "more than half" == "majority" and
+# "adjournment" == "adjourned" == "adjourn".
+
+# Paraphrase -> canonical single token. Applied AFTER `_PHRASES`, so the
+# discriminative negation/threshold phrases (twothirds/nodebate/nosecond) are
+# already collapsed and are never touched here (no word boundary inside them).
+_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
+    # vote thresholds
+    (re.compile(r"\b2\s*/\s*3\b|⅔"), " twothirds "),  # 2/3, ⅔
+    (re.compile(r"\bmore than half\b|\bover half\b|\bgreater than half\b"), " majority "),
+    (re.compile(r"\bsimple majority\b|\bmajority\b"), " majority "),
+    # motions / incidental questions
+    (re.compile(r"\bprevious question\b|\bclose debate\b|\bmotion to close debate\b"),
+     " previousquestion "),
+    (re.compile(r"\bpoint of order\b|\braise a point\b|\bquestion of order\b"),
+     " pointoforder "),
+    (re.compile(r"\bmain motion\b"), " mainmotion "),
+    # actions: adopt / pass / carry / approve all mean "adopt"
+    (re.compile(r"\badopt(?:ed|s)?\b|\bpass(?:ed|es)?\b|\bcarr(?:y|ied|ies)\b|"
+                r"\bapprov(?:e|ed|es)\b"), " adopt "),
+    # a second (positive); "no second" already collapsed to nosecond by _PHRASES
+    (re.compile(r"\bseconded\b|\bsecond(?:er|s)?\b"), " second "),
+    # positive debatability; "not debatable"/"no debate" already -> nodebate
+    (re.compile(r"\bdebatable\b|\bdebated\b|\bdebate\b"), " debatable "),
+    # previous notice for bylaws amendments
+    (re.compile(r"\bprevious notice\b|\bprior notice\b|\bnotice\b"), " notice "),
+)
+
+# Suffixes stripped by the light stemmer, longest first. Only strip when the
+# stem stays >= 3 chars, so short words are left alone.
+_SUFFIXES: tuple[str, ...] = (
+    "ization", "izations", "ational", "ations", "ation", "ments", "ment",
+    "ings", "ing", "edly", "able", "ible", "ally", "ness", "ies", "ied",
+    "ed", "es", "ly", "s",
+)
+
+
+# Canonical tokens the aliases/phrase map produce: never stem these, so the
+# discriminative forms survive intact (e.g. "twothirds" must not lose its "s"
+# and "debatable" must not collapse to "debat" — those literals anchor rubrics).
+_PROTECTED: frozenset[str] = frozenset(
+    {
+        "twothirds", "nosecond", "nodebate", "novote", "majority", "second",
+        "debatable", "previousquestion", "pointoforder", "mainmotion", "adopt",
+        "quorum", "plurality", "appeal", "adjourn", "amend", "notice",
+    }
+)
+
+
+def _stem(word: str) -> str:
+    """Dependency-free suffix stemmer (adjourn/adjournment/adjourned -> adjourn).
+
+    Canonical rubric tokens are protected so their discriminative form survives."""
+    if word in _PROTECTED:
+        return word
+    for suf in _SUFFIXES:
+        if word.endswith(suf) and len(word) - len(suf) >= 3:
+            return word[: -len(suf)]
+    return word
+
+
+def _canonicalize(text: str) -> str:
+    """Lower-case, collapse discriminative phrases, then fold paraphrases to
+    canonical tokens (so synonyms/thresholds match through the rubric)."""
+    t = text.lower()
+    for pat, repl in _PHRASES:
+        t = pat.sub(repl, t)
+    for pat, repl in _ALIASES:
+        t = pat.sub(repl, t)
+    return t
+
+
+def _canon_seq(text: str) -> list[str]:
+    """Canonicalized, stemmed content-token sequence (order + duplicates kept so
+    multi-word rubric phrases can be matched as a contiguous run)."""
+    return [
+        _stem(w)
+        for w in _WORD_RE.findall(_canonicalize(text))
+        if len(w) >= 2 and w not in _STOPWORDS
+    ]
+
+
+def _phrase_matches(phrase: str, seq: list[str]) -> bool:
+    """True if `phrase` (canonicalized) appears in the answer token sequence —
+    single tokens by membership, multi-word phrases as a contiguous run."""
+    p = _canon_seq(phrase)
+    if not p:
+        return False
+    if len(p) == 1:
+        return p[0] in seq
+    n = len(p)
+    return any(seq[i : i + n] == p for i in range(len(seq) - n + 1))
+
+
+@dataclass(frozen=True)
+class RubricElement:
+    """One gradeable point in a ruling.
+
+    ``accepted`` are synonym phrases that satisfy the point (matched through the
+    alias table + stemmer); ``forbidden`` are the wrong-answer twins whose
+    assertion subtracts points (e.g. "majority" for a two-thirds motion).
+    ``essential`` elements (correct motion + threshold + chair action) are
+    required for a pass; the rest are graded bonus. ``expects`` is the
+    human-readable correct value shown in feedback."""
+
+    name: str
+    accepted: tuple[str, ...]
+    weight: float = 1.0
+    forbidden: tuple[str, ...] = ()
+    essential: bool = False
+    expects: str = ""
+
+
+@dataclass(frozen=True)
+class Rubric:
+    elements: tuple[RubricElement, ...]
+
+
+# Motion/concept tokens that anchor a derived rubric's essential element. Kept
+# deliberately narrow: "plurality" is intentionally absent so a wrong "a
+# plurality elects" answer earns nothing from the derived rubric.
+_MOTION_TOKENS: tuple[tuple[str, str, str], ...] = (
+    ("previousquestion", "the motion", "the Previous Question"),
+    ("pointoforder", "the motion", "a Point of Order"),
+    ("mainmotion", "the motion", "a main motion"),
+    ("quorum", "the requirement", "a quorum"),
+    ("appeal", "the motion", "an Appeal"),
+    ("adjourn", "the motion", "to adjourn"),
+    ("amend", "the motion", "to amend"),
+)
+
+
+def derive_rubric(gold_answer: str) -> Rubric | None:
+    """Best-effort rubric extracted from a gold ruling when no explicit one is
+    authored: pulls the motion name, vote threshold, and second/debate polarity
+    (with their forbidden twins) via the phrase map. Returns ``None`` when the
+    ruling has no structured element to grade (caller falls back to overlap)."""
+    seq = _canon_seq(gold_answer)
+    els: list[RubricElement] = []
+
+    for token, name, display in _MOTION_TOKENS:
+        if token in seq:
+            els.append(
+                RubricElement(name, (token,), weight=2.0, essential=True, expects=display)
+            )
+            break
+
+    if "twothirds" in seq:
+        els.append(
+            RubricElement("the vote threshold", ("twothirds",), weight=2.0,
+                          essential=True, forbidden=("majority",), expects="two-thirds")
+        )
+    elif "majority" in seq:
+        els.append(
+            RubricElement("the vote threshold", ("majority",), weight=2.0,
+                          essential=True, forbidden=("twothirds",), expects="a majority")
+        )
+
+    if "nosecond" in seq:
+        els.append(
+            RubricElement("the second", ("nosecond",), forbidden=("second",),
+                          expects="no second")
+        )
+    elif "second" in seq:
+        els.append(
+            RubricElement("the second", ("second",), forbidden=("nosecond",),
+                          expects="a second")
+        )
+
+    if "nodebate" in seq:
+        els.append(
+            RubricElement("debatability", ("nodebate",), forbidden=("debatable",),
+                          expects="not debatable")
+        )
+    elif "debatable" in seq:
+        els.append(
+            RubricElement("debatability", ("debatable",), forbidden=("nodebate",),
+                          expects="debatable")
+        )
+
+    return Rubric(tuple(els)) if els else None
+
+
 @dataclass
 class Passage:
     text: str
@@ -165,9 +358,18 @@ class GradeResult:
 
 
 class Examiner:
-    """Interface for a Section II grader (baseline or LLM-backed)."""
+    """Interface for a Section II grader (baseline or LLM-backed).
 
-    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
+    ``rubric`` is optional and honoured by :class:`KeywordExaminer`; other
+    graders ignore it, so the signature stays uniform for all callers."""
+
+    def grade(
+        self,
+        answer: str,
+        gold_answer: str,
+        corpus: str,
+        rubric: Rubric | None = None,
+    ) -> GradeResult:
         raise NotImplementedError
 
 
@@ -178,7 +380,13 @@ class BaselineExaminer(Examiner):
     def __init__(self, pass_score: float = 3.0) -> None:
         self.pass_score = pass_score
 
-    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
+    def grade(
+        self,
+        answer: str,
+        gold_answer: str,
+        corpus: str,
+        rubric: Rubric | None = None,
+    ) -> GradeResult:
         gold = _tokens(gold_answer)
         if not gold:
             return GradeResult(
@@ -199,6 +407,115 @@ class BaselineExaminer(Examiner):
         return GradeResult(score, passed, feedback, citation, abstained=False)
 
 
+class KeywordExaminer(Examiner):
+    """Deterministic, offline rubric grader — the AI-off fallback.
+
+    Scores an answer against a per-element rubric (explicit where authored, else
+    :func:`derive_rubric` from the gold ruling) using the alias table + stemmer
+    for recall and a forbidden-term penalty for precision, so a confidently
+    *wrong* threshold ("majority" for a two-thirds motion) fails even though the
+    other words overlap. Grounds feedback in a retrieved RONR passage and
+    abstains when none is found (never invents)."""
+
+    #: Asserting a forbidden twin subtracts this multiple of the element weight.
+    _PENALTY = 1.0
+
+    def __init__(self, pass_score: float = 3.0) -> None:
+        self.pass_score = pass_score
+
+    def grade(
+        self,
+        answer: str,
+        gold_answer: str,
+        corpus: str,
+        rubric: Rubric | None = None,
+    ) -> GradeResult:
+        passages = retrieve(corpus, gold_answer, k=1)
+        if not passages:
+            # No supporting passage -> abstain rather than invent (anti-NAPMobile).
+            return GradeResult(
+                0.0, False, "No supporting RONR passage found.", None, abstained=True
+            )
+        citation = passages[0].citation
+
+        if not answer.strip():
+            return GradeResult(
+                0.0, False, "No answer provided.", citation, abstained=False
+            )
+
+        rub = rubric or derive_rubric(gold_answer)
+        if rub is None or not rub.elements:
+            return self._grade_overlap(answer, gold_answer, citation)
+
+        return self._grade_rubric(answer, rub, citation)
+
+    def _grade_rubric(
+        self, answer: str, rubric: Rubric, citation: str | None
+    ) -> GradeResult:
+        seq = _canon_seq(answer)
+        earned = penalty = total = 0.0
+        got: list[str] = []
+        missing: list[str] = []
+        wrong: list[RubricElement] = []
+        essentials_ok = True
+
+        for el in rubric.elements:
+            total += el.weight
+            positive = any(_phrase_matches(a, seq) for a in el.accepted)
+            contradicted = any(_phrase_matches(f, seq) for f in el.forbidden)
+            if contradicted:
+                # Wrong twin asserted: subtract, and any essential point fails.
+                penalty += el.weight * self._PENALTY
+                wrong.append(el)
+                if el.essential:
+                    essentials_ok = False
+            elif positive:
+                earned += el.weight
+                got.append(el.name)
+            else:
+                missing.append(el.name)
+                if el.essential:
+                    essentials_ok = False
+
+        raw = (earned - penalty) / total if total else 0.0
+        score = round(5.0 * max(0.0, min(1.0, raw)), 2)
+        passed = essentials_ok and score >= self.pass_score
+        feedback = self._feedback(got, missing, wrong)
+        return GradeResult(score, passed, feedback, citation, abstained=False)
+
+    def _grade_overlap(
+        self, answer: str, gold_answer: str, citation: str | None
+    ) -> GradeResult:
+        # No structured element to grade -> fall back to keyword overlap.
+        gold = _tokens(gold_answer)
+        overlap = len(_tokens(answer) & gold) / len(gold) if gold else 0.0
+        score = round(5.0 * overlap, 2)
+        passed = score >= self.pass_score
+        verdict = "matches" if passed else "misses key points from"
+        return GradeResult(
+            score, passed, f"Your answer {verdict} the model ruling.", citation,
+            abstained=False,
+        )
+
+    @staticmethod
+    def _feedback(
+        got: list[str], missing: list[str], wrong: list[RubricElement]
+    ) -> str:
+        parts: list[str] = []
+        if got:
+            parts.append("Identified " + ", ".join(got) + ".")
+        for el in wrong:
+            if el.expects:
+                parts.append(f"Wrong {el.name} — needs {el.expects}.")
+            else:
+                parts.append(f"Wrong on {el.name}.")
+        if missing:
+            parts.append("Missing: " + ", ".join(missing) + ".")
+        if not parts:
+            parts.append("No relevant points identified.")
+        return " ".join(parts)
+
+
 class PlaceholderExaminer(Examiner):
     """The active grader until real AI is enabled — **no network calls**.
 
@@ -210,8 +527,16 @@ class PlaceholderExaminer(Examiner):
     def __init__(self, pass_score: float = 3.0) -> None:
         self.pass_score = pass_score
 
-    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
-        base = BaselineExaminer(self.pass_score).grade(answer, gold_answer, corpus)
+    def grade(
+        self,
+        answer: str,
+        gold_answer: str,
+        corpus: str,
+        rubric: Rubric | None = None,
+    ) -> GradeResult:
+        base = KeywordExaminer(self.pass_score).grade(
+            answer, gold_answer, corpus, rubric
+        )
         if base.abstained:
             return base
         debrief = (
@@ -255,7 +580,13 @@ class LLMExaminer(Examiner):
         self.call_fn = call_fn
         self.pass_score = pass_score
 
-    def grade(self, answer: str, gold_answer: str, corpus: str) -> GradeResult:
+    def grade(
+        self,
+        answer: str,
+        gold_answer: str,
+        corpus: str,
+        rubric: Rubric | None = None,
+    ) -> GradeResult:
         passages = retrieve(corpus, gold_answer, k=3)
         if not passages:
             return GradeResult(
@@ -290,7 +621,7 @@ def make_examiner(call_fn: Callable[[str], str] | None = None) -> Examiner:
         return LLMExaminer(call_fn)
     if os.environ.get("RPCE_AI_KEY") or os.environ.get("OPENAI_API_KEY"):
         return LLMExaminer(_default_llm_call)
-    return BaselineExaminer()
+    return KeywordExaminer()
 
 
 def _default_llm_call(prompt: str) -> str:  # pragma: no cover - requires network + key

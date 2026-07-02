@@ -28,17 +28,18 @@ def test_concept_becomes_sibling_cards_of_one_note():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
 
-    # A motion concept (Main Motion) is ONE note with sibling cards: cloze,
-    # applied MCQ, and second/debatable characteristic cards (spec §14/§16).
+    # Every concept is ONE note with sibling cards: a cloze recall card + an
+    # applied MCQ. (Two-option second/debatable MCQs were dropped — those facts
+    # live in cloze form + the Reference tables.)
     cids = col.find_cards("tag:rpce::concept::101")
-    assert len(cids) == 4
+    assert len(cids) == 2
     nids = {col.get_card(c).nid for c in cids}
     assert len(nids) == 1, "same-concept cards must be siblings of one note"
     note = col.get_card(cids[0]).note()
-    for pf in ("ClozePayload", "McqPayload", "SecondPayload", "DebatablePayload"):
+    for pf in ("ClozePayload", "McqPayload"):
         assert note[pf], f"{pf} render payload present"
 
-    # A non-motion concept (quorum) is one note with just cloze + MCQ siblings.
+    # A non-motion concept (quorum) is likewise one note with cloze + MCQ.
     cids2 = col.find_cards("tag:rpce::concept::105")
     assert len(cids2) == 2
     assert len({col.get_card(c).nid for c in cids2}) == 1
@@ -50,7 +51,7 @@ def test_starter_deck_card_and_note_counts():
     from anki.rpce import flashcards
 
     fcs = flashcards.all_flashcards()
-    concept_cards = sum(4 if f.motion_name else 2 for f in fcs)
+    concept_cards = 2 * len(fcs)  # cloze + applied MCQ per concept
     # Plus 4 dedicated precedence questions (2 ordering + 2 multiselect, spec §15).
     assert col.card_count() == concept_cards + 4
     # One note per concept + one per precedence question (stable-GUID notes).
@@ -67,22 +68,6 @@ def test_concept_note_guids_are_deterministic_for_clean_sync():
     g1 = col1.get_card(col1.find_cards("tag:rpce::concept::101")[0]).note().guid
     g2 = col2.get_card(col2.find_cards("tag:rpce::concept::101")[0]).note().guid
     assert g1 == g2 == stable_guid("concept|101")
-
-
-def test_second_card_hint_and_short_debatable_wording():
-    import base64
-    import json
-
-    col = getEmptyCol()
-    rpce.build_starter_deck(col)
-    # Point of Order: no second required, not debatable.
-    note = col.get_card(col.find_cards("tag:rpce::concept::104")[0]).note()
-    second = json.loads(base64.b64decode(note["SecondPayload"]))
-    assert second["hint"], "needs-a-second MCQ carries a hint (spec §16)"
-    assert second["options"][second["answer"]] == "No second required"
-    deb = json.loads(base64.b64decode(note["DebatablePayload"]))
-    assert deb["options"] == ["Debatable", "Not debatable"], "short wording"
-    assert deb["options"][deb["answer"]] == "Not debatable"
 
 
 def test_every_concept_card_carries_ronr_citation_and_quote():

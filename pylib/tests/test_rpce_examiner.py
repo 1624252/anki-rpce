@@ -4,6 +4,7 @@
 """Tests for the AI Examiner: grounding/citation, baseline, eval, leakage."""
 
 from anki.rpce import examiner as ex
+from anki.rpce import scenarios
 
 # Small stand-in for the RONR corpus; the real app uses
 # data/roberts_rules_of_order_12th_edition.md.
@@ -101,10 +102,11 @@ def test_llm_examiner_abstains_on_malformed_output():
     assert result.abstained is True
 
 
-def test_make_examiner_falls_back_to_baseline_without_key(monkeypatch):
+def test_make_examiner_falls_back_to_keyword_examiner_without_key(monkeypatch):
     monkeypatch.delenv("RPCE_AI_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    assert isinstance(ex.make_examiner(), ex.BaselineExaminer)
+    # AI-off fallback is now the rubric grader, not the plain overlap baseline.
+    assert isinstance(ex.make_examiner(), ex.KeywordExaminer)
     # Providing a call_fn opts into the LLM examiner.
     assert isinstance(ex.make_examiner(lambda _p: "{}"), ex.LLMExaminer)
 
@@ -129,6 +131,132 @@ def test_positive_phrase_keywords_normalize():
     assert ex._tokens("no debate") == ex._tokens("not debatable")
     # 'no second' is its own keyword, distinct from a positive 'second'.
     assert ex._tokens("no second") != ex._tokens("a second")
+
+
+# --- KeywordExaminer: rubric grading (alias + stemmer + forbidden penalty) ---
+
+# A Previous Question rubric authored explicitly for these tests.
+_PQ_RUBRIC = ex.Rubric(
+    (
+        ex.RubricElement("the motion", ("previousquestion",), weight=2.0,
+                         essential=True, expects="the Previous Question"),
+        ex.RubricElement("the vote threshold", ("twothirds",), weight=2.0,
+                         essential=True, forbidden=("majority",), expects="two-thirds"),
+        ex.RubricElement("the second", ("second",), forbidden=("nosecond",),
+                         expects="a second"),
+        ex.RubricElement("debatability", ("nodebate",), forbidden=("debatable",),
+                         expects="not debatable"),
+    )
+)
+_PQ_GOLD = "The Previous Question needs a second, is not debatable, and requires a two-thirds vote."
+
+
+def test_keyword_examiner_passes_a_correct_ruling_with_high_score():
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    r = kw.grade(
+        "The previous question needs a second, is not debatable, and takes a two-thirds vote.",
+        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+    )
+    assert r.passed and not r.abstained
+    assert r.score >= 4.5
+    assert r.citation == "16:1-16:5"
+
+
+def test_keyword_examiner_fails_wrong_threshold_on_forbidden_penalty():
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    # Says "majority" for a two-thirds motion: lots of overlap, but the forbidden
+    # twin + the missed essential threshold must sink it below a pass.
+    wrong = kw.grade(
+        "The previous question needs a second, is not debatable, and takes a majority vote.",
+        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+    )
+    assert not wrong.passed
+    assert wrong.score < 3.0
+    assert "two-thirds" in wrong.feedback
+    # An overlap-only grader would reward the shared words; the rubric grader
+    # scores the wrong answer strictly below the correct one.
+    right = kw.grade(
+        "The previous question needs a second, is not debatable, and takes a two-thirds vote.",
+        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+    )
+    assert wrong.score < right.score
+
+
+def test_keyword_examiner_gives_partial_credit_with_breakdown():
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    r = kw.grade("The previous question requires a two-thirds vote.", _PQ_GOLD,
+                 CORPUS, _PQ_RUBRIC)
+    assert 0.0 < r.score < 5.0
+    # Per-element breakdown names what was identified and what is missing.
+    assert "the motion" in r.feedback
+    assert "the vote threshold" in r.feedback
+    assert "Missing" in r.feedback and "the second" in r.feedback
+
+
+def test_keyword_examiner_empty_and_irrelevant_answers_score_low():
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    empty = kw.grade("", _PQ_GOLD, CORPUS, _PQ_RUBRIC)
+    assert empty.score == 0.0 and not empty.passed
+    irrelevant = kw.grade("The weather is lovely today.", _PQ_GOLD, CORPUS, _PQ_RUBRIC)
+    assert irrelevant.score == 0.0 and not irrelevant.passed
+
+
+def test_keyword_examiner_abstains_without_supporting_passage():
+    kw = ex.KeywordExaminer()
+    r = kw.grade("two-thirds vote", "a rule about xylophones not in the corpus", CORPUS)
+    assert r.abstained is True
+    assert r.citation is None
+
+
+def test_keyword_examiner_matches_synonyms_and_paraphrases():
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    main_gold = "A main motion requires a second and a majority vote to adopt."
+    rubric = ex.Rubric(
+        (
+            ex.RubricElement("the second", ("second",), weight=2.0, essential=True,
+                             forbidden=("nosecond",), expects="a second"),
+            ex.RubricElement("the vote threshold", ("majority",), weight=2.0,
+                             essential=True, forbidden=("twothirds",),
+                             expects="a majority"),
+        )
+    )
+    # "more than half" == majority; "seconded" == second (via the alias table).
+    r = kw.grade("It must be seconded and pass by more than half of the votes.",
+                 main_gold, CORPUS, rubric)
+    assert r.passed and r.score >= 4.0
+
+
+def test_keyword_examiner_derives_rubric_when_none_supplied():
+    # No explicit rubric: one is derived from the gold ruling, and the forbidden
+    # twin still fires (majority when the gold says two-thirds).
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    right = kw.grade("It requires a two-thirds vote.", _PQ_GOLD, CORPUS)
+    wrong = kw.grade("It requires a majority vote.", _PQ_GOLD, CORPUS)
+    assert right.score > wrong.score
+    assert not wrong.passed
+
+
+def test_light_stemmer_collapses_morphology():
+    assert ex._stem("adjournment") == ex._stem("adjourned") == "adjourn"
+    assert ex._stem("amendable") == ex._stem("amendment") == "amend"
+
+
+def test_alias_table_folds_thresholds_and_phrases():
+    seq = ex._canon_seq("a 2/3 vote on the previous question")
+    assert "twothirds" in seq
+    assert "previousquestion" in seq
+    assert "majority" in ex._canon_seq("more than half of those voting")
+
+
+def test_scenario_rubric_grades_the_curated_scenario():
+    # The curated Previous Question scenario carries an explicit rubric; a wrong
+    # threshold fails against it.
+    s = scenarios.scenarios_for(2)[0]
+    assert s.rubric is not None
+    kw = ex.KeywordExaminer(pass_score=3.0)
+    r = kw.grade("The previous question just needs a majority vote.", s.gold_answer,
+                 s.gold_answer, s.rubric)
+    assert not r.passed
 
 
 def test_find_leaks_flags_near_duplicates_and_passes_when_clean():

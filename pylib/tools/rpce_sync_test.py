@@ -96,19 +96,18 @@ def full(col: Collection, upload: bool) -> None:
 
 
 def main() -> None:
+    # spec §7b uses 10 + 10; override with RPCE_SYNC_REVIEWS for a quick run.
+    n = int(os.environ.get("RPCE_SYNC_REVIEWS", "10"))
     tmp = Path(tempfile.mkdtemp())
     a_path, b_path = str(tmp / "deviceA.anki2"), str(tmp / "deviceB.anki2")
 
-    # --- Phase 1: device A provisions the deck, reviews 2 cards, uploads. ---
+    # --- Phase 1: device A provisions the shared deck and uploads it (0 reviews). ---
     a = Collection(a_path)
     deck_id = build_starter_deck(a)
     a.decks.set_current(deck_id)  # queue the RPCE new cards
-    assert review_next(a) is not None, "a card should be due to review"
-    review_next(a)
     a._backend.sync_collection(auth=_auth(a), sync_media=False)  # -> full required
     full(a, upload=True)
-    assert revlog(a) == 2, "A logged 2 reviews before upload"
-    print(f"Phase 1: device A uploaded (cards={a.card_count()}, reviews={revlog(a)})")
+    print(f"Phase 1: device A uploaded the deck (cards={a.card_count()}, reviews={revlog(a)})")
 
     # --- Phase 2: device B downloads; must match A exactly. ---
     b = Collection(b_path)
@@ -116,20 +115,26 @@ def main() -> None:
     full(b, upload=False)
     b.close()
     b = Collection(b_path)
+    b.decks.set_current(deck_id)
     assert b.card_count() == a.card_count(), "B has the same cards as A"
-    assert revlog(b) == revlog(a) == 2, "B received A's 2 reviews"
-    print(f"Phase 2: device B downloaded (cards={b.card_count()}, reviews={revlog(b)})")
+    print(f"Phase 2: device B downloaded (cards={b.card_count()})")
 
-    # --- Phase 3: two-way — each reviews a different card; both converge. ---
-    review_next(a)  # A -> 3 local
-    normal_sync(a)
-    review_next(b)  # B -> reviews offline
-    normal_sync(b)  # B pushes its review, pulls A's
-    normal_sync(a)  # A pulls B's review
-    assert revlog(a) == revlog(b) == 4, (
-        f"two-way merge: expected 4/4, got {revlog(a)}/{revlog(b)} (none lost/doubled)"
+    # --- Phase 3 (spec §7b): each device reviews n cards OFFLINE, then reconnect
+    # and sync both ways. All 2n review events must land, none lost or doubled. ---
+    for _ in range(n):
+        review_next(a)  # desktop reviews n cards offline
+    for _ in range(n):
+        review_next(b)  # phone reviews n cards offline
+    normal_sync(a)  # reconnect: A pushes its n
+    normal_sync(b)  # B pushes its n, pulls A's
+    normal_sync(a)  # A pulls B's
+    assert revlog(a) == revlog(b) == 2 * n, (
+        f"two-way merge: expected {2 * n}/{2 * n}, got {revlog(a)}/{revlog(b)} (none lost/doubled)"
     )
-    print(f"Phase 3: two-way sync reconciled to {revlog(a)} reviews on both, none lost")
+    print(
+        f"Phase 3: {n} reviews on the desktop + {n} on the phone reconciled to "
+        f"{revlog(a)} on both — none lost or double-counted"
+    )
 
     # --- Phase 4: conflict — both review the SAME next card offline. ---
     cid_a = review_next(a)
