@@ -461,7 +461,9 @@ function setScore(ids, sc, abstained){
   var p=el(ids.p);
   if(abstained){ p.className=""; p.textContent=""; }
   else{ p.className="pill "+conf; p.textContent=label; }
-  el(ids.r).textContent = (!abstained && sc.low!=null && sc.high!=null)
+  // Show the range whenever the score carries one — including the abstain
+  // (full-uncertainty) range for memory/performance.
+  el(ids.r).textContent = (sc.low!=null && sc.high!=null)
     ? ('range '+Math.round(sc.low*100)+'–'+Math.round(sc.high*100)+'%') : '';
   // Preparedness prose goes in a collapsible dropdown so the grid stays tidy.
   var elab = sc.elaboration || sc.explanation || sc.evidence || '';

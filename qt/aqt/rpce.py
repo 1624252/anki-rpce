@@ -237,6 +237,13 @@ def _theme_style() -> str:
 
 def _fmt_range(point: float | None, low: float | None, high: float | None) -> str:
     if point is None:
+        # Abstaining: no point number, but still show the uncertainty range when
+        # we have one (memory/performance carry a full 0-100% abstain range).
+        if low is not None and high is not None:
+            return (
+                "—<span style='display:block;font-size:13px;font-weight:600;"
+                f"color:var(--ink2);margin-top:4px'>range {low:.0%}–{high:.0%}</span>"
+            )
         return "—"
     if low is None or high is None:
         return f"{point:.0%}"

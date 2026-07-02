@@ -518,7 +518,9 @@ fn confidence_for_n(n: usize) -> &'static str {
 /// Mean with a 95% interval and sample-size confidence (scores.py `_range_from`).
 fn range_from(v: &[f64]) -> (Option<f64>, Option<f64>, Option<f64>, &'static str) {
     if v.is_empty() {
-        return (None, None, None, "abstain");
+        // No data: abstain from a point but still show the full-uncertainty
+        // range (0-100%) so memory/performance always carry a range.
+        return (None, Some(0.0), Some(1.0), "abstain");
     }
     let point = mean(v);
     let n = v.len();
@@ -632,8 +634,8 @@ fn scores_json() -> String {
     } else {
         (
             None,
-            None,
-            None,
+            Some(0.0),  // full-uncertainty abstain range (0-100%)
+            Some(1.0),
             "abstain",
             "No domain has review history yet — this bridges memory to new \
              exam-style questions once you have practised."
@@ -650,17 +652,23 @@ fn scores_json() -> String {
     let section = |needs_scenarios: bool| -> serde_json::Value {
         let mut missing: Vec<String> = Vec::new();
         if reviews < MIN_REVIEWS {
-            missing.push(format!("{reviews}/{MIN_REVIEWS} graded reviews"));
+            missing.push(format!(
+                "{} more graded reviews needed ({reviews}/{MIN_REVIEWS})",
+                MIN_REVIEWS - reviews
+            ));
         }
         if cov_pct < MIN_COVERAGE {
             missing.push(format!(
-                "{:.0}%/{:.0}% domain coverage",
+                "domain coverage {:.0}% of {:.0}% needed",
                 cov_pct * 100.0,
                 MIN_COVERAGE * 100.0
             ));
         }
         if needs_scenarios && scenarios < MIN_SCENARIOS {
-            missing.push(format!("{scenarios}/{MIN_SCENARIOS} graded scenarios"));
+            missing.push(format!(
+                "{} more graded scenarios needed ({scenarios}/{MIN_SCENARIOS})",
+                MIN_SCENARIOS - scenarios
+            ));
         }
         if !missing.is_empty() {
             return serde_json::json!({

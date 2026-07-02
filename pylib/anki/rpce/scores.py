@@ -144,7 +144,10 @@ def _reviewed_recalls(col: Collection) -> list[float]:
 def _range_from(values: list[float]) -> ScoreRange:
     """Mean with a 95% normal interval; confidence scales with sample size."""
     if not values:
-        return ScoreRange(None, None, None, CONFIDENCE_ABSTAIN)
+        # No data yet: abstain from a point estimate but still show the honest
+        # full-uncertainty range (0-100%) so memory/performance always carry a
+        # range, not a blank.
+        return ScoreRange(None, 0.0, 1.0, CONFIDENCE_ABSTAIN)
     point = mean(values)
     n = len(values)
     se = (pstdev(values) / math.sqrt(n)) if n > 1 else 0.5
@@ -397,11 +400,17 @@ def readiness(
     needs_scenarios = section == "II"
     missing: list[str] = []
     if reviews < rule.min_graded_reviews:
-        missing.append(f"{reviews}/{rule.min_graded_reviews} graded reviews")
+        missing.append(
+            f"{rule.min_graded_reviews - reviews} more graded reviews needed "
+            f"({reviews}/{rule.min_graded_reviews})"
+        )
     if cov < rule.min_coverage:
-        missing.append(f"{cov:.0%}/{rule.min_coverage:.0%} domain coverage")
+        missing.append(f"domain coverage {cov:.0%} of {rule.min_coverage:.0%} needed")
     if needs_scenarios and scenarios < rule.min_scenarios:
-        missing.append(f"{scenarios}/{rule.min_scenarios} graded scenarios")
+        missing.append(
+            f"{rule.min_scenarios - scenarios} more graded scenarios needed "
+            f"({scenarios}/{rule.min_scenarios})"
+        )
 
     if missing:
         return ReadinessSnapshot(
