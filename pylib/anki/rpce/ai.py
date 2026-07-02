@@ -30,6 +30,9 @@ from pathlib import Path
 
 #: Local, git-ignored key file (outside any synced/tracked location).
 KEY_PATH = Path.home() / ".rpce" / "openai_key"
+#: Presence of this file means "AI off" — lets the user disable AI grading even
+#: with a key configured and a connection available.
+AI_OFF_PATH = Path.home() / ".rpce" / "ai_off"
 #: Chat model; override with RPCE_OPENAI_MODEL.
 MODEL = os.environ.get("RPCE_OPENAI_MODEL", "gpt-4o-mini")
 #: Hard timeout (s): a slow/rate-limited API must fall back quickly, not hang.
@@ -61,6 +64,21 @@ def set_openai_key(key: str) -> None:
 def ai_configured() -> bool:
     """True if a key is present (does not check connectivity)."""
     return bool(openai_key())
+
+
+def ai_enabled() -> bool:
+    """True unless the user turned AI off (a manual switch, independent of the
+    key/connectivity). Off → the app uses the offline examiner even when online."""
+    return not AI_OFF_PATH.exists()
+
+
+def set_ai_enabled(on: bool) -> None:
+    """Turn AI grading on/off. Stored as a local flag file (never synced)."""
+    AI_OFF_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if on:
+        AI_OFF_PATH.unlink(missing_ok=True)
+    else:
+        AI_OFF_PATH.write_text("off", encoding="utf-8")
 
 
 def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:

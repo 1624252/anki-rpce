@@ -310,7 +310,7 @@ function initHome(){
     el('home-msg').textContent = 'Engine failed to open the collection.';
   loadAuth(); updateNetStatus();
   // React to connectivity changes: show status, and sync when back online.
-  window.addEventListener('online', function(){ updateNetStatus(); autoSync(); });
+  window.addEventListener('online', function(){ syncBackOnline(); updateNetStatus(); autoSync(); });
   window.addEventListener('offline', updateNetStatus);
   // navigator events are unreliable in a WebView, so also poll the native check
   // and keep both-open sessions in step with a periodic background sync.
@@ -644,7 +644,9 @@ function relTime(ts){ if(!ts) return 'never';
   if(s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; }
 function updateNetStatus(){
   var bar=el('syncbar'), txt=el('syncbar-txt'); if(!bar||!txt) return;
-  var on=online(), linked=!!auth.hkey, synced=linked&&auth.lastSync>0;
+  // "Offline" = the OS says offline OR our last sync couldn't reach the server
+  // (e.g. no DNS). Either way the pill goes gray and keeps the last-synced time.
+  var on=online() && !_netDown, linked=!!auth.hkey, synced=linked&&auth.lastSync>0;
   if(!on){ bar.className='off';
     // Keep the last-synced time visible even while offline (don't blank it).
     txt.textContent = synced ? ('🔴 Offline · last synced '+relTime(auth.lastSync))
@@ -669,8 +671,9 @@ function logout(){
 }
 function syncNow(){
   if(!auth.hkey){ show('sync'); return; }            // need to log in first
-  if(!online()){ popup('Offline','You’re offline. Your work is saved and will sync when you reconnect.','🔴'); return; }
   if(_syncing) return;
+  syncBackOnline();                                  // manual tap: try now, reset backoff
+  if(!online()){ updateNetStatus(); return; }        // offline: status shows it, no popup
   _syncing=true;
   var bar=el('syncbar'), txt=el('syncbar-txt');           // amber pill while syncing
   if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
@@ -678,39 +681,56 @@ function syncNow(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
       if(!r.ok){
+        // Only an expired session is actionable (re-login). Anything else is a
+        // connectivity/server problem: go gray + back off, no error popup.
         if(isAuthError(r.error)){ clearSession(); show('sync');
           popup('Please sign in again', 'Your saved AnkiWeb session has expired. Sign in to sync.', '🔒'); }
-        else popup('Sync failed', friendlySyncError(r.error), '⚠️');
+        else syncFailedOffline();
         return;
       }
       if(r.required>=2){
-        // A full sync is required (e.g. desktop re-seed). Resolve it automatically
-        // in the correct direction so later syncs combine incrementally.
         LAST_REQUIRED=r.required;
-        if(!resolveFull()) popup('Sync failed','Couldn’t complete the required full sync. Try again.','⚠️');
+        if(resolveFull()) syncBackOnline(); else syncFailedOffline();
         return;
       }
-      auth.lastSync=Date.now(); saveAuth(); refreshCounts();  // reviews unioned
-    }catch(e){ popup('Sync failed', friendlySyncError(''+e), '⚠️'); }
+      auth.lastSync=Date.now(); saveAuth(); syncBackOnline(); refreshCounts();  // reviews unioned
+    }catch(e){ syncFailedOffline(); }
     finally{ _syncing=false; updateNetStatus(); }
   },0);
 }
 /* Auto-sync after each review / on returning home, when online and signed in.
    Anki unions the revlog, so reviews from phone + desktop ADD (none lost). */
 var _syncing=false;
+// Connectivity gate. A failed sync (no route / DNS down / server unreachable)
+// marks us "net down": the status goes gray and we STOP retrying, backing off
+// 30s -> 5m instead of hammering the server, until connectivity returns (a
+// successful sync or the browser "online" event resets it). No error popups.
+var _netDown=false, _syncBackoffUntil=0, _backoffMs=0;
+function syncFailedOffline(){
+  _netDown=true;
+  _backoffMs = _backoffMs ? Math.min(300000, _backoffMs*2) : 30000;
+  _syncBackoffUntil = Date.now() + _backoffMs;
+  updateNetStatus();
+}
+function syncBackOnline(){ _netDown=false; _backoffMs=0; _syncBackoffUntil=0; }
+// Don't attempt a background sync while backing off after a failure.
+function syncBlocked(){ return _netDown && Date.now() < _syncBackoffUntil; }
 function autoSync(){
-  if(_syncing || !auth.hkey || !online()) return;
+  // Skip when signed out, offline, already syncing, or backing off after a
+  // failure (so we don't retry too often until connectivity returns).
+  if(_syncing || !auth.hkey || !online() || syncBlocked()) return;
   _syncing=true;
   var bar=el('syncbar'), txt=el('syncbar-txt');           // amber pill while syncing
   if(bar) bar.className='warn'; if(txt) txt.textContent='🟠 Syncing…';
   setTimeout(function(){
     try{
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
-      if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); refreshCounts(); }
+      if(r.ok && r.required<2){ auth.lastSync=Date.now(); saveAuth(); syncBackOnline(); refreshCounts(); }
       else if(r.ok && r.required>=2){          // adopt desktop / combine automatically
-        LAST_REQUIRED=r.required; resolveFull(); }
+        LAST_REQUIRED=r.required; if(resolveFull()) syncBackOnline(); else syncFailedOffline(); }
       else if(!r.ok && isAuthError(r.error)){ clearSession(); }  // stale/expired -> truthful status
-    }catch(e){}
+      else if(!r.ok){ syncFailedOffline(); }     // unreachable/server error -> gray + back off
+    }catch(e){ syncFailedOffline(); }
     _syncing=false; updateNetStatus();
   },0);
 }
@@ -733,18 +753,21 @@ function doSync(){
     if(bar) bar.className='warn'; if(sbt) sbt.textContent='🟠 Syncing…';
     setTimeout(function(){
       var r=j(Engine.syncCollection(auth.hkey, auth.endpoint)); noteHost(r);
-      if(!r.ok){ syStatus(''); el('sy-status').classList.add('hidden'); updateNetStatus();
-        popup('Sync failed', friendlySyncError(r.error), '⚠️'); return; }
+      // Signed in OK; a sync failure here is connectivity, not credentials —
+      // report it inline (no popup) and leave us signed in to retry later.
+      if(!r.ok){ syStatus('Signed in. Couldn’t reach the sync server — will sync when back online.');
+        syncFailedOffline(); return; }
       if(r.required>=2){
         // First alignment: adopt the desktop account automatically (spec §7b),
         // then later syncs combine incrementally.
         LAST_REQUIRED=r.required; syStatus('Aligning with the desktop…');
-        if(resolveFull()) syStatus('✓ Synced. Reviews now match the desktop.');
-        else { syStatus(''); el('sy-status').classList.add('hidden');
-          popup('Sync failed','Couldn’t complete the required full sync. Try again.','⚠️'); }
+        if(resolveFull()){ syncBackOnline(); syStatus('✓ Synced. Reviews now match the desktop.'); }
+        else { syStatus('Signed in. Couldn’t reach the sync server — will sync when back online.');
+          syncFailedOffline(); }
         updateNetStatus();
       }
-      else { auth.lastSync=Date.now(); saveAuth(); syStatus('✓ Synced. Reviews now match the desktop.');
+      else { auth.lastSync=Date.now(); saveAuth(); syncBackOnline();
+        syStatus('✓ Synced. Reviews now match the desktop.');
         refreshCounts(); updateNetStatus(); }
     },50);
   },50);
