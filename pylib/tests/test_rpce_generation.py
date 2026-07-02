@@ -134,14 +134,18 @@ def test_every_question_cites_a_section_and_verbatim_quote():
 
 
 @corpus_only
-def test_cloze_blanks_are_answerable():
+def test_cloze_blanks_follow_the_hint_rule():
+    # Rule R1 (docs/rpce/QUESTION_RULES.md): a blank may have NO hint (renders as
+    # a plain "?"), but any hint it does carry must reveal only a semantic
+    # category — never the answer's length, first letter, or word count.
+    banned = re.compile(r"\bletters?\b|\bstarts?\b|begins?\b|first letter|\bwords?\b|characters?", re.I)
     for q in _QUESTIONS:
         if q.payload["kind"] != "cloze":
             continue
         assert q.payload["blanks"], q.concept_id
         for b in q.payload["blanks"]:
             assert b["a"].strip(), f"{q.concept_id}: empty answer"
-            assert b["h"].strip(), f"{q.concept_id}: cloze needs a hint (spec §7.1)"
+            assert not banned.search(b["h"]), f"{q.concept_id}: hint reveals spelling: {b['h']!r}"
 
 
 @corpus_only
