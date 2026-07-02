@@ -236,7 +236,17 @@ def _fmt_range(point: float | None, low: float | None, high: float | None) -> st
         return "—"
     if low is None or high is None:
         return f"{point:.0%}"
-    return f"{point:.0%} (range {low:.0%}–{high:.0%})"
+    # Big point value, with the range on its own small muted line beneath.
+    return (
+        f"{point:.0%}"
+        "<span style='display:block;font-size:13px;font-weight:600;color:var(--ink2);"
+        f"margin-top:4px'>range {low:.0%}–{high:.0%}</span>"
+    )
+
+
+def _confidence_label(c: str) -> str:
+    """'high' → 'high confidence'; abstain stays 'abstaining'."""
+    return f"{c} confidence" if c in ("low", "medium", "high") else "abstaining"
 
 
 def _score_card(
@@ -267,7 +277,7 @@ def _score_card(
         "<div class='rpce-card'>"
         f"<div class='rpce-label'>{label}</div>"
         f"<div class='rpce-val'>{value}</div>"
-        f"<span class='rpce-pill {cf}'>{confidence}</span>"
+        f"<span class='rpce-pill {cf}'>{_confidence_label(confidence)}</span>"
         f"{reason_html}{bar}</div>"
     )
 
