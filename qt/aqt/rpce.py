@@ -131,6 +131,10 @@ _REVIEWER_CSS = (
     "color:#0a1f44 !important;text-align:left !important}"
     "hr{border:none;border-top:1px solid #caddf7 !important}"
     "a{color:#1d4ed8 !important}"
+    # Larger question + multiple-choice text on the bigger desktop screen.
+    ".rpce-q{font-size:23px !important;line-height:1.55 !important}"
+    ".rpce-opt{font-size:20px !important}"
+    ".rpce-opt .k{font-size:20px !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
     # Revealed cloze blank — green, matching the phone.
     ".cloze-reveal{color:#15803d !important;font-weight:700}"
