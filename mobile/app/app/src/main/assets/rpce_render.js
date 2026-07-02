@@ -1,5 +1,5 @@
 /* Generated from anki.rpce.render_js — do not edit by hand. */
-var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-hint{font-size:13px;color:#35548c;font-style:italic}\n.rpce-blank{display:inline-block;min-width:64px;text-align:center;border:none;\n  border-bottom:2px dashed #1d4ed8;background:rgba(37,99,235,.08);color:#1d4ed8;\n  border-radius:6px 6px 0 0;padding:1px 8px;margin:0 2px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-blank.revealed{border-bottom-color:#15803d;background:rgba(21,128,61,.12);\n  color:#15803d;cursor:default}\n.rpce-controls{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}\n.rpce-btn{border:1px solid #caddf7;background:#f4f8ff;color:#1d4ed8;border-radius:12px;\n  padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-opts{display:flex;flex-direction:column;gap:5px;margin-top:14px}\n.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:9px 16px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font:inherit}\n.rpce-opt .k{font-weight:800;color:#35548c;margin-right:8px}\n.rpce-opt .mark{float:right;font-weight:800}\n.rpce-opt.ok{background:rgba(21,128,61,.14);border-color:#15803d;color:#14532d;font-weight:700}\n.rpce-opt.no{background:rgba(190,18,60,.10);border-color:#be123c;color:#7f1d1d;font-weight:700}\n.rpce-opt:disabled{cursor:default}\n.rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}\n.rpce-chip{padding:12px 16px;border-radius:12px;border:1px solid #caddf7;background:#f4f8ff;\n  color:#0a1f44;cursor:pointer;font:inherit;font-size:16px;position:relative}\n.rpce-chip .pos{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;\n  border-radius:50%;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;margin-right:8px}\n.rpce-chip.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-chip.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-fb{margin-top:14px;font-size:16px;font-weight:700;min-height:20px}\n.rpce-answer{margin-top:14px;font-size:17px;line-height:1.5;color:#0a1f44}\n.rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;background:#eef4ff;\n  border-radius:10px;text-align:left}\n.rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}\n.rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}\n/* multi-select */\n.rpce-opt.sel{background:#dbeafe;border-color:#1d4ed8;font-weight:700}\n.rpce-opt .box{display:inline-block;width:18px;height:18px;border:2px solid #94a3b8;border-radius:5px;margin-right:10px;vertical-align:-3px}\n.rpce-opt.sel .box{background:#1d4ed8;border-color:#1d4ed8}\n/* ordering (vertical; top = higher precedence) */\n.rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}\n.rpce-dest{display:flex;flex-direction:column;gap:8px;min-height:8px;\n  border-left:3px solid #caddf7;padding-left:12px;margin:6px 0}\n.rpce-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px}\n.rpce-slot .n{min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;\n  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}\n.rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}\n";
+var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-hint{font-size:13px;color:#35548c;font-style:italic}\n.rpce-blank{display:inline-block;min-width:64px;text-align:center;border:none;\n  border-bottom:2px dashed #1d4ed8;background:rgba(37,99,235,.08);color:#1d4ed8;\n  border-radius:6px 6px 0 0;padding:1px 8px;margin:0 2px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-blank.revealed{border-bottom-color:#15803d;background:rgba(21,128,61,.12);\n  color:#15803d;cursor:default}\n.rpce-controls{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}\n.rpce-btn{border:1px solid #caddf7;background:#f4f8ff;color:#1d4ed8;border-radius:12px;\n  padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}\n.rpce-opts{display:flex;flex-direction:column;gap:4px;margin-top:14px}\n.rpce-opt{text-align:left;font-size:17px;line-height:1.4;padding:7px 16px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;cursor:pointer;font:inherit}\n.rpce-opt .k{font-weight:800;color:#35548c;margin-right:8px}\n.rpce-opt .mark{float:right;font-weight:800}\n.rpce-opt.ok{background:rgba(21,128,61,.14);border-color:#15803d;color:#14532d;font-weight:700}\n.rpce-opt.no{background:rgba(190,18,60,.10);border-color:#be123c;color:#7f1d1d;font-weight:700}\n.rpce-opt:disabled{cursor:default}\n.rpce-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}\n.rpce-chip{padding:12px 16px;border-radius:12px;border:1px solid #caddf7;background:#f4f8ff;\n  color:#0a1f44;cursor:pointer;font:inherit;font-size:16px;position:relative}\n.rpce-chip .pos{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;\n  border-radius:50%;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;margin-right:8px}\n.rpce-chip.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-chip.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-fb{margin-top:14px;font-size:16px;font-weight:700;min-height:20px}\n.rpce-answer{margin-top:14px;font-size:17px;line-height:1.5;color:#0a1f44}\n.rpce-ref{margin-top:16px;padding:12px 15px;border-left:4px solid #2f6fed;background:#eef4ff;\n  border-radius:10px;text-align:left}\n.rpce-cite{font-weight:700;color:#1b3faa;font-size:15px}\n.rpce-quote{margin-top:6px;font-style:italic;color:#0a1f44;font-size:16px}\n/* multi-select */\n.rpce-opt.sel{background:#dbeafe;border-color:#1d4ed8;font-weight:700}\n.rpce-opt .box{display:inline-block;width:18px;height:18px;border:2px solid #94a3b8;border-radius:5px;margin-right:10px;vertical-align:-3px}\n.rpce-opt.sel .box{background:#1d4ed8;border-color:#1d4ed8}\n/* ordering (vertical; top = higher precedence) */\n.rpce-axis{font-size:12px;font-weight:700;color:#64748b;margin:14px 0 6px}\n.rpce-dest{display:flex;flex-direction:column;gap:8px;min-height:8px;\n  border-left:3px solid #caddf7;padding-left:12px;margin:6px 0}\n.rpce-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;\n  border:1px solid #caddf7;background:#f4f8ff;color:#0a1f44;font-size:16px}\n.rpce-slot .n{min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;\n  background:#1d4ed8;color:#fff;font-size:13px;font-weight:800}\n.rpce-slot.ok{background:rgba(21,128,61,.14);border-color:#15803d}\n.rpce-slot.no{background:rgba(190,18,60,.10);border-color:#be123c}\n.rpce-src .rpce-chip.used{opacity:.35;pointer-events:none}\n/* drag-to-reorder ordering list */\n.rpce-order .rpce-slot{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}\n.rpce-order .rpce-slot.drag{opacity:.6;box-shadow:0 4px 12px rgba(0,0,0,.18)}\n.rpce-order .rpce-slot .lbl{flex:1}\n.rpce-grip{color:#94a3b8;font-size:18px;cursor:grab;line-height:1}\n.rpce-moves{display:flex;flex-direction:column;gap:2px}\n.rpce-move{border:1px solid #caddf7;background:#fff;color:#1d4ed8;border-radius:6px;\n  width:28px;height:18px;line-height:1;font-size:11px;font-weight:800;cursor:pointer;padding:0}\n.rpce-move:disabled{opacity:.4;cursor:default}\n";
 
 (function(){
   function el(tag, cls, html){ var e=document.createElement(tag);
@@ -105,11 +105,13 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
       for(var j=0;j<btns.length;j++){
         var isC=correct.indexOf(j)>=0, sel=btns[j].classList.contains('sel');
         btns[j].disabled=true; btns[j].classList.remove('sel');
-        if(isC){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">'+(sel?'✓':'← should be selected')+'</span>'; if(!sel) ok=false; }
+        if(isC && sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">✓</span>'; }
+        else if(isC && !sel){ btns[j].classList.add('ok'); btns[j].innerHTML+='<span class="mark">← should have been selected</span>'; ok=false; }
         else if(sel){ btns[j].classList.add('no'); btns[j].innerHTML+='<span class="mark">✗</span>'; ok=false; }
       }
       fb.style.color=ok?'#15803d':'#be123c';
-      fb.textContent=ok?'✓ Correct — all and only the right ones.':'✗ Not quite — the correct set is highlighted.';
+      fb.textContent=ok?'✓ Correct — all and only the right ones.'
+        :'✗ Not quite — your incorrect picks are marked ✗ and the ones you missed are marked.';
       done(host,p,opts);
     }
     if(opts&&opts.reveal){ (p.correct||[]).forEach(function(i){ box.querySelectorAll('button')[i].classList.add('sel'); }); grade(); return; }
@@ -117,40 +119,98 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
     chk.onclick=grade; ctr.appendChild(chk); host.appendChild(ctr); host.appendChild(fb);
   }
 
-  // ---- order: tap items into precedence order (top = higher) ----------------
+  // ---- order: drag the items into precedence order (top = higher) -----------
+  // All items shown at once in one reorderable list; grading happens only on
+  // Submit. Reorder by dragging (pointer events -> touch + mouse) or the ▲/▼
+  // buttons (accessible fallback). Positions renumber live.
   function renderOrder(p, host, opts){
     host.appendChild(el('div','rpce-q', p.prompt));
     var order=p.order;               // correct sequence, highest → lowest
-    var display=(opts&&opts.reveal)?order.slice():shuffle(order);
-    host.appendChild(el('div','rpce-axis','▲ Tap in order — top = HIGHER precedence, bottom = LOWER'));
-    var dest=el('div','rpce-dest'); host.appendChild(dest);
-    var src=el('div','rpce-chips rpce-src'); host.appendChild(src);
-    var fb=el('div','rpce-fb'); host.appendChild(fb);
-    var picked=[], chips={};
-    function evaluate(){
-      var allRight=true;
-      dest.querySelectorAll('.rpce-slot').forEach(function(slot,pos){
-        if(order[pos]===picked[pos]){ slot.classList.add('ok'); }
-        else { slot.classList.add('no'); allRight=false; }
+    host.appendChild(el('div','rpce-axis','▲ top = HIGHER precedence, bottom = LOWER'));
+    var list=el('div','rpce-dest rpce-order'); host.appendChild(list);
+    var fb=el('div','rpce-fb');
+    var graded=false;
+
+    function renumber(){
+      var rows=list.querySelectorAll('.rpce-slot');
+      for(var i=0;i<rows.length;i++) rows[i].querySelector('.n').textContent=(i+1);
+    }
+    function currentOrder(){
+      var rows=list.querySelectorAll('.rpce-slot'), out=[];
+      for(var i=0;i<rows.length;i++) out.push(rows[i].dataset.label);
+      return out;
+    }
+    // ▲/▼ fallback: swap a row with its neighbour.
+    function nudge(row,dir){
+      if(graded) return;
+      if(dir<0 && row.previousElementSibling) list.insertBefore(row,row.previousElementSibling);
+      else if(dir>0 && row.nextElementSibling) list.insertBefore(row.nextElementSibling,row);
+      renumber();
+    }
+    // Which row (not the one being dragged) should the dragged row sit before,
+    // given the pointer's Y? null => append to end. Standard sortable logic.
+    function afterRow(y){
+      var els=list.querySelectorAll('.rpce-slot:not(.drag)'), best=null, bestOff=-Infinity;
+      for(var i=0;i<els.length;i++){
+        var box=els[i].getBoundingClientRect(), off=y-box.top-box.height/2;
+        if(off<0 && off>bestOff){ bestOff=off; best=els[i]; }
+      }
+      return best;
+    }
+    function attachDrag(row){
+      var dragging=false;
+      row.addEventListener('pointerdown',function(ev){
+        if(graded || ev.target.classList.contains('rpce-move')) return; // let buttons work
+        dragging=true; row.classList.add('drag');
+        try{ row.setPointerCapture(ev.pointerId); }catch(e){}
       });
+      row.addEventListener('pointermove',function(ev){
+        if(!dragging) return; ev.preventDefault();
+        var after=afterRow(ev.clientY);
+        if(after==null) list.appendChild(row); else list.insertBefore(row,after);
+        renumber();
+      });
+      function end(ev){ if(!dragging) return; dragging=false; row.classList.remove('drag');
+        try{ row.releasePointerCapture(ev.pointerId); }catch(e){} }
+      row.addEventListener('pointerup',end);
+      row.addEventListener('pointercancel',end);
+    }
+    function makeRow(label){
+      var row=el('div','rpce-slot'); row.dataset.label=label;
+      row.appendChild(el('span','n',''));
+      row.appendChild(el('span','rpce-grip','⠿'));
+      row.appendChild(el('span','lbl',label));
+      var mv=el('span','rpce-moves');
+      var up=el('button','rpce-move','▲'), dn=el('button','rpce-move','▼');
+      up.onclick=function(){ nudge(row,-1); }; dn.onclick=function(){ nudge(row,1); };
+      mv.appendChild(up); mv.appendChild(dn); row.appendChild(mv);
+      attachDrag(row);
+      return row;
+    }
+    function submit(){
+      if(graded) return; graded=true;
+      var got=currentOrder(), rows=list.querySelectorAll('.rpce-slot'), allRight=true;
+      for(var i=0;i<rows.length;i++){
+        if(got[i]===order[i]) rows[i].classList.add('ok');
+        else { rows[i].classList.add('no'); allRight=false; }
+        var mb=rows[i].querySelectorAll('.rpce-move');
+        for(var k=0;k<mb.length;k++) mb[k].disabled=true;   // stop nudging
+      }
       fb.style.color=allRight?'#15803d':'#be123c';
       fb.innerHTML=allRight?'✓ Correct order.'
-        :'✗ Not quite. Correct (highest → lowest): <b>'+order.join(' → ')+'</b>';
+        :'✗ Not quite — the correct order (highest → lowest) is: <b>'+order.join(' → ')+'</b>';
       done(host,p,opts);
     }
-    function place(label){
-      picked.push(label);
-      var slot=el('div','rpce-slot','<span class="n">'+picked.length+'</span>'+label);
-      dest.appendChild(slot);
-      chips[label].classList.add('used');
-      if(picked.length===order.length) evaluate();
+
+    if(opts&&opts.reveal){                       // answer side: show correct, all ok
+      order.forEach(function(label){ list.appendChild(makeRow(label)); });
+      renumber(); host.appendChild(fb); submit(); return;
     }
-    display.forEach(function(label){
-      var chip=el('button','rpce-chip',label); chips[label]=chip;
-      chip.onclick=function(){ if(chips[label].classList.contains('used')) return; place(label); };
-      src.appendChild(chip);
-    });
-    if(opts&&opts.reveal){ order.forEach(place); }
+    shuffle(p.order.slice()).forEach(function(label){ list.appendChild(makeRow(label)); });
+    renumber();
+    var ctr=el('div','rpce-controls'); var sub=el('button','rpce-btn','Submit');
+    sub.onclick=submit; ctr.appendChild(sub); host.appendChild(ctr);
+    host.appendChild(fb);
   }
 
   window.RPCE = { render: function(payload, host, opts){

@@ -134,8 +134,8 @@ _REVIEWER_CSS = (
     # Larger question + multiple-choice text on the bigger desktop screen,
     # with tighter spacing between the answer choices.
     ".rpce-q{font-size:23px !important;line-height:1.55 !important}"
-    ".rpce-opts{gap:3px !important;margin-top:10px !important}"
-    ".rpce-opt{font-size:20px !important;padding:8px 16px !important}"
+    ".rpce-opts{gap:2px !important;margin-top:8px !important}"
+    ".rpce-opt{font-size:20px !important;padding:6px 16px !important;margin:0 !important}"
     ".rpce-opt .k{font-size:20px !important}"
     ".cloze,.cloze b{color:#1d4ed8 !important;font-weight:700}"
     # Revealed cloze blank — green, matching the phone.

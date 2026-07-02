@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "11"
+RPCE_DECK_VERSION = "12"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -166,15 +166,10 @@ def stable_guid(key: str) -> str:
 
 
 def hint_for(term: str) -> str:
-    """A hint for a cloze blank — only when the answer is NOT obvious from the
-    sentence. In practice that's a yes/no polarity the surrounding words don't
-    give away (debatable-vs-not, amendable-vs-not). Things the sentence already
-    frames (e.g. "... a ___ vote") get no hint; hints never reveal spelling."""
-    t = term.strip().lower()
-    if "debatable" in t:  # debatable / not debatable / undebatable
-        return "debatable or not debatable"
-    if "amendable" in t:
-        return "amendable or not amendable"
+    """Cloze blanks carry NO hint: the defining sentence + citation carry the
+    recall, and any hint tends to give the answer away (the candidate asked us
+    to remove them). Kept as a function so callers stay unchanged; always "".
+    """
     return ""
 
 
