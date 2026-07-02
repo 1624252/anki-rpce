@@ -1293,10 +1293,12 @@ def _select_rpce_deck() -> bool:
 
 
 def _tab_study() -> None:
+    """Start a review session straight away (like the phone) — skip Anki's
+    intermediate overview/"Study Now" screen so 'Study' always begins a session."""
     mw = aqt.mw
     if mw is None or not _select_rpce_deck():
         return
-    mw.moveToState("overview")
+    mw.moveToState("review")
 
 
 _TOOLBAR_CSS = (
