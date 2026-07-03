@@ -807,9 +807,12 @@ function simRespond(){
   var p=simPending;
   function present(score, feedback, usedAi){
     var passed=score>=3;
+    // Offline keyword hit/miss (from this step's expected key points) \u2014 shown with
+    // BOTH the offline and the AI grade (informational; never changes the score).
+    var kw=keywordNote({keywords:(p.expected||[]).map(function(g){return g[0];})}, ans).html;
     simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
       "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
-      feedback+"<br><b>Model ruling:</b> "+p.gold+"</p>" + examinerBadge(usedAi) + refBlock(p.ref));
+      feedback+"</p>"+kw+"<p style='color:var(--ink2)'><b>Model ruling:</b> "+p.gold+"</p>" + examinerBadge(usedAi) + refBlock(p.ref));
     el('sim-answer').value=''; playSim();
   }
   function offline(){

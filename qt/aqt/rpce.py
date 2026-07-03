@@ -151,10 +151,12 @@ _REVIEWER_BOTTOM_CSS = (
     # Remove the reviewer's Edit and More buttons (not part of the RPCE flow).
     "button[onclick*='edit']{display:none !important}"
     "button[onclick*='more']{display:none !important}"
-    # RPCE cards reveal inline (onComplete flips the card), so the "Show Answer"
-    # button is never used — hide it. This also removes it when the reviewer's
-    # bottom bar lingers into Section II / Simulate / the session-complete page.
-    "#ansbut{display:none !important}"
+    # NOTE: do NOT hide #ansbut (Show Answer). RPCE cards normally reveal inline
+    # (onComplete flips via pycmd('ans')), but Show Answer is the only fallback to
+    # reach the Again/Hard/Good/Easy rating buttons if a card is left un-completed.
+    # Section II / Simulate / session-complete render in the deck-browser state,
+    # where the whole bottom bar is hidden by _on_state_change — so it won't leak
+    # into those screens.
     # …and keep both side cells equal width so the rating buttons stay centered
     # now that the left (Edit) cell is empty.
     "td.stat{width:120px !important}"
@@ -1272,12 +1274,30 @@ def _sim_respond(payload: str) -> None:
         verdict = "pass" if result.passed else "keep practicing"
         ref = pending.ref
         ref_html = _ref_block(ref.section, ref.quote) if ref else ""
+        # Offline keyword hit/miss from this step's expected key points — shown
+        # with BOTH the offline and the AI grade (informational; the AI score
+        # stands). Simple case-insensitive synonym match for the display.
+        _al = answer.lower()
+        _cov = [g[0] for g in expected if g and any(s.lower() in _al for s in g)]
+        _miss = [g[0] for g in expected if g and not any(s.lower() in _al for s in g)]
+        kw_html = ""
+        if _cov:
+            kw_html += (
+                "<div style='margin-top:8px;color:#15803d;font-weight:700'>"
+                "✓ You covered: " + ", ".join(_cov) + "</div>"
+            )
+        if _miss:
+            kw_html += (
+                "<div style='margin-top:4px;color:#b45309;font-weight:700'>"
+                "Still missing: " + ", ".join(_miss) + "</div>"
+            )
         _SIM["log"].append(
             "<div style='margin:12px 0;padding:14px 16px;background:var(--surface);"
             "border:1px solid var(--border);border-radius:14px'>"
             "<div style='font-weight:800;color:var(--ink)'>"
             f"Examiner: {result.score:.1f}/5.0 ({verdict})</div>"
             f"<div style='margin-top:6px;color:var(--ink)'>{result.feedback}</div>"
+            + kw_html
             + (_examiner_badge(used) if used else "")
             + f"<div style='margin-top:8px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
             + ref_html
