@@ -267,6 +267,7 @@ def _score_card(
     fill: float | None = None,
     reason: str = "",
     abstaining: bool = False,
+    updated: str = "",
 ) -> str:
     """A themed score card: label, big value, confidence pill, the main reasons
     behind the number (spec §4), and an optional bar. When ``abstaining`` we show
@@ -296,12 +297,18 @@ def _score_card(
         )
     else:
         reason_html = ""
+    updated_html = (
+        f"<div style='margin-top:10px;font-size:11px;color:var(--ink2);"
+        f"text-align:left'>Updated {updated}</div>"
+        if updated
+        else ""
+    )
     return (
         "<div class='rpce-card'>"
         f"<div class='rpce-label'>{label}</div>"
         f"<div class='rpce-val'>{value}</div>"
         f"<span class='rpce-pill {cf}'>{_confidence_label(confidence)}</span>"
-        f"{reason_html}{bar}</div>"
+        f"{reason_html}{bar}{updated_html}</div>"
     )
 
 
@@ -445,6 +452,7 @@ def _banner_html(col) -> str:
 
     mem_abstain = mem.point is None
     perf_abstain = perf.point is None
+    _upd = _updated_str(col)  # per-score last-updated stamp (spec §4)
     cards = "".join(
         [
             _score_card(
@@ -456,6 +464,7 @@ def _banner_html(col) -> str:
                 if mem_abstain
                 else (mem.elaboration or mem.explanation),
                 abstaining=mem_abstain,
+                updated=_upd,
             ),
             _score_card(
                 "Performance",
@@ -466,6 +475,7 @@ def _banner_html(col) -> str:
                 if perf_abstain
                 else (perf.elaboration or perf.explanation),
                 abstaining=perf_abstain,
+                updated=_upd,
             ),
             _score_card(
                 "Pass Section I",
@@ -474,6 +484,7 @@ def _banner_html(col) -> str:
                 None if sec1.abstained else sec1.p_pass,
                 section_needs(sec1) if sec1.abstained else sec1.elaboration,
                 abstaining=sec1.abstained,
+                updated=_upd,
             ),
             _score_card(
                 "Pass Section II",
@@ -482,6 +493,7 @@ def _banner_html(col) -> str:
                 None if sec2.abstained else sec2.p_pass,
                 section_needs(sec2) if sec2.abstained else sec2.elaboration,
                 abstaining=sec2.abstained,
+                updated=_upd,
             ),
         ]
     )
