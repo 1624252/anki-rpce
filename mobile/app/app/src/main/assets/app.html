@@ -169,11 +169,6 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
       <h1 class="h1">Speedrun<small>for the RPCE</small></h1>
       <p class="sub">Review the same deck as the desktop, on the shared engine.</p>
     </div>
-    <div class="counts">
-      <div class="count new"><div class="n" id="c-new">–</div><div class="l">New</div></div>
-      <div class="count learn"><div class="n" id="c-learn">–</div><div class="l">Learning</div></div>
-      <div class="count due"><div class="n" id="c-due">–</div><div class="l">To review</div></div>
-    </div>
     <button class="btn" onclick="openScores()">📊 Readiness dashboard</button>
     <button class="btn" onclick="startStudy()">Review session</button>
     <div class="setting-btn" style="display:flex;align-items:center;justify-content:center;gap:10px">
@@ -326,8 +321,7 @@ function refreshActivity(){
     "<br>Simulation responses: "+cfgInt("rpce:sim_responses");
 }
 function refreshCounts(){
-  var c = j(Engine.deckCounts());
-  if (c.ok){ el('c-new').textContent=c.new; el('c-learn').textContent=c.learning; el('c-due').textContent=c.review; }
+  // (New/Learning/To-review card counts removed from the home screen.)
   var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;   // reflect saved session length
   refreshActivity();
 }
