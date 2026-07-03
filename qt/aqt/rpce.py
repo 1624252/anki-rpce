@@ -417,13 +417,6 @@ def _banner_html(col) -> str:
     total = len(_concepts.all_concepts())
     pct = scores.concept_coverage_pct(col)
     covered = len(scores.concepts_mastered(col))
-    cal = scores.memory_calibration(col)
-    cal_line = (
-        f"Memory calibration: <b>Brier {cal['brier']:.3f}</b> · log-loss "
-        f"{cal['log_loss']:.3f} (FSRS retrievability vs. outcome, n={cal['n']})"
-        if cal
-        else "Memory calibration: review more with FSRS on to measure accuracy"
-    )
 
     def section_value(snap) -> str:
         # Always render the range — abstaining shows "— range 0%–100%", matching
@@ -570,7 +563,6 @@ def _banner_html(col) -> str:
   <div class="rpce-grid">{cards}</div>
   <div class="rpce-covhead"><b>Concept coverage</b><span>{pct:.0%} ({covered}/{total})</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
-  <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   {activity_html}
