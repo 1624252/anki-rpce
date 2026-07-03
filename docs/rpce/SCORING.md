@@ -33,17 +33,17 @@ Computed only over concepts/cards the candidate **has actually studied**.
 
 ### 2. Performance — "will the candidate get a NEW exam-style question right?"
 
-A **concept-weighted projection** across the whole blueprint. It is NOT an average of what you've studied (that's Memory) — it credits a concept only once you've **mastered** it (the coverage bar: the concept's 2 most-recent reviews are both a pass with the most recent Easy), and every un-mastered concept — whether never seen or merely glanced at once — counts as **0**. So partial coverage keeps the projected score low, which is the honest signal (with 9.5% mastered you should not read 73%).
+A **concept-weighted projection** of first-attempt accuracy across the whole blueprint. It is NOT an average of what you've drilled (that's Memory) — it measures how often you get a question **right the first time you see it** (a new question), projected over every concept, with concepts you've never practised counting as **0** (a new concept you'd likely miss). So it estimates your score on fresh exam questions.
 
-- Per-concept recall `cᵢ` = mean card recall for concept `i` (`r = (reps − lapses + 1)/(reps + 2)`).
+- Per-concept first-attempt accuracy `cᵢ` = fraction of concept `i`'s cards answered correctly (ease ≥ Good) on their **earliest** review.
 - Per-concept weight `wᵢ` = its domain's exam weight, split evenly across that domain's concepts (so each domain keeps its exam weight; there is no per-concept weight in the registry).
-- **Performance point** = `Σ wᵢ·cᵢ / Σ wᵢ` over ALL 210 concepts, where `cᵢ = 0` for any un-mastered concept.
-- Abstains (no number) until at least one concept is mastered.
+- **Performance point** = `Σ wᵢ·cᵢ / Σ wᵢ` over ALL 210 concepts, where `cᵢ = 0` for any concept never practised.
+- Abstains (no number) until at least one question has been answered.
 - **Range** margin widens when coverage is low: `margin = 0.10 + 0.40·(1 − coverage)`, clamped to [0,1].
 
 ### 3. Predicted Section I / Section II — projected section score, with a range
 
-The predicted section score is the same **concept-weighted mastery-gated projection** as Performance (§2), expressed on the real 0–100% scale plus a range — a projection to exam day, where the candidate will not have mastered 100% of the blueprint. (The registry does not tag concepts by section, so both sections project over the full concept set; Section II additionally requires graded scenarios before it shows a number — see the give-up rule.)
+The predicted section score is the same **concept-weighted first-attempt projection** as Performance (§2), expressed on the real 0–100% scale plus a range — a projection to exam day across the whole blueprint. (The registry does not tag concepts by section, so both sections project over the full concept set; Section II additionally requires graded scenarios before it shows a number — see the give-up rule.)
 
 - The projected **percent score** shown is the projection `perf` itself (0–100%), with its range.
 - A logistic maps `perf` through the 80% bar to a pass probability for the "on track / not yet" verdict: `P(pass) = 1 / (1 + exp(−k·(perf − 0.80)))`, `k = 12`; the range endpoints go through the same logistic.

@@ -370,31 +370,40 @@ def _domain_recall(col: Collection, code: int) -> float | None:
     return mean(recalls) if recalls else None
 
 
-def _concept_recalls(col: Collection) -> dict[str, float]:
-    """Mean reps/lapses recall per concept, over that concept's reviewed cards
-    (reps > 0). Read from the ``rpce::concept::<id>`` tags in one DB pass."""
-    buckets: dict[str, list[float]] = {}
-    for reps, lapses, tags in col.db.execute(
-        "select c.reps, c.lapses, n.tags from cards c join notes n on c.nid = n.id "
+def _concept_correctness(col: Collection) -> dict[str, float]:
+    """Per-concept FIRST-ATTEMPT correctness: the fraction of a concept's cards
+    answered correctly (ease >= Good) the FIRST time they were seen — a measure of
+    getting a NEW question on that concept right, before any drilling. Read from
+    the ``rpce::concept::<id>`` tags + the earliest revlog entry per card."""
+    # Earliest review's ease per card (oldest first; keep the first seen).
+    first_ease: dict[int, int] = {}
+    for cid, ease in col.db.execute("select cid, ease from revlog order by id asc"):
+        first_ease.setdefault(int(cid), int(ease))
+    buckets: dict[str, list[int]] = {}
+    for cid, tags in col.db.execute(
+        "select c.id, n.tags from cards c join notes n on c.nid = n.id "
         "where c.reps > 0 and n.tags like '%rpce::concept::%'"
     ):
-        r = _recall_estimate(int(reps), int(lapses))
+        fe = first_ease.get(int(cid))
+        if fe is None:
+            continue
+        correct = 1 if fe >= _EASE_GOOD else 0
         for tok in (tags or "").split():
             if tok.startswith("rpce::concept::"):
-                buckets.setdefault(tok.rsplit("::", 1)[-1], []).append(r)
+                buckets.setdefault(tok.rsplit("::", 1)[-1], []).append(correct)
     return {cid: mean(v) for cid, v in buckets.items() if v}
 
 
 def _concept_weighted_projection(col: Collection) -> tuple[float, int, int]:
-    """Exam projection over ALL performance-expectation concepts; a concept only
-    contributes once it is COVERED (mastered — see :func:`concepts_mastered`).
+    """Exam projection over ALL performance-expectation concepts, based on how
+    well you get NEW questions right.
 
-    Returns ``(point, mastered, total)``: ``point`` is the domain-exam-weighted
-    mean recall over the concepts you've mastered, with every un-mastered concept
-    (whether unseen or merely glanced at once) counting as 0. So this is a genuine
-    projection to exam day — you get credit only for what you've actually learned,
-    and low coverage keeps the projected score low. Each domain keeps its exam
-    weight, spread evenly across its concepts."""
+    Returns ``(point, seen, total)``: ``point`` is the domain-exam-weighted mean
+    of each concept's FIRST-ATTEMPT correctness (:func:`_concept_correctness`),
+    with every concept you've never practised counting as 0. So it projects your
+    exam score on fresh questions across the whole blueprint — strong first-try
+    accuracy lifts it, unpractised concepts (new to you) drag it down. Each domain
+    keeps its exam weight, split evenly across its concepts."""
     from collections import Counter
 
     from . import concepts as _concepts
@@ -406,40 +415,40 @@ def _concept_weighted_projection(col: Collection) -> tuple[float, int, int]:
     weights = topic_weights(col)
     total_weight = sum(weights.values()) or 1.0
     per_domain = Counter(c.domain for c in cs)
-    recalls = _concept_recalls(col)
-    mastered = concepts_mastered(col)
+    correctness = _concept_correctness(col)
     num = 0.0
     denom = 0.0
-    scored = 0
+    seen = 0
     for c in cs:
         # domain exam weight, split evenly over that domain's concepts
         w = (weights.get(domain_tag(c.domain), 0.0) / total_weight) / (
             per_domain[c.domain] or 1
         )
         denom += w
-        if c.id in mastered:  # only mastered concepts earn credit
-            scored += 1
-            num += w * recalls.get(c.id, 0.0)
-        # un-mastered concept contributes 0 (projection penalises weak coverage)
-    return (num / denom if denom else 0.0), scored, total
+        acc = correctness.get(c.id)
+        if acc is not None:  # concept practised -> credit its first-try accuracy
+            seen += 1
+            num += w * acc
+        # never-practised concept counts as 0 (a new concept you'd likely miss)
+    return (num / denom if denom else 0.0), seen, total
 
 
 def performance_score(col: Collection) -> ScoreRange:
-    """Concept-weighted exam projection; un-mastered concepts count as 0.
+    """Concept-weighted exam projection based on getting NEW questions right.
 
-    Generalises Memory to the whole blueprint: a projection over all 210
-    performance-expectation concepts (not the 7 domains) that credits only the
-    concepts you've MASTERED (covered), so partial coverage lowers the score
-    instead of mirroring Memory."""
-    point, mastered, total = _concept_weighted_projection(col)
-    if mastered == 0:
+    Generalises to the whole blueprint: a projection over all 210
+    performance-expectation concepts of your FIRST-ATTEMPT correctness, with every
+    concept you've never practised counting as 0. So it estimates your score on
+    fresh exam questions — distinct from Memory (recall of what you've drilled)."""
+    point, seen, total = _concept_weighted_projection(col)
+    if seen == 0:
         sr = ScoreRange(
             None,
             0.0,  # abstain, but still carry the full-uncertainty 0-100% range
             1.0,
             CONFIDENCE_ABSTAIN,
-            "No concept mastered yet — this projects your exam score once you're "
-            "consistently acing questions (bridges memory to new questions).",
+            "No questions answered yet — this projects your exam score from how "
+            "often you get new questions right once you've practised.",
         )
         sr.confidence_label = confidence_label(sr.confidence)
         sr.elaboration = _performance_prose(
@@ -451,10 +460,10 @@ def performance_score(col: Collection) -> ScoreRange:
     margin = 0.1 + 0.4 * (1.0 - cov)
     weakest = best_next_topic(col)
     explanation = (
-        f"Concept-weighted projection across all {total} performance expectations; "
-        f"{mastered} mastered and every un-mastered concept counts as 0 (so "
-        f"incomplete coverage lowers the score). Weakest area: {weakest}. The "
-        f"range widens when coverage is low ({cov:.0%} covered)."
+        f"Concept-weighted projection across all {total} performance expectations, "
+        f"from your first-attempt correctness; {seen} practised and every "
+        f"un-practised concept counts as 0. Weakest area: {weakest}. The range "
+        f"widens when coverage is low ({cov:.0%} covered)."
     )
     sr = ScoreRange(
         point,

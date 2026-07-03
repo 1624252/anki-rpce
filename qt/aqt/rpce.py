@@ -2382,6 +2382,13 @@ def _end_session() -> None:
     try:
         _RPCE_VIEW = "session_done"
         mw.moveToState("deckBrowser")  # the content hook renders the done page
+        # Push this session's reviews to AnkiWeb right away (only if signed in, so
+        # we never pop the login dialog). Mirrors the phone's post-session sync.
+        try:
+            if mw.pm.sync_auth() and not _syncing:
+                _trigger_sync()
+        except Exception:
+            pass
     except Exception as exc:
         print(f"RPCE end-session error: {exc}")
     finally:

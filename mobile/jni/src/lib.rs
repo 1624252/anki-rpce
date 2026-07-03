@@ -593,16 +593,16 @@ fn is_pe_concept(id: &str) -> bool {
 /// - coverage: fraction of PE concepts MASTERED (a card's 2 most-recent reviews
 ///   both a pass with the most recent Easy). Mirrors scores.concepts_mastered.
 /// - projection: the concept-weighted exam projection (mirrors
-///   scores._concept_weighted_projection) — the domain-weighted mean recall over
-///   MASTERED concepts, every un-mastered concept counting as 0, so partial
-///   coverage keeps the predicted score low. Used for Performance + both
-///   Predicted sections.
+///   scores._concept_weighted_projection) — the domain-weighted mean of each
+///   concept's FIRST-ATTEMPT correctness (getting a new question right), every
+///   un-practised concept counting as 0. Used for Performance + both Predicted
+///   sections.
 fn concept_coverage() -> (i64, i64, f64, f64) {
     use std::collections::{HashMap, HashSet};
     let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the mastery rule below
-    // Cards + concept tags + reps/lapses (for per-concept recall).
+    // Cards + their concept tags (denominator = distinct PE concepts present).
     let rows = match db_query(
-        "SELECT c.id, n.tags, c.reps, c.lapses FROM cards c JOIN notes n ON c.nid = n.id \
+        "SELECT c.id, n.tags FROM cards c JOIN notes n ON c.nid = n.id \
          WHERE n.tags LIKE '%rpce::concept::%'",
         serde_json::json!([]),
     ) {
@@ -611,7 +611,6 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
     };
     let mut all: HashSet<String> = HashSet::new();
     let mut card_concepts: HashMap<i64, Vec<String>> = HashMap::new();
-    let mut card_recall: HashMap<i64, f64> = HashMap::new();
     // domain code -> distinct concept ids in that domain (present in the deck)
     let mut domain_concepts: HashMap<i64, HashSet<String>> = HashMap::new();
     if let Some(arr) = rows.as_array() {
@@ -622,11 +621,6 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
             };
             let cid = a.first().and_then(|v| v.as_i64()).unwrap_or(0);
             let tags = a.get(1).and_then(|v| v.as_str()).unwrap_or("");
-            let reps = a.get(2).and_then(|v| v.as_i64()).unwrap_or(0);
-            let lapses = a.get(3).and_then(|v| v.as_i64()).unwrap_or(0);
-            if reps > 0 {
-                card_recall.insert(cid, (reps - lapses + 1) as f64 / (reps + 2) as f64);
-            }
             for t in tags.split_whitespace() {
                 if let Some(id) = t.strip_prefix("rpce::concept::") {
                     if !is_pe_concept(id) {
@@ -680,19 +674,38 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
     }
     let covered = mastered.len() as i64;
 
-    // Per-concept recall = mean of its reviewed cards' recall.
-    let mut concept_recall: HashMap<String, (f64, i64)> = HashMap::new();
+    // Per-concept FIRST-ATTEMPT correctness: the fraction of a concept's cards
+    // answered correctly (ease >= Good=3) on their EARLIEST review — getting a NEW
+    // question right. Mirrors scores._concept_correctness.
+    let mut first_ease: HashMap<i64, i64> = HashMap::new();
+    if let Ok(v) = db_query(
+        "SELECT cid, ease FROM revlog ORDER BY id ASC",
+        serde_json::json!([]),
+    ) {
+        if let Some(arr) = v.as_array() {
+            for r in arr {
+                if let Some(a) = r.as_array() {
+                    let cid = a.first().and_then(|x| x.as_i64()).unwrap_or(0);
+                    let ease = a.get(1).and_then(|x| x.as_i64()).unwrap_or(0);
+                    first_ease.entry(cid).or_insert(ease); // earliest wins (ASC)
+                }
+            }
+        }
+    }
+    let mut concept_correct: HashMap<String, (f64, i64)> = HashMap::new();
     for (cid, concepts) in &card_concepts {
-        if let Some(&rc) = card_recall.get(cid) {
+        if let Some(&fe) = first_ease.get(cid) {
+            let correct = if fe >= 3 { 1.0 } else { 0.0 };
             for c in concepts {
-                let e = concept_recall.entry(c.clone()).or_insert((0.0, 0));
-                e.0 += rc;
+                let e = concept_correct.entry(c.clone()).or_insert((0.0, 0));
+                e.0 += correct;
                 e.1 += 1;
             }
         }
     }
-    // Concept-weighted projection: each domain shares equal exam weight (1/7),
-    // split over its concepts; a concept earns credit only once mastered.
+    // Concept-weighted projection over ALL concepts (mirrors
+    // scores._concept_weighted_projection): each domain shares equal exam weight
+    // (1/7), split over its concepts; un-practised concepts count as 0.
     let n_dom = DOMAINS.len() as f64;
     let mut num = 0.0;
     let mut denom = 0.0;
@@ -701,10 +714,12 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
         let n_in = domain_concepts.get(&dom).map(|s| s.len()).unwrap_or(1).max(1) as f64;
         let w = (1.0 / n_dom) / n_in;
         denom += w;
-        if mastered.contains(c) {
-            let r = concept_recall.get(c).map(|(s, n)| s / *n as f64).unwrap_or(0.0);
-            num += w * r;
+        if let Some((s, n)) = concept_correct.get(c) {
+            if *n > 0 {
+                num += w * (s / *n as f64);
+            }
         }
+        // un-practised concept counts as 0 (a new concept you'd likely miss)
     }
     let projection = if denom > 0.0 { num / denom } else { 0.0 };
     (covered, total, covered as f64 / total as f64, projection)
