@@ -4,8 +4,9 @@ Turns the transcribed criteria (`data/2026-4-22-Criteria-for-Credentialing-UPDAT
 
 ## Phase 0 — Concept registry (foundation for everything)
 
-- New `pylib/anki/rpce/concepts.py`: a `Concept(id, name, domain, section_weight, ronr_refs, sections=("I","II"))` list built from the RP performance expectations — the ~44 named sub-topics in the criteria (Motions in General, Main Motion, Amend, Commit/Refer, Postpone Definitely, Limit/Extend Debate, Previous Question, Recess, Adjourn, Point of Order, Appeal, Suspend the Rules, Parliamentary Inquiry, Request for Information, Rescind/ASPA, Reconsider, Quorum, Order of Business, Orders of the Day, Agenda, Minutes, Recognition/Floor, Handling Motions, Debate, Meeting & Session, Motions Not in Order, Renewal, Previous Notice, Serve as Parliamentarian, Teaching, Ethics/Code, Consulting, Discipline, Answering Questions, Terminology, Bylaw Amendments, Special Rules of Order, Interpreting Bylaws, Reviewing Governing Docs, Higher Authorities, Boards, Committees, Rules in Boards/Committees, Tellers, Nominations, Elections, Voting).
-- Each concept keeps a stable `id` (used as the `rpce::concept::<id>` tag), the RONR paragraphs the PE says to test, and the exam section(s) it feeds.
+- `data/rpce_concepts.json` + `pylib/anki/rpce/concepts.py`: one `Concept(id, name, domain, section_weight, ronr_refs, sections)` **per numbered RP performance expectation** — **1.1 … 7.43, ~180 concepts** — extracted faithfully from `data/2026-4-22-Criteria-for-Credentialing-UPDATED-v1.md` (each PE's number, short label, and RONR citations).
+- Each concept's `id` is its PE number (e.g. `"1.13"`), used as the `rpce::concept::1.13` tag; it records the RONR paragraphs that PE says to test and the exam section(s) it feeds.
+- Sub-topic groupings (Amend, Previous Question, Quorum, …) are kept as a `group` field so the dashboard can roll ~180 concepts up into readable sections without losing per-PE scoring.
 - Mirror the list into the Rust engine (`mobile/jni/src/lib.rs`) so coverage/scoring match.
 - **Verify:** a test asserts every concept has ≥1 RONR ref and a valid domain, and that the desktop and Rust lists are identical.
 
@@ -16,7 +17,7 @@ Turns the transcribed criteria (`data/2026-4-22-Criteria-for-Credentialing-UPDAT
 
 ## Phase 2 — Requirement (2): ≥5 questions per concept
 
-- For each concept, author **≥5** questions (more where the PE lists many rules), **varying type**: cloze, multiple-choice, select-all, ordering. Target ≈ 44 × 5 = **220+** minimum; generate more for dense concepts (Amend, Previous Question, Voting, Bylaws).
+- For each of the ~180 concepts, author **≥5** questions (more where the PE lists many rules), **varying type**: cloze, multiple-choice, select-all, ordering. Target ≈ 180 × 5 = **900+** review questions; generate more for dense PEs.
 - Every question cites the exact RONR (12th ed.) paragraph from the concept's `ronr_refs`, and tests what that PE says to test. Author (via subagents grounded in `data/roberts_rules_of_order_12th_edition.md`), then quality-gate: solvable cold, verbatim-verified citation, no spelling/"which section" tells.
 - **Verify:** a test asserts every concept has ≥5 cards and every card's citation is verbatim in the corpus.
 

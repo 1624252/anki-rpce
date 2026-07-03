@@ -6,7 +6,7 @@ Same formulas run on desktop (`pylib/anki/rpce/scores.py`) and phone (`mobile/jn
 
 ## Concepts and coverage
 
-Every practice item (Review card, Section II scenario, Simulate decision) carries a **concept** drawn from the RP performance expectations (see `CONCEPTS` in `pylib/anki/rpce/concepts.py`). Each concept has a domain (1–7) and a section weight.
+Every practice item (Review card, Section II scenario, Simulate decision) carries a **concept**. A concept is **one numbered RP performance expectation** (1.1, 1.2, … 7.43 — roughly 180 in total; see `CONCEPTS` in `pylib/anki/rpce/concepts.py`, built from `data/rpce_concepts.json`). Each concept has a domain (1–7), a short label, its RONR (12th ed.) citations, and a section weight.
 
 - **Coverage(section)** = (concepts in that section with ≥ `MIN_ITEMS_PER_CONCEPT` graded items) / (total concepts in that section). This is the "percent of the exam covered so far" shown with every score.
 - Section I concepts = all knowledge/recall concepts (the MCQ blueprint). Section II concepts = the concepts that have authored performance scenarios.
