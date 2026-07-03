@@ -606,6 +606,10 @@ def _updated_str(col) -> str:
 #: rendered IN-WINDOW (like the Dashboard) by branching on this flag in
 #: ``_on_deck_browser_content`` — not as separate popup dialogs.
 _RPCE_VIEW = "dashboard"  # "dashboard" | "section2" | "simulate"
+#: True whenever the reviewer bottom bar must stay hidden (any screen that is not
+#: an active review card). Enforced by the patched show()/animate_height so Anki's
+#: delayed re-show on leaving review can't re-display it. See _on_state_change.
+_bottom_bar_locked = False
 #: Which Section II scenario is on screen (index into ``all_scenarios()``).
 _S2_IDX = 0
 #: In-window simulation state (see ``_sim_reset``): sim_idx, turn, pending, log,
@@ -2017,7 +2021,7 @@ def _on_answer_card(reviewer, card, ease) -> None:
     except Exception as exc:  # never break reviewing over concept burying
         print(f"RPCE concept-bury error: {exc}")
     # Tally this answer for the completion-page breakdown (rating + format).
-    global _session_done, _session_stats
+    global _session_done, _session_stats, _session_ending
     if _session_stats is None:
         _session_stats = _new_session_stats()
     _session_stats["total"] += 1
@@ -2042,6 +2046,10 @@ def _on_answer_card(reviewer, card, ease) -> None:
 
         global _last_session_stats
         _last_session_stats = _session_stats  # freeze for the completion page
+        # Suppress the reviewer's next-card render (which runs right after this
+        # hook, in _after_answering) so no other question flashes before the
+        # completion page. _end_session clears the flag.
+        _session_ending = True
         # No artificial delay — the user has already seen + rated this card, so
         # jump straight to the completion page on the next event-loop tick.
         QTimer.singleShot(0, _end_session)
@@ -2116,6 +2124,10 @@ def _rpce_render_html(payload_b64: str, reveal: bool) -> str:
 #: user starts a new session from the home screen afterward.
 _DEFAULT_SESSION_LIMIT = 20
 _session_done = 0  # cards answered in the current session
+#: True between rating the final card and the completion page appearing — signals
+#: the patched reviewer to skip rendering another (flashing) question. See
+#: _suppress_next_card_at_session_end.
+_session_ending = False
 #: Live tally for the current session; frozen into ``_last_session_stats`` at the
 #: cap so the completion page can show a breakdown after the counter resets.
 _session_stats: dict | None = None
@@ -2426,16 +2438,19 @@ def _end_session() -> None:
     """End the review session at the cap and show an in-window 'Session complete'
     page (via the deck-browser content hook, like Section II / Simulate) so the
     user can start a fresh session or return to the dashboard."""
-    global _session_done, _RPCE_VIEW
+    global _session_done, _RPCE_VIEW, _session_ending
     _session_done = 0
     mw = aqt.mw
     if mw is None:
+        _session_ending = False
         return
     try:
         _RPCE_VIEW = "session_done"
         mw.moveToState("deckBrowser")  # the content hook renders the done page
     except Exception as exc:
         print(f"RPCE end-session error: {exc}")
+    finally:
+        _session_ending = False
 
 
 def _on_card_will_show(text: str, card, kind: str) -> str:
@@ -2528,17 +2543,23 @@ def _on_deck_browser_did_render(deck_browser) -> None:
 
 
 def _on_state_change(new_state, old_state) -> None:
-    """Hide Anki's bottom bar on the home and deck-overview screens (Options /
-    Custom Study / Description aren't part of the RPCE flow); keep it for the
-    reviewer, which needs the answer buttons."""
+    """The reviewer bottom bar (Again/Hard/Good/Easy) belongs to an active review
+    card ONLY. Show it in the review state; hide it everywhere else — the home
+    dashboard, Section II, Simulate, and the session-complete page (all rendered
+    in the deck-browser state). A lock (see _control_bottom_bar_visibility) keeps
+    it hidden so Anki's own delayed re-show on leaving review can't sneak it back
+    onto those screens."""
+    global _bottom_bar_locked
     mw = aqt.mw
     if mw is None:
         return
     try:
-        if new_state in ("deckBrowser", "overview"):
-            mw.bottomWeb.hide()
-        else:
+        if new_state == "review":
+            _bottom_bar_locked = False
             mw.bottomWeb.show()
+        else:
+            _bottom_bar_locked = True
+            mw.bottomWeb.hide()
         # Starting review (from home/overview) begins a fresh session.
         if new_state == "review" and old_state != "review":
             global _session_done, _session_stats
@@ -2809,9 +2830,60 @@ def _remove_deck_browser_bottom_bar() -> None:
     DeckBrowser._drawButtons = _no_buttons
 
 
+def _control_bottom_bar_visibility() -> None:
+    """Make the reviewer bottom bar obey a single rule: visible only during an
+    active review card. Leaving the reviewer, Anki's ``_reviewCleanup`` calls
+    ``bottomWeb.show()`` (while the state is still "review"), which also schedules
+    a ~50ms-delayed re-show — that's what left the Again/Hard/Good/Easy bar showing
+    on the first tab switch and stuck on the session-complete page. We gate both
+    ``show`` and ``animate_height`` on the ``_bottom_bar_locked`` flag so any
+    re-show scheduled during the transition is a no-op once we've locked it."""
+    from aqt.toolbar import BottomWebView
+
+    _orig_show = BottomWebView.show
+    _orig_animate = BottomWebView.animate_height
+
+    def _show(self) -> None:
+        if _bottom_bar_locked:
+            return
+        _orig_show(self)
+
+    def _animate(self, height: int) -> None:
+        # While locked, never expand — collapse any (possibly delayed) re-show.
+        if _bottom_bar_locked and height > 1:
+            height = 1
+        _orig_animate(self, height)
+
+    BottomWebView.show = _show
+    BottomWebView.animate_height = _animate
+
+
+def _suppress_next_card_at_session_end() -> None:
+    """Stop the one-frame flash of another question when a session ends.
+
+    After the final card is rated, the reviewer's ``_after_answering`` fires our
+    ``reviewer_did_answer_card`` hook and *then* calls ``nextCard()``, which
+    renders the next question before our deferred ``_end_session`` can swap in the
+    completion page. Wrapping ``nextCard`` to no-op while ``_session_ending`` is
+    set removes that intervening render, so the last card holds until the done
+    page appears."""
+    from aqt.reviewer import Reviewer
+
+    _orig_next_card = Reviewer.nextCard
+
+    def _next_card(self) -> None:
+        if _session_ending:
+            return
+        _orig_next_card(self)
+
+    Reviewer.nextCard = _next_card
+
+
 def setup() -> None:
     """Register all RPCE desktop integration hooks."""
     _remove_deck_browser_bottom_bar()
+    _control_bottom_bar_visibility()
+    _suppress_next_card_at_session_end()
     # Auto-proceed past the post-login "empty AnkiWeb collection — replace it?"
     # prompt (the local RPCE deck is the source of truth). Only the empty-UPLOAD
     # case is monkeypatched; download/conflict dialogs are left untouched.
