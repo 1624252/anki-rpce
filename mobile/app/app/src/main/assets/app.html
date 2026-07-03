@@ -374,8 +374,9 @@ function sessionComplete(){
   var total=sessDone||SESSION_LIMIT, rt=sessStats.ratings;
   var recalled=rt.good+rt.easy, acc=total?Math.round(100*recalled/total):0;
   d.querySelector('.sub').textContent='You recalled '+acc+'% of this session confidently.';
+  var peCount=Object.keys(sessStats.concepts).filter(function(id){return /^\d+\.\d+$/.test(id);}).length;
   el('done-stats').innerHTML=sessStatsHtml(total, recalled, rt.hard, rt.again,
-    Object.keys(sessStats.concepts).length, sessStats.byType, sessStats.byDomain);
+    peCount, sessStats.byType, sessStats.byDomain);
   el('new-session-btn').classList.remove('hidden');
 }
 function statTile(v,label){ return '<div class="stile"><div class="sval">'+v+'</div>'+
@@ -390,7 +391,11 @@ function loadConcepts(){
 // Per-concept counts grouped under each domain: the domain shows its total, and
 // each concept is listed indented as "ID. Name    count".
 function conceptBreakdown(conceptCounts){
-  var ids=Object.keys(conceptCounts); if(!ids.length) return '';
+  // Only performance-expectation concepts (ids like "1.5") — legacy non-PE
+  // concept tags (e.g. precedence-chart cards) are not part of the 210-concept
+  // blueprint and would show as a bogus "Domain 101".
+  var ids=Object.keys(conceptCounts).filter(function(id){return /^\d+\.\d+$/.test(id);});
+  if(!ids.length) return '';
   loadConcepts();
   var byDom={};
   ids.forEach(function(id){ var dom=String(id).split('.')[0]; (byDom[dom]=byDom[dom]||[]).push(id); });

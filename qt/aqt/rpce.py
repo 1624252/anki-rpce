@@ -2212,7 +2212,16 @@ def _session_done_html(col) -> str:
     missed = r["again"]
     acc = round(100 * recalled / total) if total else 0
 
-    concepts = len(st.get("concepts") or ())
+    import re as _re
+
+    # Only performance-expectation concepts (e.g. "1.5") count — legacy non-PE
+    # concept cards (precedence-chart etc.) aren't part of the 210 blueprint.
+    _pe = {
+        c: n
+        for c, n in (st.get("concepts") or {}).items()
+        if _re.fullmatch(r"\d+\.\d+", str(c))
+    }
+    concepts = len(_pe)
     # Big stat tiles: total, recalled, needed effort, missed, distinct concepts.
     tiles = "".join(
         [
@@ -2262,7 +2271,7 @@ def _session_done_html(col) -> str:
         )
 
     type_html = ""
-    domain_html = _concept_breakdown(st.get("concepts") or {})
+    domain_html = _concept_breakdown(_pe)
 
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">
