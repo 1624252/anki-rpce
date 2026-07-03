@@ -117,6 +117,9 @@ html,body{margin:0;min-height:100%;
 .cov{height:13px;border-radius:999px;background:var(--track);overflow:hidden}
 .cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}
 .note{margin-top:18px;font-size:15px;color:#92400e;background:rgba(180,83,9,.10);border:1px solid rgba(180,83,9,.30);border-left:4px solid var(--warn);border-radius:12px;padding:13px 15px}
+/* Collapse the readiness phase-chip and abstain-note when empty so they don't
+   render as stray empty rounded boxes (they only carry text on error/abstain). */
+.chip:empty,.note:empty{display:none !important}
 textarea{width:100%;min-height:120px;background:var(--track);color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:14px;font-size:16px;font-family:inherit;margin-top:12px}
 input{width:100%;background:var(--track);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:16px;margin-top:10px}
 label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
@@ -223,8 +226,8 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     <div class="grid2">
       <div class="scard"><div class="lab">Memory</div><div class="val" id="s-mem">–</div><span class="pill" id="p-mem"></span><div class="srange" id="r-mem"></div><div class="sreason" id="e-mem"></div><div class="supd" id="u-mem"></div></div>
       <div class="scard"><div class="lab">Performance</div><div class="val" id="s-perf">–</div><span class="pill" id="p-perf"></span><div class="srange" id="r-perf"></div><div class="sreason" id="e-perf"></div><div class="supd" id="u-perf"></div></div>
-      <div class="scard"><div class="lab">Pass Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span><div class="srange" id="r-1"></div><div class="sreason" id="e-1"></div><div class="supd" id="u-1"></div></div>
-      <div class="scard"><div class="lab">Pass Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span><div class="srange" id="r-2"></div><div class="sreason" id="e-2"></div><div class="supd" id="u-2"></div></div>
+      <div class="scard"><div class="lab">Predicted Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span><div class="srange" id="r-1"></div><div class="sreason" id="e-1"></div><div class="supd" id="u-1"></div></div>
+      <div class="scard"><div class="lab">Predicted Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span><div class="srange" id="r-2"></div><div class="sreason" id="e-2"></div><div class="supd" id="u-2"></div></div>
     </div>
     <div class="covhead"><b>CONCEPT COVERAGE</b><span id="cov-txt"></span></div>
     <div class="cov"><i id="cov-bar" style="width:0%"></i></div>

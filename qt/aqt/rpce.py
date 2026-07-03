@@ -485,7 +485,7 @@ def _banner_html(col) -> str:
                 updated=_upd,
             ),
             _score_card(
-                "Pass Section I",
+                "Predicted Section I",
                 section_value(sec1),
                 sec1.confidence,
                 None if sec1.abstained else sec1.p_pass,
@@ -494,7 +494,7 @@ def _banner_html(col) -> str:
                 updated=_upd,
             ),
             _score_card(
-                "Pass Section II",
+                "Predicted Section II",
                 section_value(sec2),
                 sec2.confidence,
                 None if sec2.abstained else sec2.p_pass,
@@ -1873,6 +1873,7 @@ def _on_profile_open() -> None:
     mw.setWindowTitle(APP_TITLE)
     _apply_app_icon()
     _apply_light_theme()
+    _start_sync_timer()  # periodic background sync + live "synced N ago" label
     # This is a rebranded fork pointed at its own sync host, so Anki's background
     # update check just hits AnkiWeb and logs "update check failed". We already
     # hide the manual "check for updates" UI; disable the automatic one too.
@@ -2824,6 +2825,51 @@ def _suppress_next_card_at_session_end() -> None:
         _orig_next_card(self)
 
     Reviewer.nextCard = _next_card
+
+
+_SYNC_TIMER = None
+#: Background auto-sync cadence. The timer ticks every 30s (to keep the "synced N
+#: ago" label current); an actual sync runs at most this often.
+_AUTO_SYNC_SECS = 300
+
+
+def _on_sync_tick() -> None:
+    """Keep the relative last-synced label fresh, and run a background sync every
+    _AUTO_SYNC_SECS — like the phone — so the user never has to press Sync."""
+    mw = aqt.mw
+    if mw is None or mw.col is None:
+        return
+    _redraw_toolbar()  # refresh "Synced · N ago"
+    if _syncing:
+        return
+    try:
+        signed_in = bool(mw.pm.sync_auth())
+    except Exception:
+        signed_in = False
+    if not signed_in or _is_offline():
+        return
+    import time
+
+    try:
+        last = int(mw.col.get_config("rpce:last_sync", 0) or 0)
+    except Exception:
+        last = 0
+    if int(time.time()) - last < _AUTO_SYNC_SECS:
+        return
+    _trigger_sync()
+
+
+def _start_sync_timer() -> None:
+    """Start the once-per-process periodic sync + label-refresh timer (idempotent)."""
+    global _SYNC_TIMER
+    if _SYNC_TIMER is not None or aqt.mw is None:
+        return
+    from aqt.qt import QTimer
+
+    _SYNC_TIMER = QTimer(aqt.mw)
+    _SYNC_TIMER.setInterval(30_000)  # 30s keeps the relative label current
+    qconnect(_SYNC_TIMER.timeout, _on_sync_tick)
+    _SYNC_TIMER.start()
 
 
 def setup() -> None:
