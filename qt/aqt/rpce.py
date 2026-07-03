@@ -735,7 +735,7 @@ def _s2_grade(answer_b64: str) -> None:
             "<div style='margin-top:16px;padding:16px 18px;background:var(--surface2);"
             "border:1px solid var(--border);border-radius:16px;text-align:left'>"
             "<div style='font-size:20px;font-weight:800;color:var(--ink)'>"
-            f"Score: {result.score:.1f}/5 "
+            f"Score: {result.score:.1f}/5.0 "
             f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span></div>"
             f"<div style='margin-top:8px;color:var(--ink)'>{result.feedback}</div>"
             + kw_html
@@ -952,7 +952,10 @@ function rpceRespondSim(){
   var v = document.getElementById('simans').value;
   document.getElementById('simfb').innerHTML =
     '<div style="color:#1d4ed8;font-weight:700;margin-top:14px">🤖 Grading your response…</div>';
-  pycmd('rpce:simrespond:' + btoa(unescape(encodeURIComponent(v))));
+  // Pass the current scroll position so the re-rendered page can restore it
+  // (don't jump back to the top on Respond).
+  var y = Math.round(window.scrollY || document.documentElement.scrollTop || 0);
+  pycmd('rpce:simrespond:' + y + ':' + btoa(unescape(encodeURIComponent(v))));
 }
 </script>"""
 
@@ -993,9 +996,16 @@ def _sim_play() -> None:
 
 
 def _sim_reset() -> None:
-    """Start the first meeting fresh and play to the first decision point."""
+    """Start a RANDOM meeting fresh and play to the first decision point (so you
+    don't always get the same simulation on entering Simulate)."""
     global _SIM
-    _SIM = {"sim_idx": 0, "turn": 0, "pending": None, "log": [], "done": False}
+    import random
+
+    from anki.rpce import simulations
+
+    n = len(simulations.all_simulations())
+    idx = random.randrange(n) if n else 0
+    _SIM = {"sim_idx": idx, "turn": 0, "pending": None, "log": [], "done": False}
     _sim_play()
 
 
@@ -1092,13 +1102,22 @@ def _simulate_html(col) -> str:
   {controls}
   {ai_html}
 </div></div>
+<script>
+  // Restore the scroll position captured on Respond, so the page doesn't jump
+  // back to the top when the meeting re-renders. Fresh loads have scroll_y=0.
+  (function(){{ var y={int(_SIM.get("scroll_y", 0)) if _SIM else 0};
+    if(y>0) window.scrollTo(0, y); }})();
+</script>
 """
 
 
-def _sim_respond(answer_b64: str) -> None:
+def _sim_respond(payload: str) -> None:
     """Grade the parliamentarian's response OFF the main thread (spinner shown in
     JS), append the debrief to the transcript, advance the meeting, and re-render
-    the page. Faithful to ``SimulationDialog._respond``'s auto-advance flow."""
+    the page. Faithful to ``SimulationDialog._respond``'s auto-advance flow.
+
+    ``payload`` is ``"<scrollY>:<base64 answer>"`` — the scroll offset is stashed
+    so the re-rendered page can restore it (don't jump to the top on Respond)."""
     from anki.rpce import examiner, scores
 
     mw = aqt.mw
@@ -1107,6 +1126,11 @@ def _sim_respond(answer_b64: str) -> None:
     pending = _SIM.get("pending")
     if pending is None:
         return
+    scroll_str, _, answer_b64 = payload.partition(":")
+    try:
+        _SIM["scroll_y"] = int(scroll_str)
+    except (ValueError, TypeError):
+        _SIM["scroll_y"] = 0
     try:
         answer = base64.b64decode(answer_b64).decode("utf-8").strip()
     except Exception:
@@ -1161,7 +1185,7 @@ def _sim_respond(answer_b64: str) -> None:
             "<div style='margin:12px 0;padding:14px 16px;background:var(--surface);"
             "border:1px solid var(--border);border-radius:14px'>"
             "<div style='font-weight:800;color:var(--ink)'>"
-            f"Examiner: {result.score:.1f}/5 ({verdict})</div>"
+            f"Examiner: {result.score:.1f}/5.0 ({verdict})</div>"
             f"<div style='margin-top:6px;color:var(--ink)'>{result.feedback}</div>"
             + (_examiner_badge(used) if used else "")
             + f"<div style='margin-top:8px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
@@ -1282,15 +1306,19 @@ def _sim_continue_ai(last_ruling: str) -> None:
 
 
 def _sim_next() -> None:
-    """Move on to the next meeting and re-render (like ``_next_sim``)."""
+    """Move on to a RANDOM different meeting and re-render."""
     global _SIM
+    import random
+
     from anki.rpce import simulations
 
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
     sims = simulations.all_simulations()
-    idx = ((_SIM["sim_idx"] if _SIM else 0) + 1) % len(sims)
+    cur = _SIM["sim_idx"] if _SIM else 0
+    others = [i for i in range(len(sims)) if i != cur]
+    idx = random.choice(others) if others else 0
     _SIM = {"sim_idx": idx, "turn": 0, "pending": None, "log": [], "done": False}
     _sim_play()
     mw.moveToState("deckBrowser")

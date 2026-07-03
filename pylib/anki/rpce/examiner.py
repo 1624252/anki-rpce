@@ -475,10 +475,14 @@ def grade_sim_step(
     passed = not missing  # every key concept covered
     parts = []
     if got:
-        parts.append("✓ You covered: " + ", ".join(f"<b>{g}</b>" for g in got) + ".")
+        parts.append(
+            "<span style='color:#15803d;font-weight:700'>✓ You covered: "
+            + ", ".join(f"<b>{g}</b>" for g in got)
+            + ".</span>"
+        )
     if missing:
         parts.append(
-            "<span style='color:#be123c'>Still needed: "
+            "<span style='color:#be123c;font-weight:700'>✗ Still needed: "
             + ", ".join(f"<b>{m}</b>" for m in missing)
             + ".</span>"
         )
