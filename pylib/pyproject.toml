@@ -34,6 +34,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["anki"]
+# Force-include the (git-ignored) obfuscated bundled OpenAI key when it has been
+# injected by pylib/tools/rpce_embed_key.py before packaging, so the shipping MSI
+# grades with AI out of the box. Absent in normal dev builds (per-user key then).
+artifacts = ["anki/rpce/_bundled_key"]
 
 [tool.hatch.version]
 source = "code"
