@@ -42,11 +42,15 @@ DEFAULT_COUNT = 0  # 0 = full coverage (2-5 questions from every corpus paragrap
 # in docs/rpce/QUESTION_RULES.md). Produced by rpce_author_workflow.js and
 # quality-gated by solving each cold. When present it REPLACES the retired
 # template generator; the generator stays only as an offline fallback.
-AUTHORED_JSON = Path(__file__).resolve().parents[2] / "data" / "rpce_authored_questions.json"
+AUTHORED_JSON = (
+    Path(__file__).resolve().parents[2] / "data" / "rpce_authored_questions.json"
+)
 # Objective ordering/multiselect questions generated from the canonical motion
 # knowledge (rpce_gen_precedence.py) — merged in so the round-robin shows every
 # type, not just MCQ/cloze.
-PRECEDENCE_JSON = Path(__file__).resolve().parents[2] / "data" / "rpce_precedence_questions.json"
+PRECEDENCE_JSON = (
+    Path(__file__).resolve().parents[2] / "data" / "rpce_precedence_questions.json"
+)
 
 
 def _cloze_blanks(q: dict) -> list[dict]:
@@ -64,17 +68,39 @@ def _authored_payload(q: dict) -> tuple[dict, str, str]:
     cite, quote = q.get("cite", ""), q.get("quote", "")
     kind = q["kind"]
     if kind == "mcq":
-        payload = {"kind": "mcq", "stem": q["stem"], "options": list(q["options"]),
-                   "answer": int(q["answer"]), "cite": cite, "quote": quote}
+        payload = {
+            "kind": "mcq",
+            "stem": q["stem"],
+            "options": list(q["options"]),
+            "answer": int(q["answer"]),
+            "cite": cite,
+            "quote": quote,
+        }
     elif kind == "order":
-        payload = {"kind": "order", "prompt": q["prompt"], "order": list(q["order"]),
-                   "cite": cite, "quote": quote}
+        payload = {
+            "kind": "order",
+            "prompt": q["prompt"],
+            "order": list(q["order"]),
+            "cite": cite,
+            "quote": quote,
+        }
     elif kind == "multi":
-        payload = {"kind": "multi", "stem": q["stem"], "options": list(q["options"]),
-                   "correct": list(q["correct"]), "cite": cite, "quote": quote}
+        payload = {
+            "kind": "multi",
+            "stem": q["stem"],
+            "options": list(q["options"]),
+            "correct": list(q["correct"]),
+            "cite": cite,
+            "quote": quote,
+        }
     else:  # cloze
-        payload = {"kind": "cloze", "text": q["text"], "blanks": _cloze_blanks(q),
-                   "cite": cite, "quote": quote}
+        payload = {
+            "kind": "cloze",
+            "text": q["text"],
+            "blanks": _cloze_blanks(q),
+            "cite": cite,
+            "quote": quote,
+        }
     return payload, q["plainQ"], q["plainA"]
 
 
@@ -89,7 +115,9 @@ def add_authored_questions(col: Collection, deck_id: int) -> int:
     """Load the authored bank + generated precedence set and add each as a note.
     Round-robin by kind so a session mixes ALL types roughly equally instead of
     clustering (positions come from add-order on import)."""
-    questions = _load(AUTHORED_JSON) + _load(PRECEDENCE_JSON)
+    # Ship ONLY the authored performance-expectation bank; the legacy precedence
+    # generator (PRECEDENCE_JSON) carried non-PE concept tags and is dropped.
+    questions = _load(AUTHORED_JSON)
     groups: dict[str, list[dict]] = {}
     for q in questions:
         groups.setdefault(q["kind"], []).append(q)
@@ -147,22 +175,10 @@ def write_web_assets(assets_dir: Path) -> None:
     (assets_dir / "reference.json").write_text(
         json.dumps(knowledge.reference_tables(), indent=1), encoding="utf-8"
     )
-    # Section II scenarios for the phone (mirrors anki.rpce.scenarios: the curated
-    # set + the authored sample-style bank), in the shape app.html expects.
-    from anki.rpce import scenarios as _scen
-
-    scen_json = [
-        {
-            "domain": s.domain_code,
-            "prompt": s.prompt,
-            "gold": s.gold_answer,
-            "ref": {"section": s.ref.section, "quote": s.ref.quote},
-        }
-        for s in _scen.all_scenarios()
-    ]
-    (assets_dir / "scenarios.json").write_text(
-        json.dumps(scen_json, ensure_ascii=False, indent=1), encoding="utf-8"
-    )
+    # NOTE: scenarios.json / simulations.json / concepts.json are written by
+    # rpce_export_assets.py (the authoritative source, with concept ids + grading
+    # keywords + concept names). This tool no longer writes a minimal scenarios.json
+    # here, which previously clobbered the richer file on re-export.
 
 
 def main(out_path: str, count: int) -> None:
@@ -171,9 +187,12 @@ def main(out_path: str, count: int) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         col = Collection(str(Path(tmp) / "starter.anki2"))
         try:
-            # Precedence questions come from PRECEDENCE_JSON via the loader
-            # (round-robined with the authored bank), so don't front-load them.
-            deck_id = build_starter_deck(col, fallback_precedence=False)
+            # Ship ONLY the authored PE-concept bank: no fallback precedence
+            # questions and no curated legacy flashcards (both carried non-PE
+            # concept tags), so every shipped card maps to a 210-blueprint concept.
+            deck_id = build_starter_deck(
+                col, fallback_precedence=False, include_flashcards=False
+            )
             n = add_generated_questions(col, deck_id, count)
             total = len(col.find_cards('deck:"RPCE"'))
             col._backend.export_anki_package(

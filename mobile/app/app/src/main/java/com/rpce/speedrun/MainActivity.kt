@@ -128,6 +128,84 @@ class MainActivity : AppCompatActivity() {
         fun concepts(): String =
             assets.open("concepts.json").bufferedReader().use { it.readText() }
 
+        /** The obfuscated bundled OpenAI key blob (git-ignored asset, injected at
+         *  build time), or "" if none was embedded. De-obfuscated in JS to decide
+         *  whether AI is available. This is obfuscation, not security — see
+         *  anki.rpce._keybundle. */
+        @JavascriptInterface
+        fun aiKeyBlob(): String =
+            try {
+                assets.open("rpce_key").bufferedReader().use { it.readText().trim() }
+            } catch (e: Exception) {
+                ""
+            }
+
+        /** Grade a Section II answer via the OpenAI chat API on a background
+         *  thread (a WebView fetch is CORS-blocked from file://), then hand the
+         *  raw response back to JS via window.__aiGradeDone. Any failure yields an
+         *  {"error":...} payload so JS falls back to offline keyword grading. */
+        @JavascriptInterface
+        fun aiGrade(system: String, user: String) {
+            val key = bundledOpenAiKey()
+            if (key.isEmpty()) {
+                deliverAiResult("{\"error\":\"no key\"}")
+                return
+            }
+            thread {
+                val result = try {
+                    val body = org.json.JSONObject()
+                        .put("model", "gpt-4o-mini")
+                        .put("temperature", 0)
+                        .put(
+                            "messages",
+                            org.json.JSONArray()
+                                .put(org.json.JSONObject().put("role", "system").put("content", system))
+                                .put(org.json.JSONObject().put("role", "user").put("content", user)),
+                        ).toString()
+                    val conn = java.net.URL("https://api.openai.com/v1/chat/completions")
+                        .openConnection() as java.net.HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.connectTimeout = 20000
+                    conn.readTimeout = 20000
+                    conn.doOutput = true
+                    conn.setRequestProperty("Authorization", "Bearer $key")
+                    conn.setRequestProperty("Content-Type", "application/json")
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+                    stream.bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    "{\"error\":\"${e.message?.replace("\"", "'")}\"}"
+                }
+                deliverAiResult(result)
+            }
+        }
+
+        private fun deliverAiResult(raw: String) {
+            runOnUiThread {
+                web.evaluateJavascript(
+                    "window.__aiGradeDone && window.__aiGradeDone(${org.json.JSONObject.quote(raw)})",
+                    null,
+                )
+            }
+        }
+
+        /** De-obfuscate the bundled key blob (mirrors anki.rpce._keybundle). */
+        private fun bundledOpenAiKey(): String {
+            val blob = aiKeyBlob()
+            if (blob.isEmpty()) return ""
+            return try {
+                val raw = android.util.Base64.decode(blob, android.util.Base64.DEFAULT)
+                val pad = "rpce-speedrun::obfuscation-pad::not-a-security-boundary::v1"
+                    .toByteArray(Charsets.UTF_8)
+                String(
+                    ByteArray(raw.size) { i -> (raw[i].toInt() xor pad[i % pad.size].toInt()).toByte() },
+                    Charsets.UTF_8,
+                )
+            } catch (e: Exception) {
+                ""
+            }
+        }
+
         /** Real device connectivity (navigator.onLine is unreliable in a WebView).
          *  Checks ANY network for INTERNET capability, not just the active default:
          *  on the emulator the default network can lack the INTERNET flag while

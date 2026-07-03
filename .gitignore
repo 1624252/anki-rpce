@@ -36,3 +36,7 @@ docs/autoapi/
 openai_key
 *.openai_key
 .rpce_openai_key
+
+# RPCE bundled OpenAI key (obfuscated, injected at build time — NEVER commit)
+pylib/anki/rpce/_bundled_key
+mobile/app/app/src/main/assets/rpce_key

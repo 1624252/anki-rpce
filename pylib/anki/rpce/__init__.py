@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "18"
+RPCE_DECK_VERSION = "19"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"
@@ -428,7 +428,13 @@ def _precedence_notes(col: Collection, deck_id: int) -> None:
     order_q(ranked[5:10], 2)  # a subsidiary window
     multi_q(
         "Postpone to a Certain Time",
-        ["Amend", "Recess", "Commit or Refer", "Previous Question", "Postpone Indefinitely"],
+        [
+            "Amend",
+            "Recess",
+            "Commit or Refer",
+            "Previous Question",
+            "Postpone Indefinitely",
+        ],
         "higher",
         1,
     )
@@ -441,7 +447,10 @@ def _precedence_notes(col: Collection, deck_id: int) -> None:
 
 
 def build_starter_deck(
-    col: Collection, name: str = "RPCE", fallback_precedence: bool = True
+    col: Collection,
+    name: str = "RPCE",
+    fallback_precedence: bool = True,
+    include_flashcards: bool = True,
 ) -> int:
     """Build the offline starter deck. Each curated concept becomes ONE note with
     sibling cards (a cloze recall card + an applied-MCQ card, plus second/
@@ -470,7 +479,7 @@ def build_starter_deck(
             col.decks.set_config_id_for_deck_dict(deck, cid)
             col.decks.save(deck)
         conf = col.decks.get_config(cid) or col.decks.config_dict_for_deck_id(deck_id)
-        conf["new"]["perDay"] = 9999   # no daily new-card cap (drill freely)
+        conf["new"]["perDay"] = 9999  # no daily new-card cap (drill freely)
         conf["rev"]["perDay"] = 9999
         # NO_SORT keeps the add-order the exporter lays out round-robin by type
         # (a uniform RANDOM_CARD order over-showed MCQs); sync-stable positions.
@@ -481,7 +490,11 @@ def build_starter_deck(
     _concept_notetype(col)
     _question_notetype(col)
 
-    for card in flashcards.all_flashcards():
+    # The curated legacy flashcards (numeric-id concept cards + precedence
+    # characteristics) predate the 210 performance-expectation concept bank; the
+    # shipping deck omits them (include_flashcards=False) so every card maps to a
+    # PE concept. Kept on for the offline fallback + tests.
+    for card in flashcards.all_flashcards() if include_flashcards else []:
         text, blanks = cloze_to_payload_text(card.cloze)
         cid = str(card.concept_id)
         cite, quote = card.ref.section, card.ref.quote
