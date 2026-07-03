@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from anki.rpce import scenarios, simulations
+from anki.rpce import concepts, scenarios, simulations
 
 
 def _ref(ref) -> dict | None:
@@ -29,12 +29,22 @@ def _ref(ref) -> dict | None:
     return {"section": ref.section, "quote": ref.quote}
 
 
+def _concept_name(cid: str) -> str:
+    if not cid:
+        return ""
+    c = concepts.concept_by_id(cid)
+    return c.name if c else ""
+
+
 def _scenarios_json() -> list[dict]:
     return [
         {
             "domain": s.domain_code,
+            "concept": s.concept,
+            "conceptName": _concept_name(s.concept),
             "prompt": s.prompt,
             "gold": s.gold_answer,
+            "keywords": list(s.keywords),
             "ref": _ref(s.ref),
         }
         for s in scenarios.all_scenarios()

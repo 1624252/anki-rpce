@@ -396,7 +396,6 @@ def _banner_html(col) -> str:
 
     total = len(_concepts.all_concepts())
     pct = scores.concept_coverage_pct(col)
-    covered = round(pct * total)
     cal = scores.memory_calibration(col)
     cal_line = (
         f"Memory calibration: <b>Brier {cal['brier']:.3f}</b> · log-loss "
@@ -620,10 +619,30 @@ def _section2_html(col) -> str:
     """Section II performance practice as an IN-WINDOW page (mirrors the
     dashboard): domain label, prompt, answer box, Submit (async graded), a
     feedback slot, Next scenario, and a Home link."""
-    from anki.rpce import domain_by_code
+    from anki.rpce import ai, concepts, domain_by_code
 
     s, i, total = _s2_scenario()
     d = domain_by_code(s.domain_code)
+    # Concept label (mirrors Review + the dashboard: everything is by concept).
+    concept_txt = ""
+    if s.concept:
+        c = concepts.concept_by_id(s.concept)
+        concept_txt = f" · Concept {s.concept}" + (f": {c.name}" if c else "")
+    # AI-grading toggle — only when a key is configured (offline always works).
+    ai_toggle = ""
+    if ai.ai_configured():
+        on = ai.ai_enabled()
+        ai_toggle = (
+            "<div style='margin-top:10px;text-align:left'>"
+            "<button onclick=\"pycmd('rpce:aitoggle');return false;\" "
+            "style='background:var(--surface);border:1px solid var(--border);"
+            "border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;"
+            f"color:{'var(--ready)' if on else 'var(--ink2)'}'>"
+            f"{'🤖 AI grading: ON' if on else '🔌 AI grading: OFF'}</button>"
+            "<span style='color:var(--ink2);margin-left:10px;font-size:var(--fs-small)'>"
+            "AI addresses your answer &amp; cites RONR; offline keyword grading otherwise.</span>"
+            "</div>"
+        )
     return f"""{_theme_style()}{_S2_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
   <div style="text-align:left;margin-bottom:8px">
@@ -631,7 +650,8 @@ def _section2_html(col) -> str:
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
   </div>
   <div class="rpce-h1">Section II <small>performance scenario</small></div>
-  <div class="rpce-sub">Domain {d.code}: {d.name} · scenario {i + 1} of {total}</div>
+  <div class="rpce-sub">Domain {d.code}: {d.name}{concept_txt} · scenario {i + 1} of {total}</div>
+  {ai_toggle}
   <div style="margin-top:22px;padding:18px 20px;background:var(--surface2);
     border:1px solid var(--border);border-radius:16px;font-size:var(--fs-lead);
     line-height:1.5;text-align:left">{s.prompt}</div>
@@ -698,15 +718,17 @@ def _s2_grade(answer_b64: str) -> None:
     gold = s.gold_answer
 
     def op():
-        # Section II is graded by the deterministic offline keyword/rubric grader
-        # ONLY — no AI grading here (per product decision).
-        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
-        return result, "offline"
+        # AutoExaminer uses the online AI grader when a key is configured AND AI
+        # mode is toggled on (feeding it the keywords + RONR citation), and always
+        # falls back to the deterministic offline keyword/rubric grader otherwise.
+        ex = examiner.AutoExaminer()
+        result = ex.grade(answer, gold, corpus, rubric)
+        return result, ex.used
 
     def on_done(future) -> None:
         # Runs back on the main thread.
         try:
-            result, _used = future.result()
+            result, used = future.result()
         except Exception as exc:
             _s2_inject(
                 "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
@@ -735,12 +757,21 @@ def _s2_grade(answer_b64: str) -> None:
                 "Still missing: " + ", ".join(missing) + "</div>"
             )
         verdict = "pass" if result.passed else "keep practicing"
+        badge = (
+            "<span style='margin-left:10px;font-size:var(--fs-small);font-weight:700;"
+            + (
+                "color:var(--ready)'>🤖 AI examiner"
+                if used == "ai"
+                else "color:var(--ink2)'>🔌 Offline examiner"
+            )
+            + "</span>"
+        )
         html = (
             "<div style='margin-top:16px;padding:16px 18px;background:var(--surface2);"
             "border:1px solid var(--border);border-radius:16px;text-align:left'>"
             "<div style='font-size:20px;font-weight:800;color:var(--ink)'>"
             f"Score: {result.score:.1f}/5.0 "
-            f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span></div>"
+            f"<span style='color:var(--ink2);font-weight:600'>({verdict})</span>{badge}</div>"
             f"<div style='margin-top:8px;color:var(--ink)'>{result.feedback}</div>"
             + kw_html
             + f"<div style='margin-top:10px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
@@ -1608,8 +1639,8 @@ def _brand_main_window() -> None:
         print(f"RPCE window-size error: {exc}")
     # Tools ▸ RPCE actions: session length + AnkiWeb logout.
     try:
-        from aqt.qt import QAction
         from anki.rpce import ai
+        from aqt.qt import QAction
 
         act = QAction("Review session length…", mw)
         qconnect(act.triggered, _set_session_length)
@@ -2081,9 +2112,9 @@ def _set_ai_key() -> None:
     (~/.rpce/openai_key) — NEVER in the collection (which syncs) or the repo, so
     the secret can't leak. Blank clears it; the app then uses the offline
     examiner. Enables the online AI examiner for Section II + simulations."""
+    from anki.rpce import ai
     from aqt.qt import QInputDialog, QLineEdit
     from aqt.utils import tooltip
-    from anki.rpce import ai
 
     mw = aqt.mw
     if mw is None:
@@ -2111,8 +2142,8 @@ def _set_ai_key() -> None:
 def _toggle_ai_examiner(checked: bool) -> None:
     """Turn online AI grading on/off (works even when online). The offline
     examiner is the fallback either way; only meaningful when a key is set."""
-    from aqt.utils import tooltip
     from anki.rpce import ai
+    from aqt.utils import tooltip
 
     ai.set_ai_enabled(checked)
     tooltip(
