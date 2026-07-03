@@ -13,8 +13,9 @@ Modeling notes (transparent bridges, not black boxes):
   Laplace-smoothed ``(reps - lapses + 1) / (reps + 2)``. This is a transparent
   proxy; the upgrade path is FSRS-calibrated retrievability with a Brier/log-loss
   check on held-out reviews (spec §9 Step 1).
-- **Performance** = exam-weighted mean of per-domain recall (spec §9 Step 2);
-  it incorporates coverage by weighting unseen domains as 0.
+- **Performance** = concept-weighted projection of first-attempt correctness
+  (getting a NEW question right) across all 210 concepts, un-practised = 0
+  (spec §9 Step 2); it generalises Memory to fresh exam questions.
 - **Readiness** = P(pass a section ≥ 80%), a logistic mapping of performance
   around the 0.8 bar — never an invented scaled score (RPCE is pass/section).
 
@@ -554,11 +555,11 @@ def readiness(
             f"({reviews}/{rule.min_graded_reviews})"
         )
     if cov < rule.min_coverage:
-        missing.append(f"concept coverage {cov:.0%} of {rule.min_coverage:.0%} needed")
+        missing.append(f"concept coverage {cov:.0%} of {rule.min_coverage:.0%} needed.")
     if needs_scenarios and scenarios < rule.min_scenarios:
         missing.append(
             f"{rule.min_scenarios - scenarios} more graded scenarios needed "
-            f"({scenarios}/{rule.min_scenarios})"
+            f"({scenarios}/{rule.min_scenarios})."
         )
 
     if missing:
