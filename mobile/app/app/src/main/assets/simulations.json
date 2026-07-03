@@ -1,554 +1,5 @@
 [
   {
-    "id": 1,
-    "domain": 1,
-    "title": "New business at the Lakeside Association",
-    "setting": "You are the parliamentarian at the monthly meeting of the Lakeside Community Association. The chair turns to new business.",
-    "turns": [
-      {
-        "speaker": "Chair",
-        "line": "We'll now move to new business."
-      },
-      {
-        "speaker": "Member (Ramos)",
-        "line": "I move that the Association spend $500 on new signage."
-      },
-      {
-        "speaker": "Chair",
-        "line": "(turning to you) Before I do anything, what needs to happen with this motion?",
-        "prompt": "Advise the chair: what must happen before this main motion is debated?",
-        "gold": "A main motion requires a second before it is considered. The chair should call for a second; if seconded, the chair states the question and opens it to debate.",
-        "concept": "",
-        "ref": {
-          "section": "44:1",
-          "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
-        },
-        "expected": [
-          [
-            "second"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Chen)",
-        "line": "Second!"
-      },
-      {
-        "speaker": "Chair",
-        "line": "It is moved and seconded to spend $500 on new signage. Is there any debate?"
-      },
-      {
-        "speaker": "Member (Park)",
-        "line": "I move to amend by striking out '$500' and inserting '$750'.",
-        "prompt": "Advise the chair: how is this amendment handled, and what vote does it need?",
-        "gold": "The amendment needs a second and must be germane to the motion. It is debatable and is adopted by a majority vote — even though the main motion might require a different threshold, an amendment needs only a majority.",
-        "concept": "",
-        "ref": {
-          "section": "5:8",
-          "quote": "A secondary motion thus takes precedence over the main motion; and a main motion takes precedence over nothing and yields to all applicable secondary motions."
-        },
-        "expected": [
-          [
-            "majority"
-          ],
-          [
-            "second",
-            "germane"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Chen)",
-        "line": "Second the amendment!"
-      },
-      {
-        "speaker": "Chair",
-        "line": "The amendment carries. The motion now reads 'spend $750 on new signage.' Further debate?"
-      },
-      {
-        "speaker": "Member (Ramos)",
-        "line": "We've heard enough — I move the previous question!",
-        "prompt": "Advise the chair: how is the motion for the Previous Question handled?",
-        "gold": "The Previous Question needs a second, is not debatable, and requires a two-thirds vote to adopt. If it passes, debate ends immediately and the assembly votes on the pending motion.",
-        "concept": "",
-        "ref": {
-          "section": "16:1",
-          "quote": "The Previous Question is the motion used to bring the assembly to an immediate vote on one or more pending questions; its adoption does this with certain exceptions."
-        },
-        "expected": [
-          [
-            "two-thirds",
-            "2/3",
-            "two thirds"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Chen)",
-        "line": "Second!"
-      },
-      {
-        "speaker": "Chair",
-        "line": "The previous question is adopted by more than two-thirds; debate is closed. (to you) What vote is now needed to adopt the main motion itself?",
-        "prompt": "Advise the chair: what vote adopts this main motion?",
-        "gold": "A main motion is adopted by a majority vote unless a special rule or the bylaws require more. Here a majority of the votes cast decides it.",
-        "concept": "",
-        "ref": {
-          "section": "44:1",
-          "quote": "The basic requirement for approval of an action or choice by a deliberative assembly, except where a rule provides otherwise, is a majority vote."
-        },
-        "expected": [
-          [
-            "majority"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The motion is adopted. Thank you, parliamentarian."
-      }
-    ]
-  },
-  {
-    "id": 2,
-    "domain": 4,
-    "title": "A thin house at the Booster Club",
-    "setting": "The Booster Club meeting is scheduled to start, but only a few members are present. A member is eager to get going.",
-    "turns": [
-      {
-        "speaker": "Member (Doyle)",
-        "line": "There aren't many of us, but let's just start adopting motions.",
-        "prompt": "Advise the chair: what must be confirmed before the assembly transacts business?",
-        "gold": "Business cannot be transacted without a quorum present. The chair must confirm that a quorum, as defined by the bylaws, is present before the assembly takes any substantive action.",
-        "concept": "",
-        "ref": {
-          "section": "40:1",
-          "quote": "A quorum in an assembly is the number of members … who must be present in order that business can be validly transacted."
-        },
-        "expected": [
-          [
-            "quorum"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "Thank you. Members have arrived and we now have a quorum. Proceed."
-      },
-      {
-        "speaker": "Member (Ito)",
-        "line": "Point of order! I don't think the last speaker was recognized.",
-        "prompt": "Advise the chair: how is a Point of Order handled?",
-        "gold": "A Point of Order needs no second, is not debatable, and is raised at the time of the breach. The chair rules on the point; the chair's ruling may be challenged by an Appeal.",
-        "concept": "",
-        "ref": {
-          "section": "23:1",
-          "quote": "When a member thinks that the rules of the assembly are being violated, he can make a Point of Order (or \"raise a question of order,\" as it is sometimes expressed), thereby calling upon the chair for a ruling and an enforcement of the regular rules."
-        },
-        "expected": [
-          [
-            "rule",
-            "rules",
-            "ruling",
-            "decide",
-            "decides"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "(quietly, to you) I'm inclined to rule the point well taken — but should I make this ruling, or should you as the parliamentarian?",
-        "prompt": "Advise: who rules on the point — you or the chair?",
-        "gold": "The chair rules, not the parliamentarian. The parliamentarian only advises the chair (usually privately); the chair then states the ruling to the assembly.",
-        "concept": "",
-        "ref": {
-          "section": "47:46",
-          "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
-        },
-        "expected": [
-          [
-            "chair",
-            "advis"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "Understood. I rule the point well taken."
-      }
-    ]
-  },
-  {
-    "id": 3,
-    "domain": 5,
-    "title": "A close election at the Arts Guild",
-    "setting": "The Arts Guild is electing its president. The bylaws require a ballot vote but are silent on the threshold. Three candidates are running.",
-    "turns": [
-      {
-        "speaker": "Teller",
-        "line": "First ballot: Alvarez 40, Brooks 35, Cho 20. Alvarez has the most votes."
-      },
-      {
-        "speaker": "Chair",
-        "line": "(to you) Alvarez has a plurality. Can I declare Alvarez elected?",
-        "prompt": "Advise the chair: is a plurality enough to elect here?",
-        "gold": "No. Unless the bylaws provide otherwise, election requires a majority — more than half of the votes cast. A plurality does not elect.",
-        "concept": "",
-        "ref": {
-          "section": "44:11",
-          "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
-        },
-        "expected": [
-          [
-            "no",
-            "not",
-            "cannot",
-            "does not elect",
-            "not elected"
-          ],
-          [
-            "majority"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "We balloted again: Alvarez 48, Brooks 42, Cho 5 — still no one over half. (to you) What do we do now?",
-        "prompt": "Advise the chair: what happens when no candidate has a majority?",
-        "gold": "Balloting is simply repeated until one candidate receives a majority. Candidates are not dropped unless the bylaws so provide, and members may change their votes on each ballot.",
-        "concept": "",
-        "ref": {
-          "section": "44:11",
-          "quote": "A plurality vote is the largest number of votes to be given any candidate or proposition when three or more choices are possible; the candidate or proposition receiving the largest number of votes has a plurality."
-        },
-        "expected": [
-          [
-            "repeat",
-            "again",
-            "another ballot",
-            "re-ballot",
-            "revote"
-          ],
-          [
-            "majority"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "Third ballot: Alvarez has 51 of 95 votes — a majority. Alvarez is elected."
-      }
-    ]
-  },
-  {
-    "id": 4,
-    "domain": 7,
-    "title": "A dues increase at the Historical Society",
-    "setting": "You are the parliamentarian at the Historical Society. A bylaw amendment to raise annual dues from $50 to $75 was submitted in writing at last month's regular meeting, and is now up for consideration.",
-    "turns": [
-      {
-        "speaker": "Chair",
-        "line": "Next: the bylaw amendment to raise dues from $50 to $75, noticed last month."
-      },
-      {
-        "speaker": "Member (Vance)",
-        "line": "Let's just pass it with a simple majority and move on.",
-        "prompt": "Advise the chair: what vote does adopting this bylaw amendment require?",
-        "gold": "Amending the bylaws takes a two-thirds vote, and it is in order now only because previous notice was given at the last regular meeting. A simple majority is not sufficient.",
-        "concept": "",
-        "ref": {
-          "section": "56:67",
-          "quote": "These bylaws may be amended at any regular meeting of the Society by a two-thirds vote, provided that the amendment has been submitted in writing at the previous regular meeting."
-        },
-        "expected": [
-          [
-            "two-thirds",
-            "2/3",
-            "two thirds"
-          ],
-          [
-            "notice",
-            "previous notice",
-            "noticed"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Ruiz)",
-        "line": "I move to amend the amendment — make the new dues $150 instead of $75.",
-        "prompt": "Advise the chair: is amending the figure up to $150 in order?",
-        "gold": "No. An amendment to a bylaw amendment cannot exceed the scope of the notice. Members were noticed of an increase to $75, so a higher figure like $150 is out of order; a figure between the current $50 and the noticed $75 would be in order.",
-        "concept": "",
-        "ref": {
-          "section": "57:11",
-          "quote": "If the bylaws require previous notice for their amendment … no amendment to a bylaw amendment is in order that increases the modification of the article or provision to be amended."
-        },
-        "expected": [
-          [
-            "no",
-            "not in order",
-            "out of order",
-            "cannot",
-            "exceed"
-          ],
-          [
-            "scope",
-            "notice"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The amendment to $150 is out of order — it exceeds the scope of the notice. We'll vote on the $75 amendment as noticed."
-      }
-    ]
-  },
-  {
-    "id": 5,
-    "domain": 2,
-    "title": "Reworking a proposal at the Riverside Garden Club",
-    "setting": "You are the parliamentarian at the Riverside Garden Club. A main motion \"that the Club hold its annual plant sale on the first Saturday of May\" is pending and has been debated for a while.",
-    "turns": [
-      {
-        "speaker": "Chair",
-        "line": "The motion to hold the plant sale on the first Saturday of May is open for debate."
-      },
-      {
-        "speaker": "Member (Okafor)",
-        "line": "This needs more study than we can give it on the floor. I move to refer the motion to a three-member committee to work out the details.",
-        "prompt": "Advise the chair: how is this motion to Commit/Refer handled, and what vote does it need?",
-        "gold": "The motion to Commit or Refer needs a second and is debatable. It sends the pending question to a committee and is adopted by a majority vote. If it passes, the main motion goes to the committee instead of being decided now.",
-        "concept": "",
-        "ref": {
-          "section": "13:1",
-          "quote": "The subsidiary motion to Commit or Refer is generally used to send a pending question to a relatively small group of selected persons—a committee—so that the question may be carefully investigated and put into better condition for the assembly to consider."
-        },
-        "expected": [
-          [
-            "commit",
-            "refer",
-            "committee"
-          ],
-          [
-            "majority",
-            "second"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The motion to refer is defeated, so the main motion is again pending. Further debate?"
-      },
-      {
-        "speaker": "Member (Bianchi)",
-        "line": "I move to substitute the whole motion with \"that the Club hold a fall harvest festival in October instead of a plant sale.\"",
-        "prompt": "Advise the chair: is a substitute in order here, and how is it treated?",
-        "gold": "A motion to substitute is a form of amendment and must be germane to the pending question. It needs a second, is fully debatable on the merits of both the original and the substitute, and is adopted by a majority vote.",
-        "concept": "",
-        "ref": {
-          "section": "12:70",
-          "quote": "A primary amendment to substitute is treated similarly to a motion to strike out and insert … It is open to debate at all times while it is pending with no secondary amendment pending; and such debate may go fully into the merits of both the original text and the substitute."
-        },
-        "expected": [
-          [
-            "substitute",
-            "amend"
-          ],
-          [
-            "majority",
-            "germane",
-            "debat"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The substitute is lost; the original motion stands. It's getting late."
-      },
-      {
-        "speaker": "Member (Okafor)",
-        "line": "I move to postpone this motion to our next regular meeting.",
-        "prompt": "Advise the chair: how is the motion to Postpone to a Certain Time handled?",
-        "gold": "The motion to Postpone to a Certain Time needs a second, is debatable, and is adopted by a majority vote. It puts the question off to a definite later time — here the next regular meeting. (A two-thirds vote is needed only if it is made a special order.)",
-        "concept": "",
-        "ref": {
-          "section": "14:1",
-          "quote": "The subsidiary motion to Postpone to a Certain Time (or Postpone Definitely, or Postpone) is the motion by which action on a pending question can be put off, within limits, to a definite session, day, meeting, or hour, or until after a certain event."
-        },
-        "expected": [
-          [
-            "postpone",
-            "put off",
-            "defer"
-          ],
-          [
-            "majority",
-            "second"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The motion is postponed to our next regular meeting. Thank you, parliamentarian."
-      }
-    ]
-  },
-  {
-    "id": 6,
-    "domain": 3,
-    "title": "Undoing a hasty vote at the Ridgeline Trail Alliance",
-    "setting": "You are the parliamentarian at the Ridgeline Trail Alliance. Earlier in this same meeting the assembly adopted a motion to spend $2,000 on a trailhead sign. New information has just come to light.",
-    "turns": [
-      {
-        "speaker": "Member (Nguyen)",
-        "line": "I move to spend an additional $800 on landscaping around the new sign."
-      },
-      {
-        "speaker": "Chair",
-        "line": "That motion is out of order because we already adjourned that item."
-      },
-      {
-        "speaker": "Member (Nguyen)",
-        "line": "I disagree with that ruling and I appeal from the decision of the chair!",
-        "prompt": "Advise the chair: how is this Appeal handled, and who decides it?",
-        "gold": "An Appeal requires a second. It takes the question away from the chair and gives it to the assembly, which decides by vote. A majority or a tie vote sustains the chair's ruling; the assembly, not the chair, has the final say.",
-        "concept": "",
-        "ref": {
-          "section": "24:1",
-          "quote": "But any two members have the right to Appeal from his decision on such a question. By one member making (or \"taking\") the appeal and another seconding it, the question is taken from the chair and vested in the assembly for final decision."
-        },
-        "expected": [
-          [
-            "assembly",
-            "member"
-          ],
-          [
-            "second",
-            "majority",
-            "tie",
-            "vote"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "On the appeal, the assembly reverses my ruling. (to you) Now a member wants to revisit the $2,000 sign vote we adopted earlier tonight."
-      },
-      {
-        "speaker": "Member (Alvarado)",
-        "line": "I voted for the $2,000, but the bids came in higher. I move to reconsider that vote.",
-        "prompt": "Advise the chair: may this member move to Reconsider the vote?",
-        "gold": "Yes. In an ordinary meeting the motion to Reconsider must be made the same day as the vote, and only by a member who voted on the prevailing side. Alvarado voted for the motion that was adopted, so he is on the prevailing side and may move it. It needs a second.",
-        "concept": "",
-        "ref": {
-          "section": "37:10",
-          "quote": "The motion to Reconsider can be made only by a member who voted with the prevailing side. In other words, a reconsideration can be moved only by one who voted aye if the motion involved was adopted, or no if the motion was lost."
-        },
-        "expected": [
-          [
-            "prevailing",
-            "voted",
-            "winning side"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Alvarado)",
-        "line": "Actually, rather than reconsider, could we just change the amount that's already on the books to $2,500?",
-        "prompt": "Advise the chair: what motion is used to change a figure the assembly already adopted?",
-        "gold": "That is the motion to Amend Something Previously Adopted, used to change part of an action already taken. Without previous notice it takes a two-thirds vote or a majority of the entire membership; with notice, a majority vote.",
-        "concept": "",
-        "ref": {
-          "section": "35:1",
-          "quote": "Amend Something Previously Adopted is the motion that can be used if it is desired to change only a part of the text, or to substitute a different version."
-        },
-        "expected": [
-          [
-            "amend something previously adopted",
-            "previously adopted",
-            "amend"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "Understood. Thank you, parliamentarian."
-      }
-    ]
-  },
-  {
-    "id": 7,
-    "domain": 6,
-    "title": "The parliamentarian's proper role at the Metro Nonprofit Convention",
-    "setting": "You have been engaged as the professional parliamentarian for the annual convention of the Metro Nonprofit Coalition. A contentious bylaws item is on the floor and tempers are rising.",
-    "turns": [
-      {
-        "speaker": "Member (Delacroix)",
-        "line": "(to you) You clearly know the rules best — just tell us how to vote and rule on this point for us.",
-        "prompt": "Advise: what is your proper role, and who actually rules?",
-        "gold": "The parliamentarian's role during a meeting is purely advisory and consultative. Parliamentary law gives the chair alone the power to rule on questions of order; I advise the chair — usually privately — and the chair makes and states the ruling.",
-        "concept": "",
-        "ref": {
-          "section": "47:46",
-          "quote": "The parliamentarian is a consultant, commonly a professional, who advises the president and other officers, committees, and members on matters of parliamentary procedure."
-        },
-        "expected": [
-          [
-            "advis",
-            "consult"
-          ],
-          [
-            "chair"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "(quietly, to you) You're also a dues-paying member of this Coalition. Can you just vote with us on this bylaws amendment to help it pass?",
-        "prompt": "Advise: as the member serving as parliamentarian, may you vote and debate on this question?",
-        "gold": "No. A member who serves as parliamentarian has the same duty as the chair to maintain impartiality, and so does not make motions, debate, or vote on questions — except on a ballot vote. I must forgo those rights while serving in this role.",
-        "concept": "",
-        "ref": {
-          "section": "47:55",
-          "quote": "A member of an assembly who acts as its parliamentarian has the same duty as the presiding officer to maintain a position of impartiality, and therefore does not make motions, participate in debate, or vote on any question except in the case of a ballot vote."
-        },
-        "expected": [
-          [
-            "impartial",
-            "not vote",
-            "cannot vote",
-            "forgo"
-          ]
-        ]
-      },
-      {
-        "speaker": "Member (Delacroix)",
-        "line": "This amendment is a fraud and the member who wrote it is a liar!",
-        "prompt": "Advise the chair: how should the chair handle this remark in debate?",
-        "gold": "Debate must be directed to the measure, not the member. A member may not attack another's motives or use words like 'fraud' or 'liar' about a member. The chair must act at once to call the speaker to order and require decorum.",
-        "concept": "",
-        "ref": {
-          "section": "43:21",
-          "quote": "When a question is pending, a member can condemn the nature or likely consequences of the proposed measure in strong terms, but he must avoid personalities, and under no circumstances can he attack or question the motives of another member. The measure, not the member, is the subject of debate."
-        },
-        "expected": [
-          [
-            "measure not the member",
-            "measure, not the member",
-            "motive",
-            "personalit",
-            "decorum",
-            "order"
-          ]
-        ]
-      },
-      {
-        "speaker": "Chair",
-        "line": "The member will confine his remarks to the measure. Thank you, parliamentarian."
-      }
-    ]
-  },
-  {
     "id": 1000,
     "domain": 1,
     "title": "Sorting Motions by Class and Purpose",
@@ -5316,6 +4767,1180 @@
       {
         "speaker": "Chair",
         "line": "That gives me real confidence going in. Thank you."
+      }
+    ]
+  },
+  {
+    "id": 1056,
+    "domain": 7,
+    "title": "Handling bylaw amendments at the annual meeting",
+    "setting": "The Oakmont Society is at its annual meeting. Two bylaw amendments have been noticed. You sit beside the chair as parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Chair",
+        "line": "We turn to the noticed bylaw amendments. Our bylaws contain no article on their own amendment."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What vote and notice do we need to adopt an amendment when the bylaws are silent?",
+        "prompt": "Advise the chair on the default requirement to amend the bylaws.",
+        "gold": "If the bylaws set no amendment procedure, the default rule applies: the amendment needs previous notice and a two-thirds vote, or, as an alternative, a vote of a majority of the entire membership. You cannot lower that bar by ordinary motion.",
+        "concept": "7.1",
+        "ref": {
+          "section": "57:1",
+          "quote": "Special requirements for this motion’s adoption should be specified in the bylaws, and they should always include at least notice and a two-thirds vote, which (with a vote of a majority of the entire membership as an allowable alternative) are the requirements for its adoption if such specification in the bylaws is neglected"
+        },
+        "expected": [
+          [
+            "previous notice",
+            "notice"
+          ],
+          [
+            "two-thirds vote"
+          ],
+          [
+            "majority of the entire membership"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Alvarez)",
+        "line": "The first amendment passed. My second amendment conflicts with the one we just adopted, so surely it is dead now?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is the conflicting noticed amendment out of order now?",
+        "prompt": "Advise the chair whether the conflicting noticed amendment may still be considered.",
+        "gold": "All amendments for which notice was given are entitled to be considered, so this one is not out of order merely because it conflicts with the amendment just adopted. Take it up on the language of the bylaws as already amended.",
+        "concept": "7.2",
+        "ref": {
+          "section": "57:6",
+          "quote": "all bylaw amendments of which notice was given are entitled to be considered, as a matter of the rights of their proposers, and a bylaw amendment is not dropped simply because it would conflict with one previously adopted"
+        },
+        "expected": [
+          [
+            "entitled to be considered",
+            "all amendments considered"
+          ],
+          [
+            "not dropped",
+            "not out of order"
+          ],
+          [
+            "as amended",
+            "already amended"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "The vote on that second amendment was close, about 40 to 30."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How should the result be entered?",
+        "prompt": "Advise the chair on recording the vote on the bylaw amendment.",
+        "gold": "Because the vote was not nearly unanimous, the chair should have the vote on the bylaw amendment counted and the count recorded in the minutes.",
+        "concept": "7.3",
+        "ref": {
+          "section": "57:9",
+          "quote": "The final vote on a bylaw amendment should be counted and recorded in the minutes unless it is nearly unanimous"
+        },
+        "expected": [
+          [
+            "counted",
+            "count"
+          ],
+          [
+            "recorded in the minutes",
+            "recorded"
+          ],
+          [
+            "not nearly unanimous"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Next year the committee brings a full revision. How do we take it up?",
+        "prompt": "Advise the chair on the method of considering a revision.",
+        "gold": "A revision or a lengthy multi-section amendment is considered seriatim, section by section. Do not put the whole document to a single vote until the sections have been opened to perfection.",
+        "concept": "7.9",
+        "ref": {
+          "section": "57:6",
+          "quote": "A revision of bylaws or a lengthy amendment involving more than one section should be considered seriatim as described in 28"
+        },
+        "expected": [
+          [
+            "seriatim",
+            "section by section"
+          ],
+          [
+            "revision",
+            "lengthy amendment"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1057,
+    "domain": 7,
+    "title": "Notice, scope, and form of bylaw amendments",
+    "setting": "A special meeting of the Riverside Club has been called to consider dues and structural bylaw changes. You advise the chair.",
+    "turns": [
+      {
+        "speaker": "Member (Boyd)",
+        "line": "Dues are $10. I move to strike $10 and insert $25."
+      },
+      {
+        "speaker": "Member (Cho)",
+        "line": "I move to amend that to $40 instead."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is the amendment to $40 in order?",
+        "prompt": "Advise the chair on the scope-of-notice limit for amending a pending amendment.",
+        "gold": "An amendment to the pending bylaw amendment may not increase the modification beyond the scope of the notice given. Raising the dues figure above the noticed number is out of order, even by unanimous consent.",
+        "concept": "7.4",
+        "ref": {
+          "section": "57:11",
+          "quote": "If the bylaws require previous notice for their amendment (as they should), or if they do not but notice has been given and a majority of the entire membership is not present, no amendment to a bylaw amendment is in order that increases the modification of the article or provision to be amended"
+        },
+        "expected": [
+          [
+            "scope of notice",
+            "within the scope"
+          ],
+          [
+            "cannot increase",
+            "not increase the modification"
+          ],
+          [
+            "out of order"
+          ]
+        ]
+      },
+      {
+        "speaker": "Secretary",
+        "line": "The mailed notice just said 'dues may be changed.'"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is that notice sufficient, and how should notice be worded?",
+        "prompt": "Advise the chair on whether the notice adequately informs members.",
+        "gold": "The notice is defective if it does not fairly inform the members of the change contemplated; a vague notice will not support the amendment. Restate it in the formal striking-out-and-inserting form.",
+        "concept": "7.5",
+        "ref": {
+          "section": "57:14",
+          "quote": "The notice should fairly inform the members of the changes contemplated"
+        },
+        "expected": [
+          [
+            "fairly inform",
+            "adequately inform"
+          ],
+          [
+            "formal form",
+            "striking out and inserting"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Members want the new dues to start next fiscal year, not today. How?",
+        "prompt": "Advise the chair on drafting the transitional/effective-date provision.",
+        "gold": "Put the transition mechanics in provisos attached to the adopting motion, not in the bylaws themselves. The amendment takes effect immediately on adoption unless the motion to adopt fixes a later effective time.",
+        "concept": "7.7",
+        "ref": {
+          "section": "57:15",
+          "quote": "An amendment to the bylaws goes into effect immediately upon its adoption unless the motion to adopt specifies another time for its becoming effective, or the assembly has set such a time by a previously adopted motion"
+        },
+        "expected": [
+          [
+            "provisos",
+            "proviso"
+          ],
+          [
+            "effective immediately",
+            "takes effect on adoption"
+          ],
+          [
+            "specify a later time",
+            "delayed effective date"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Do we need to vote on the new section headings and numbers too?",
+        "prompt": "Advise the chair on the status of captions, headings, and numbers.",
+        "gold": "Headings, article and section numbers, and captions are now an integral part of what the assembly adopts, not clerical marginalia. Only the assembly may change a heading if the change could affect meaning.",
+        "concept": "7.6",
+        "ref": {
+          "section": "57:18",
+          "quote": "It is now the usual practice to include these subtitles or identifying numbers or letters as an integral part of what is adopted by action of the assembly"
+        },
+        "expected": [
+          [
+            "integral part",
+            "part of what is adopted"
+          ],
+          [
+            "assembly must adopt",
+            "only the assembly"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1058,
+    "domain": 7,
+    "title": "Which document governs, and special rules",
+    "setting": "The Hillcrest Association's board is reviewing its governing documents. You attend as parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Director (Diaz)",
+        "line": "We keep hitting a debate-length problem. Can we just adopt a house rule limiting speeches?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What kind of rule is that, and how is it adopted?",
+        "prompt": "Advise the chair on adopting a special rule of order.",
+        "gold": "This belongs in a special rule of order, which supersedes any conflicting rule in the parliamentary authority. Adopt it with previous notice and a two-thirds vote, or a majority of the entire membership.",
+        "concept": "7.8",
+        "ref": {
+          "section": "2:16",
+          "quote": "Special rules of order supersede any rules in the parliamentary authority with which they may conflict"
+        },
+        "expected": [
+          [
+            "special rule of order"
+          ],
+          [
+            "supersedes the parliamentary authority",
+            "supersedes conflicting rule"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Evans)",
+        "line": "Someone wants to put our one-time office-move logistics into the bylaws."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Does that belong in the bylaws?",
+        "prompt": "Advise the chair on the appropriate content of the bylaws.",
+        "gold": "Temporary or transitional provisions do not belong in the bylaws; keep them out and handle them by proviso. Bylaws should carry only durable, substantive governance content.",
+        "concept": "7.12",
+        "ref": {
+          "section": "56:12",
+          "quote": "Provisions of a temporary nature or relating to the mechanics of transition from old to revised bylaws should not be included within bylaws"
+        },
+        "expected": [
+          [
+            "temporary provisions",
+            "transitional"
+          ],
+          [
+            "not in the bylaws",
+            "should not be included"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Fox)",
+        "line": "Our charter says one thing and a bylaw says another about property."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Which controls?",
+        "prompt": "Advise the chair on identifying the governing document.",
+        "gold": "In an incorporated organization the corporate charter outranks every other rule, and no bylaw may conflict with it. Look to the charter first; if the bylaw provision clashes with it, the charter governs.",
+        "concept": "7.13",
+        "ref": {
+          "section": "2:7",
+          "quote": "In an incorporated organization, the corporate charter supersedes all its other rules, none of which can legally contain anything in conflict with the charter"
+        },
+        "expected": [
+          [
+            "corporate charter",
+            "charter"
+          ],
+          [
+            "supersedes",
+            "outranks other rules"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Should we even be incorporated?",
+        "prompt": "Advise the chair on the relevance of corporation status.",
+        "gold": "Whether to incorporate turns on needs such as holding property, making binding contracts, hiring employees, suing or being sued, and shielding officers and members from personal liability. Absent such needs, incorporation is generally not required.",
+        "concept": "7.15",
+        "ref": {
+          "section": "2:5",
+          "quote": "Incorporation is sometimes necessary or may be advisable, depending upon the differing laws of each state, if the organization is to hold property, inherit a legacy, make legally binding contracts, hire employees, be in a position to sue or be sued as a society, protect its officers and members from personal liability, or the like"
+        },
+        "expected": [
+          [
+            "hold property",
+            "property"
+          ],
+          [
+            "contracts",
+            "binding contracts"
+          ],
+          [
+            "personal liability",
+            "protect officers"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1059,
+    "domain": 7,
+    "title": "Interpreting the bylaws",
+    "setting": "The Fairview League faces a dispute over an ambiguous membership clause. You are the parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Member (Grant)",
+        "line": "Two of us read Article III completely differently."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How do we even approach this disagreement?",
+        "prompt": "Advise the chair on recalling the Principles of Interpretation.",
+        "gold": "This is a matter of interpretation, and the Principles of Interpretation apply. Advise the chair that the society decides the meaning of its own bylaws, guided by those established principles.",
+        "concept": "7.10",
+        "ref": {
+          "section": "56:68",
+          "quote": "In preparing bylaws and interpreting them, the following principles of interpretation—which have equal application to other rules and documents adopted by an organization—may be of assistance"
+        },
+        "expected": [
+          [
+            "principles of interpretation"
+          ],
+          [
+            "society decides",
+            "the society interprets"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Apply that here: the clause is genuinely ambiguous.",
+        "prompt": "Advise the chair on applying the principles to the ambiguous provision.",
+        "gold": "First, an ambiguity must actually exist; if the meaning is clear there is nothing to interpret. Where it is ambiguous, interpret it, if possible, in harmony with the other bylaws, and a majority vote decides.",
+        "concept": "7.11",
+        "ref": {
+          "section": "56:68",
+          "quote": "If a bylaw is ambiguous, it must be interpreted, if possible, in harmony with the other bylaws"
+        },
+        "expected": [
+          [
+            "ambiguity must exist",
+            "genuine ambiguity"
+          ],
+          [
+            "harmony with other bylaws",
+            "consistent with other bylaws"
+          ],
+          [
+            "majority vote"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Hart)",
+        "line": "For years we've seated late-dues members even though the bylaws seem to bar it."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) That practice isn't written anywhere. Must we keep following it?",
+        "prompt": "Advise the chair on when an established custom must be followed.",
+        "gold": "Where no written rule covers the point, the established custom is followed unless the assembly, by majority vote, decides otherwise in the particular instance. It has the force of a rule until then.",
+        "concept": "7.16",
+        "ref": {
+          "section": "2:25",
+          "quote": "If there is no contrary provision in the parliamentary authority or written rules of the organization, such an established custom is adhered to unless the assembly, by a majority vote, agrees in a particular instance to do otherwise"
+        },
+        "expected": [
+          [
+            "established custom",
+            "custom"
+          ],
+          [
+            "majority vote"
+          ],
+          [
+            "set aside",
+            "do otherwise"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) I now raise a point of order: the custom conflicts with Article III.",
+        "prompt": "Advise the chair on custom that conflicts with a written rule.",
+        "gold": "Because the custom now conflicts with a written rule, a point of order raising the conflict makes the custom fall to the ground, and the written rule must be followed thereafter. Custom cannot override an express rule.",
+        "concept": "7.17",
+        "ref": {
+          "section": "2:25",
+          "quote": "However, if a customary practice is or becomes in conflict with the parliamentary authority or any written rule, and a Point of Order citing the conflict is raised at any time, the custom falls to the ground, and the conflicting provision in the parliamentary authority or written rule must thereafter be complied with"
+        },
+        "expected": [
+          [
+            "point of order"
+          ],
+          [
+            "custom falls",
+            "custom yields"
+          ],
+          [
+            "written rule governs",
+            "comply with the rule"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1060,
+    "domain": 7,
+    "title": "When procedural law overrides the rules",
+    "setting": "The Lakeside Cooperative, an incorporated association, is meeting. A statute governs some of its procedures. You advise the chair.",
+    "turns": [
+      {
+        "speaker": "Member (Ito)",
+        "line": "A statute clearly requires a mailed ballot, but our bylaws let us vote by show of hands."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Which prevails?",
+        "prompt": "Advise the chair on procedural law versus the organization's rules.",
+        "gold": "Applicable procedural law prescribed by local, state, or national law binds the assembly, and any action taken in violation of it is null and void. The society's own rules cannot override that law.",
+        "concept": "7.14",
+        "ref": {
+          "section": "1:5",
+          "quote": "Aside from rules of parliamentary procedure and the particular rules of an assembly, the actions of any deliberative body are also subject to applicable procedural rules prescribed by local, state, or national law and would be null and void if in violation of such law"
+        },
+        "expected": [
+          [
+            "procedural law",
+            "applicable law"
+          ],
+          [
+            "null and void",
+            "void"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Jones)",
+        "line": "We already adopted an action last month that violated that statute. Too late to object?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is a point of order still timely?",
+        "prompt": "Advise the chair on the continuing-breach nature of the violation.",
+        "gold": "This is a continuing breach: action taken in violation of the rules of a continuing nature is null and void, so the point of order is timely even now. Adopting something in conflict with law is not cured by the lapse of time.",
+        "concept": "7.18",
+        "ref": {
+          "section": "23:6",
+          "quote": "The only exceptions to the requirement that a point of order must be made promptly at the time of the breach arise in connection with breaches that are of a continuing nature, whereby the action taken in violation of the rules is null and void"
+        },
+        "expected": [
+          [
+            "continuing breach",
+            "continuing nature"
+          ],
+          [
+            "null and void",
+            "void"
+          ],
+          [
+            "timely",
+            "in order at any time"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Kim)",
+        "line": "Then let's just suspend the statute for today's meeting."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Can we suspend it?",
+        "prompt": "Advise the chair on whether a procedural rule prescribed by law may be suspended.",
+        "gold": "A rule of order can be suspended, but an applicable procedural rule prescribed by federal, state, or local law cannot be, unless that law itself provides for its own suspension. The motion to suspend is out of order as to the statute.",
+        "concept": "7.19",
+        "ref": {
+          "section": "25:8",
+          "quote": "No applicable procedural rule prescribed by federal, state, or local law can be suspended unless the rule specifically provides for its own suspension"
+        },
+        "expected": [
+          [
+            "cannot suspend law",
+            "law cannot be suspended"
+          ],
+          [
+            "unless the law provides",
+            "own suspension"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How do I even know which authority controls a given action?",
+        "prompt": "Advise the chair on finding the applicable procedural law.",
+        "gold": "Identify the governing procedural law by class: action conflicting with the bylaws, with a still-in-force main motion, with federal, state, or local law, with a fundamental principle, or with a rule protecting absentees or members' rights. Here the controlling authority is the applicable statute.",
+        "concept": "7.20",
+        "ref": {
+          "section": "23:6",
+          "quote": "Instances of this kind occur when: a) a main motion has been adopted that conflicts with the bylaws (or constitution) of the organization or assembly, b) a main motion has been adopted that conflicts with a main motion previously adopted and still in force, unless the subsequently adopted motion was adopted by the vote required to rescind or amend the previously adopted motion, c) any action has been taken in violation of applicable procedural rules prescribed by federal, state, or local law, d) any action has been taken in violation of a fundamental principle of parliamentary law, or e) any action has been taken in violation of a rule protecting absentees, a rule in the bylaws protecting the secrecy of the members’ votes (as on a ballot vote), or a rule protecting a basic right of an individual member"
+        },
+        "expected": [
+          [
+            "federal, state, or local law",
+            "applicable law"
+          ],
+          [
+            "bylaws"
+          ],
+          [
+            "fundamental principle"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1061,
+    "domain": 7,
+    "title": "Boards: authority, superior bodies, officers",
+    "setting": "The Summit Chapter, a subordinate unit of a national federation, holds a board meeting. You attend as parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Director (Lee)",
+        "line": "Can this board just start acting on its own on any matter it likes?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What is the source and limit of this board's power?",
+        "prompt": "Advise the chair on the board's delegated authority.",
+        "gold": "A society has no executive board unless the bylaws create one, and the board holds only the power the bylaws delegate or the assembly refers to it. It cannot act beyond that grant.",
+        "concept": "7.22",
+        "ref": {
+          "section": "49:5",
+          "quote": "A society has no executive board, nor can its officers act as a board, except as the bylaws may provide; and when so established, the board has only such power as is delegated to it by the bylaws or by vote of the society’s assembly referring individual matters to it"
+        },
+        "expected": [
+          [
+            "bylaws create the board",
+            "only as bylaws provide"
+          ],
+          [
+            "only delegated power",
+            "power delegated"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Moore)",
+        "line": "We passed a local rule that the national's charter seems to forbid."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Whose rule wins?",
+        "prompt": "Advise the chair on subordinate-unit rules versus the superior organization.",
+        "gold": "A charter granted by the parent state or national organization supersedes any rule the subordinate unit adopts, because it requires the unit to adopt no rule conflicting with the grantor's. The local rule yields to the superior body's charter.",
+        "concept": "7.21",
+        "ref": {
+          "section": "2:7",
+          "quote": "While such a charter is not an instrument of incorporation and is usually quite general in its terms, it supersedes any rules the subordinate body may adopt, because it carries with it the requirement that the subordinate unit adopt no rules that conflict with those of the grantor"
+        },
+        "expected": [
+          [
+            "superior organization",
+            "parent/grantor"
+          ],
+          [
+            "supersedes subordinate rules",
+            "subordinate rules yield"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Nash)",
+        "line": "Frankly, the chair keeps missing rules and leaning on you for everything."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What is expected of the presiding officer here?",
+        "prompt": "Advise the chair on the presiding officer's responsibilities.",
+        "gold": "The presiding officer should be well versed in parliamentary law and thoroughly familiar with the bylaws and rules, even with a parliamentarian at hand. That duty rests on the officer, not the adviser.",
+        "concept": "7.23",
+        "ref": {
+          "section": "47:6",
+          "quote": "This person should be well versed in parliamentary law and should be thoroughly familiar with the bylaws and other rules of the organization—even if he or she is to have the assistance of a parliamentarian"
+        },
+        "expected": [
+          [
+            "versed in parliamentary law",
+            "knowledgeable"
+          ],
+          [
+            "familiar with bylaws",
+            "knows the rules"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Our ex-officio member from outside the society, may he vote?",
+        "prompt": "Advise the chair on the rights of an ex-officio board member.",
+        "gold": "An ex-officio board member who is not under the authority of the society has all privileges of membership, including making motions and voting, but none of the obligations, and is not counted toward quorum. Treat this ex-officio member accordingly.",
+        "concept": "7.25",
+        "ref": {
+          "section": "49:8",
+          "quote": "If the ex-officio member is not under the authority of the society, he has all the privileges of board membership, including the right to make motions and to vote, but none of the obligations—just as in a case, for example, where the governor of a state is ex officio a trustee of a private academy"
+        },
+        "expected": [
+          [
+            "all privileges",
+            "right to vote and make motions"
+          ],
+          [
+            "no obligations",
+            "none of the obligations"
+          ],
+          [
+            "not counted for quorum",
+            "excluded from quorum"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1062,
+    "domain": 7,
+    "title": "Board rules, business, conflicts, and turnover",
+    "setting": "The Grove Foundation board, one-third of which rotates each year, meets. A contract vote is on the agenda. You advise the chair.",
+    "turns": [
+      {
+        "speaker": "Director (Ortiz)",
+        "line": "This board wants its own standing rules that differ from the society's."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) May we adopt board rules that differ?",
+        "prompt": "Advise the chair on the limits on a board's own rules.",
+        "gold": "The board may adopt its own special rules of order or standing rules, but only so far as they do not conflict with the society's bylaws, parliamentary authority, or rules. A conflicting board rule is void.",
+        "concept": "7.33",
+        "ref": {
+          "section": "49:15",
+          "quote": "Such a board may adopt its own special rules of order or standing rules only to the extent that such rules do not conflict with any of the rules of the society listed above"
+        },
+        "expected": [
+          [
+            "own rules only if consistent",
+            "must not conflict"
+          ],
+          [
+            "society's rules govern",
+            "bylaws and rules of the society"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Park)",
+        "line": "Half of us are traveling; can we just approve the contract by group email?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is an email poll valid board action?",
+        "prompt": "Advise the chair on the requirements for transacting business.",
+        "gold": "A board can act only at a regular or properly called meeting with notice to every member and a quorum present. Polling members separately by phone or email is not board action.",
+        "concept": "7.34",
+        "ref": {
+          "section": "49:16",
+          "quote": "a board can transact business only in a regular or properly called meeting of which every board member has been sent any required notice —or at an adjournment of one of these meetings—and at which a quorum is present"
+        },
+        "expected": [
+          [
+            "properly called meeting",
+            "regular or called meeting"
+          ],
+          [
+            "notice to every member",
+            "required notice"
+          ],
+          [
+            "quorum"
+          ]
+        ]
+      },
+      {
+        "speaker": "Director (Quinn)",
+        "line": "I'm an officer of the firm we'd be contracting with, but I'd like to vote."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Should director Quinn vote on this contract?",
+        "prompt": "Advise the chair on voting where a director has a direct personal interest.",
+        "gold": "A director with a direct personal or pecuniary interest not common to other members should not vote on the contract. Advise drafting the bylaw around that abstention rule; but note no member can be compelled to refrain.",
+        "concept": "7.24",
+        "ref": {
+          "section": "45:4",
+          "quote": "No member should vote on a question in which he has a direct personal or pecuniary interest not common to other members of the organization"
+        },
+        "expected": [
+          [
+            "direct personal interest",
+            "personal or pecuniary interest"
+          ],
+          [
+            "should abstain",
+            "should not vote"
+          ],
+          [
+            "cannot be compelled",
+            "not required to abstain"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) A third of the board just rotated off. What happens to their unfinished items?",
+        "prompt": "Advise the chair on the effect of periodic partial change in the board.",
+        "gold": "Because a fixed portion of the board turns over periodically, it becomes in effect a new board, and matters only temporarily disposed of fall to the ground, except those still in a committee's hands. Do not treat the old board's unfinished items as automatically carried over.",
+        "concept": "7.38",
+        "ref": {
+          "section": "49:22",
+          "quote": "In cases where a board is constituted so that a specified portion of its membership is chosen periodically (as, for example, where one third of the board is elected annually for three-year terms), it becomes, in effect, a new board each time such a group assumes board membership"
+        },
+        "expected": [
+          [
+            "new board",
+            "in effect a new board"
+          ],
+          [
+            "fall to the ground",
+            "matters dropped"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1063,
+    "domain": 7,
+    "title": "Committees: instructions, vacancies, authority, terms",
+    "setting": "The assembly of the Delta Society has referred a matter to a committee. You are the parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Member (Reyes)",
+        "line": "We already referred the venue question to the Events Committee. Can we still tell it what to do?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) May we send further instructions now?",
+        "prompt": "Advise the chair on giving instructions to a committee.",
+        "gold": "Yes: after referral and before the committee reports, the assembly may give it additional instructions by majority vote, even at a later session. The instructions bind the committee.",
+        "concept": "7.26",
+        "ref": {
+          "section": "13:22",
+          "quote": "After a question has been referred to a committee and at any time before the committee submits its report, even at another session, the assembly by a majority vote can give the committee additional instructions in reference to the referred question"
+        },
+        "expected": [
+          [
+            "additional instructions",
+            "further instructions"
+          ],
+          [
+            "majority vote"
+          ],
+          [
+            "binding on the committee",
+            "must carry out"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Singh)",
+        "line": "One committee member resigned. Who fills the seat?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How is the vacancy filled?",
+        "prompt": "Advise the chair on the power to fill a committee vacancy.",
+        "gold": "The power to appoint a committee carries the power to fill any vacancy in it. The appointing authority, not the committee, fills the seat.",
+        "concept": "7.27",
+        "ref": {
+          "section": "13:23",
+          "quote": "The power to appoint a committee includes the power to fill any vacancy that may arise in it"
+        },
+        "expected": [
+          [
+            "power to fill vacancy",
+            "fill the vacancy"
+          ],
+          [
+            "appointing authority"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Tran)",
+        "line": "Can the committee just sign the venue contract itself?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What are the limits on this committee's authority?",
+        "prompt": "Advise the chair on the limits of committee authority.",
+        "gold": "A committee generally has less authority to act independently than a board; unless empowered, it may only report findings or recommendations. It cannot act for the society without specific authorization.",
+        "concept": "7.28",
+        "ref": {
+          "section": "50:4",
+          "quote": "Generally the term committee implies that, within the area of its assigned responsibilities, the committee has less authority to act independently for the society (or other constituting power) than a board is usually understood to have"
+        },
+        "expected": [
+          [
+            "less authority than a board",
+            "limited authority"
+          ],
+          [
+            "only report",
+            "cannot act without authorization"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is the Events Committee standing or special, and when does it end?",
+        "prompt": "Advise the chair on the terms of standing versus special committees.",
+        "gold": "Distinguish the two types: a standing committee has continuing existence, while a special committee dissolves once its assigned task is complete. This body is special, so it ends on final report.",
+        "concept": "7.29",
+        "ref": {
+          "section": "50:3",
+          "quote": "Ordinary committees are of two types—standing committees (which have a continuing existence) and special committees (which go out of existence as soon as they have completed a specified task"
+        },
+        "expected": [
+          [
+            "standing committee",
+            "continuing existence"
+          ],
+          [
+            "special committee",
+            "goes out of existence"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1064,
+    "domain": 7,
+    "title": "Appointing a committee",
+    "setting": "The Bayview Guild must appoint a special committee. No method is prescribed in its bylaws. You advise the chair.",
+    "turns": [
+      {
+        "speaker": "Chair",
+        "line": "We need to appoint the fundraising committee. Our bylaws are silent on how."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What are our options for appointing it?",
+        "prompt": "Advise the chair on the methods of appointing committees.",
+        "gold": "When the method is not prescribed, the assembly chooses among the recognized methods, voted in order: election by ballot, nominations from the floor with viva-voce election, nomination by the chair, appointment by the chair, and appointment by a motion naming the members.",
+        "concept": "7.31",
+        "ref": {
+          "section": "13:13",
+          "quote": "if different methods are suggested or moved, they are voted on in the following order: (1) election by ballot; (2) nominations from the floor (“open nominations”) with viva-voce election; (3) nominations by the chair; and (4) appointment by the chair"
+        },
+        "expected": [
+          [
+            "election by ballot"
+          ],
+          [
+            "nominations from the floor",
+            "open nominations"
+          ],
+          [
+            "appointment by the chair"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Ulloa)",
+        "line": "I'd like to nominate an outside fundraising expert who isn't a member."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) May a non-member be appointed?",
+        "prompt": "Advise the chair on appointing non-members to a committee.",
+        "gold": "Non-members may be appointed to a committee, even as chairman, but control over each such appointment is reserved to the assembly in the individual case. The chair cannot seat a non-member without that approval.",
+        "concept": "7.30",
+        "ref": {
+          "section": "50:12",
+          "quote": "It is possible for persons who are not members of the assembly or the society to be appointed to committees—even to the position of committee chairman—but control over each such appointment is reserved to the assembly in the individual case"
+        },
+        "expected": [
+          [
+            "non-members may serve",
+            "persons not members"
+          ],
+          [
+            "assembly approval",
+            "reserved to the assembly"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Vance)",
+        "line": "This committee is just to carry out the fundraiser we already voted for."
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How should we compose it?",
+        "prompt": "Advise the chair on considerations in appointing the committee's members.",
+        "gold": "A committee formed to carry out an order the assembly has already adopted should be small and composed only of members who favor the action. Anyone opposed should ask to be excused.",
+        "concept": "7.32",
+        "ref": {
+          "section": "50:18",
+          "quote": "When a special committee is appointed to implement an order of the assembly, it should be small and should consist only of those in favor of the action to be carried out"
+        },
+        "expected": [
+          [
+            "small"
+          ],
+          [
+            "favor the action",
+            "in sympathy with the action"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) When the committee deliberates, may interested members sit in?",
+        "prompt": "Advise the chair on committee hearings and who may attend.",
+        "gold": "Before making substantive recommendations, the committee should give members a chance to appear at a hearing, but during its actual deliberations only committee members have the right to be present. So exclude the non-members while the committee deliberates.",
+        "concept": "7.41",
+        "ref": {
+          "section": "50:27",
+          "quote": "When a committee is to make substantive recommendations or decisions on an important matter, it should give members of the society an opportunity to appear before it and present their views on the subject at a time scheduled by the committee. Such a meeting is usually called a hearing. During actual deliberations of the committee, only committee members have the right to be present"
+        },
+        "expected": [
+          [
+            "hearing"
+          ],
+          [
+            "only committee members deliberate",
+            "only members present during deliberations"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1065,
+    "domain": 7,
+    "title": "Small-board and committee procedure",
+    "setting": "The Cedar Board has nine members present, and several committees are meeting alongside. You are the parliamentarian.",
+    "turns": [
+      {
+        "speaker": "Chair",
+        "line": "We're a small board tonight. Do we really need all the formality?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Which formalities can we relax in a small board?",
+        "prompt": "Advise the chair on the informal small-board rules.",
+        "gold": "In a board of about a dozen or fewer, the informal rules apply: hands instead of standing, no second required, unlimited speeches, informal discussion with no motion pending, votes without a motion when clear, the chair need not rise to put a question, and a member-chair may debate and vote.",
+        "concept": "7.37",
+        "ref": {
+          "section": "49:21",
+          "quote": "The rules governing such meetings are different from the rules that hold in other assemblies, in the following respects: 1) Members may raise a hand instead of standing when seeking to obtain the floor, and may remain seated while making motions or speaking. 2) Motions need not be seconded. 3) There is no limit to the number of times a member can speak to a debatable question. Appeals, however, are debatable under the regular rules—that is, each member (except the chair) can speak only once in debate on them, while the chair may speak twice. 4) Informal discussion of a subject is permitted while no motion is pending. 5) When a proposal is perfectly clear to all present, a vote can be taken without a motion’s having been introduced. Unless agreed to by unanimous consent, however, all proposed actions must be approved by vote under the same rules as in larger meetings, except that a vote can be taken initially by a show of hands, which is often a better method in small meetings. 6) The chairman need not rise while putting questions to a vote. 7) If the chairman is a member, he may, without leaving the chair, speak in informal discussions and in debate, and vote on all questions"
+        },
+        "expected": [
+          [
+            "small board",
+            "dozen or fewer"
+          ],
+          [
+            "no second required",
+            "need not be seconded"
+          ],
+          [
+            "unlimited debate",
+            "speak any number of times"
+          ]
+        ]
+      },
+      {
+        "speaker": "Committee chair (Wong)",
+        "line": "Do these relaxed rules apply in our committee meetings too?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Do small-board rules extend to committees?",
+        "prompt": "Advise the chair on when small-board rules apply.",
+        "gold": "The relaxed small-board procedures apply in all standing and special committees unless the society instructs otherwise. So this committee may use the informal rules.",
+        "concept": "7.35",
+        "ref": {
+          "section": "50:25",
+          "quote": "The informalities and modifications of the regular rules of parliamentary procedure listed in 49:21 for use in small boards are applicable during the meetings of all standing and special committees, unless the committee is otherwise instructed by the society"
+        },
+        "expected": [
+          [
+            "small-board rules apply",
+            "informal procedures"
+          ],
+          [
+            "in committees",
+            "standing and special committees"
+          ],
+          [
+            "unless instructed otherwise"
+          ]
+        ]
+      },
+      {
+        "speaker": "Member (Xu)",
+        "line": "In committee, can I move the previous question to cut off debate?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Is limiting debate allowed in committee?",
+        "prompt": "Advise the chair on limiting debate in committees.",
+        "gold": "Motions to close or limit debate, such as the Previous Question, are not allowed in committee, so this attempt to cut off discussion is out of order. The committee's matured judgment is not to be curtailed that way.",
+        "concept": "7.39",
+        "ref": {
+          "section": "50:25",
+          "quote": "motions to close or limit debate (15, 16) are not allowed in committees"
+        },
+        "expected": [
+          [
+            "cannot limit debate",
+            "close or limit debate not allowed"
+          ],
+          [
+            "out of order",
+            "not in order"
+          ]
+        ]
+      },
+      {
+        "speaker": "Non-member (Young)",
+        "line": "May I inspect the board's minute book?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Does this non-member have a right to the minutes?",
+        "prompt": "Advise the chair on access to board minutes.",
+        "gold": "Only members of the board have the right to examine the board's minute book, unless the board itself orders otherwise. The requesting non-member has no right of access absent such an order.",
+        "concept": "7.36",
+        "ref": {
+          "section": "49:17",
+          "quote": "Only members of the board have the right to examine the minute book kept by the secretary, unless the board orders otherwise"
+        },
+        "expected": [
+          [
+            "only board members",
+            "members of the board"
+          ],
+          [
+            "examine minutes",
+            "minute book"
+          ],
+          [
+            "unless the board orders otherwise"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1066,
+    "domain": 7,
+    "title": "Committee meetings and reports",
+    "setting": "The Ashford Council's Finance Committee is meeting and will report to the assembly. You advise the chair.",
+    "turns": [
+      {
+        "speaker": "Committee chair (Zane)",
+        "line": "Only three of our seven members showed up. Can we act?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) Do we have a quorum?",
+        "prompt": "Advise the chair on the committee quorum.",
+        "gold": "The quorum in a committee is a majority of its members unless the assembly has set a different number. With fewer than that present, the committee cannot transact business.",
+        "concept": "7.40",
+        "ref": {
+          "section": "50:21",
+          "quote": "The quorum in a committee is a majority of its membership unless the assembly has prescribed a different quorum"
+        },
+        "expected": [
+          [
+            "majority of its membership",
+            "majority of members"
+          ],
+          [
+            "unless a different quorum is set"
+          ]
+        ]
+      },
+      {
+        "speaker": "Committee chair (Zane)",
+        "line": "We're ready to report to the assembly. What form should it take?"
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) What type of report is this?",
+        "prompt": "Advise the chair on the types of board and committee reports.",
+        "gold": "Reports fall into two categories: annual or periodic reports of boards or standing committees, largely informational, and reports on single items of business arising during the year. Classify this one accordingly.",
+        "concept": "7.42",
+        "ref": {
+          "section": "51:3",
+          "quote": "For convenience in the discussions in this section, reports may be divided into two general categories as follows: a) Annual or periodic reports of boards or standing committees are usually submitted in accordance with requirements in the bylaws, are primarily for information, and should summarize important work done by the board or committee during the year or other period covered by the report. They may also contain recommendations—which may relate to general policy to be followed by the organization, or may propose specific action by its assembly. b) Reports relating to single items of business arising during the year fall into a number of particular forms—which are described for the case of committees in 51:30ff. As will be seen from examples there, these reports can often be quite brief unless special circumstances or instructions to the reporting body call for a detailed presentation of facts"
+        },
+        "expected": [
+          [
+            "annual or periodic report",
+            "periodic report"
+          ],
+          [
+            "single item report",
+            "report on a single item"
+          ]
+        ]
+      },
+      {
+        "speaker": "Chair",
+        "line": "(to you) How should we present our recommendations?",
+        "prompt": "Advise the chair on preparing recommendations in a report.",
+        "gold": "Recommendations for immediate action should be grouped at the end of the report and cast as one or more proposed resolutions, so the assembly can act on them cleanly. The reporting body should draft the resolutions itself.",
+        "concept": "7.43",
+        "ref": {
+          "section": "51:4",
+          "quote": "In any report of a subordinate board or a committee (of type (a) or (b) above), specific recommendations for immediate action by the parent assembly should be grouped at the end—repeating them if they have already been noted at separate places in the report —and should generally be cast in the form of one or more proposed resolutions"
+        },
+        "expected": [
+          [
+            "grouped at the end",
+            "collected at the end"
+          ],
+          [
+            "in the form of resolutions",
+            "proposed resolutions"
+          ]
+        ]
       }
     ]
   }

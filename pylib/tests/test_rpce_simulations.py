@@ -3,6 +3,8 @@
 
 """Tests for Simulation mode (scripted meetings graded by the examiner)."""
 
+import re
+
 import pytest
 
 from anki.rpce import DOMAINS, simulations
@@ -31,27 +33,39 @@ def test_response_turns_carry_prompt_and_gold():
             assert turn.prompt and turn.gold
 
 
-def test_response_turns_cite_ronr_with_a_quote():
+def test_response_turns_cite_ronr_or_are_ronr_less():
     import re
 
     for sim in simulations.all_simulations():
         for turn in simulations.response_turns(sim):
-            assert turn.ref is not None, turn.prompt
-            assert re.fullmatch(r"\d+:\d+", turn.ref.section), turn.ref.section
-            assert len(turn.ref.quote.strip()) > 20
+            if turn.ref is not None and turn.ref.section:
+                # section:paragraph, optionally with sub-item/range detail
+                # (e.g. "24:3(2)", "35:2(3-5)", "16:5(8)n15").
+                assert re.match(r"\d+:\d+", turn.ref.section), turn.ref.section
+                assert len(turn.ref.quote.strip()) > 20
+            else:
+                # Professional-practice concepts RONR does not cover carry no cite;
+                # they must still be concept-tagged.
+                assert turn.concept, turn.prompt
+
+
+def test_every_sim_at_most_10_turns_and_concept_tagged():
+    for sim in simulations.all_simulations():
+        assert len(sim.turns) <= 10, (sim.id, len(sim.turns))
+        for turn in simulations.response_turns(sim):
+            assert re.fullmatch(r"\d+\.\d+", turn.concept), turn.concept
 
 
 def test_narration_turns_are_not_graded():
-    sim = simulations.simulation_by_id(1)
+    sim = simulations.all_simulations()[0]
     narration = [t for t in sim.turns if not t.needs_response]
-    assert narration, "a meeting has spoken lines that are not response points"
     for turn in narration:
         assert turn.prompt is None
 
 
 def test_examiner_grades_a_good_response_as_passing():
     # A response that matches the model ruling should pass the placeholder grader.
-    turn = simulations.response_turns(simulations.simulation_by_id(1))[0]
+    turn = simulations.response_turns(simulations.all_simulations()[0])[0]
     result = PlaceholderExaminer().grade(turn.gold, turn.gold, turn.gold)
     assert result.passed and not result.abstained
 

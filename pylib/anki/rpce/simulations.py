@@ -526,8 +526,11 @@ def _load_authored_sims() -> tuple[Simulation, ...]:
 
 
 def all_simulations() -> tuple[Simulation, ...]:
-    # Built-in sims first, then the authored concept-covering bank.
-    return SIMULATIONS + _load_authored_sims()
+    # Ship the authored bank when present (67 sims, every concept, each <=10
+    # turns); the legacy built-in SIMULATIONS remain only as the offline/test
+    # fallback when the authored file is absent.
+    authored = _load_authored_sims()
+    return authored if authored else SIMULATIONS
 
 
 def simulation_by_id(sim_id: int) -> Simulation:
