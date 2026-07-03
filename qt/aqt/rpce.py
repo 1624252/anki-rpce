@@ -616,7 +616,7 @@ def _section2_html(col) -> str:
     """Section II performance practice as an IN-WINDOW page (mirrors the
     dashboard): domain label, prompt, answer box, Submit (async graded), a
     feedback slot, Next scenario, and a Home link."""
-    from anki.rpce import ai, domain_by_code
+    from anki.rpce import domain_by_code
 
     s, i, total = _s2_scenario()
     d = domain_by_code(s.domain_code)
@@ -643,7 +643,6 @@ def _section2_html(col) -> str:
       padding:13px 26px;font-size:var(--fs-body);font-weight:800;cursor:pointer">
       Submit for grading</button>
   </div>
-  <div style="margin-top:10px;text-align:left">{_ai_toggle_html()}</div>
   <div id="s2fb"></div>
   <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
     <button onclick="pycmd('rpce:s2next');return false;"
@@ -695,17 +694,15 @@ def _s2_grade(answer_b64: str) -> None:
     gold = s.gold_answer
 
     def op():
-        # Grade with the AI examiner when a key is set AND AI grading is on;
-        # otherwise the deterministic offline keyword/rubric grader. AutoExaminer
-        # handles the fallback and records which grader ran (.used) for the badge.
-        ex = examiner.AutoExaminer()
-        result = ex.grade(answer, gold, corpus, rubric)
-        return result, ex.used
+        # Section II is graded by the deterministic offline keyword/rubric grader
+        # ONLY — no AI grading here (per product decision).
+        result = examiner.KeywordExaminer().grade(answer, gold, corpus, rubric)
+        return result, "offline"
 
     def on_done(future) -> None:
         # Runs back on the main thread.
         try:
-            result, used = future.result()
+            result, _used = future.result()
         except Exception as exc:
             _s2_inject(
                 "<div style='color:#b45309;font-weight:700;margin-top:14px'>"
@@ -744,7 +741,6 @@ def _s2_grade(answer_b64: str) -> None:
             + kw_html
             + f"<div style='margin-top:10px;color:var(--ink)'><b>Model ruling:</b> {gold}</div>"
             + _ref_block(s.ref.section, s.ref.quote)
-            + _examiner_badge(used)
             + "</div>"
         )
         _s2_inject(html)
