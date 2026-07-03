@@ -827,7 +827,7 @@ fn scores_json() -> String {
         )
     };
 
-    // Performance: concept-weighted exam projection; un-mastered concepts = 0.
+    // Performance: concept-weighted projection of first-attempt correctness.
     let _ = n_domains;
     let (perf_p, perf_lo, perf_hi, perf_conf, perf_explain) = if seen_any {
         let conf = if cov_pct >= 0.8 {
@@ -840,8 +840,8 @@ fn scores_json() -> String {
         let margin = 0.1 + 0.4 * (1.0 - cov_pct);
         let explain = format!(
             "Concept-weighted projection across all {concept_total} performance \
-             expectations; {seen} mastered and every un-mastered concept counts as 0 \
-             (so incomplete coverage lowers the score). Weakest area: {best_next}. The \
+             expectations, from your first-attempt correctness; {seen} practised and \
+             every un-practised concept counts as 0. Weakest area: {best_next}. The \
              range widens when coverage is low ({:.0}% covered).",
             cov_pct * 100.0
         );
@@ -859,8 +859,8 @@ fn scores_json() -> String {
             Some(1.0),
             "abstain",
             format!(
-                "No concept mastered yet — this projects your exam score once you're \
-                 consistently acing questions.{review_need}"
+                "No questions answered yet — this projects your exam score from how \
+                 often you get new questions right once you've practised.{review_need}"
             ),
         )
     };
@@ -874,20 +874,20 @@ fn scores_json() -> String {
         let mut missing: Vec<String> = Vec::new();
         if reviews < MIN_REVIEWS {
             missing.push(format!(
-                "{} more graded reviews needed ({reviews}/{MIN_REVIEWS})",
+                "{} more graded reviews needed ({reviews}/{MIN_REVIEWS}).",
                 MIN_REVIEWS - reviews
             ));
         }
         if cov_pct < MIN_COVERAGE {
             missing.push(format!(
-                "concept coverage {:.0}% of {:.0}% needed",
+                "Concept coverage {:.0}% of {:.0}% needed.",
                 cov_pct * 100.0,
                 MIN_COVERAGE * 100.0
             ));
         }
         if needs_scenarios && scenarios < MIN_SCENARIOS {
             missing.push(format!(
-                "{} more graded scenarios needed ({scenarios}/{MIN_SCENARIOS})",
+                "{} more graded scenarios needed ({scenarios}/{MIN_SCENARIOS}).",
                 MIN_SCENARIOS - scenarios
             ));
         }

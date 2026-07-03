@@ -291,27 +291,28 @@ def _memory_prose(point: float | None) -> str:
 
 
 def _performance_prose(point: float | None, cov: float, weakest: str | None) -> str:
-    """How prepared the user is across the exam blueprint (not how it's computed)."""
+    """How well the user gets NEW questions right across the blueprint — the
+    meaning of the first-attempt projection, not how it's computed."""
     focus = f" Your weakest area is {weakest}." if weakest else ""
     if point is None:
         return (
-            "You haven't practised enough exam-style questions yet to gauge how "
-            "prepared you are across the blueprint." + focus
+            "You haven't answered enough questions yet to project how you'd do on "
+            "fresh exam questions." + focus
         )
     if point >= 0.8:
         return (
-            "You're performing at or above the exam bar across the domains you've "
-            f"covered ({cov:.0%} of the blueprint)." + focus
+            "You're getting new questions right at or above the exam bar across the "
+            f"concepts you've practised ({cov:.0%} of the blueprint covered)." + focus
         )
     if point >= 0.6:
         return (
-            "You're getting close to exam-ready on the material you've covered "
-            f"({cov:.0%} of the blueprint), with clear room to firm up weak spots."
-            + focus
+            "You get most new questions right, with clear room to firm up weak spots "
+            f"and broaden coverage ({cov:.0%} covered)." + focus
         )
     return (
-        "You're still building toward exam-ready; broaden your coverage and "
-        f"strengthen recall (currently {cov:.0%} of the blueprint covered)." + focus
+        "You're still building the ability to get fresh questions right; broaden "
+        f"coverage and drill your weak areas ({cov:.0%} of the blueprint covered)."
+        + focus
     )
 
 
@@ -552,10 +553,10 @@ def readiness(
     if reviews < rule.min_graded_reviews:
         missing.append(
             f"{rule.min_graded_reviews - reviews} more graded reviews needed "
-            f"({reviews}/{rule.min_graded_reviews})"
+            f"({reviews}/{rule.min_graded_reviews})."
         )
     if cov < rule.min_coverage:
-        missing.append(f"concept coverage {cov:.0%} of {rule.min_coverage:.0%} needed.")
+        missing.append(f"Concept coverage {cov:.0%} of {rule.min_coverage:.0%} needed.")
     if needs_scenarios and scenarios < rule.min_scenarios:
         missing.append(
             f"{rule.min_scenarios - scenarios} more graded scenarios needed "
@@ -604,9 +605,9 @@ def readiness(
     high = _logistic_pass_probability(perf.high or perf.point)
     scen_note = f", {scenarios} graded scenarios" if section == "II" else ""
     evidence = (
-        f"Maps a {perf.point:.0%} performance estimate through the 80% section "
+        f"Maps a {perf.point:.0%} performance projection through the 80% section "
         f"bar to a pass probability. Evidence: {reviews} reviews across "
-        f"{cov:.0%} of domains{scen_note}. Focus next on {next_topic}."
+        f"{cov:.0%} of concepts{scen_note}. Focus next on {next_topic}."
     )
     return ReadinessSnapshot(
         section=section,
