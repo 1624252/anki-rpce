@@ -53,6 +53,8 @@ class GiveUpRule:
     min_graded_reviews: int = 200
     min_coverage: float = 0.5
     min_scenarios: int = 100
+    #: A concept counts as "covered" once it has this many graded items.
+    min_items_per_concept: int = 5
 
 
 CONFIDENCE_LABELS = {
@@ -172,6 +174,34 @@ def graded_reviews(col: Collection) -> int:
         col.db.scalar("select count() from revlog where cid in (select id from cards)")
         or 0
     )
+
+
+def concept_item_counts(col: Collection) -> dict[str, int]:
+    """Graded (reps>0) card count per performance-expectation concept, keyed by
+    concept id, read from the ``rpce::concept::<id>`` tags in one pass."""
+    counts: dict[str, int] = {}
+    for row in col.db.execute(
+        "select n.tags from cards c join notes n on c.nid = n.id where c.reps > 0"
+    ):
+        for tok in (row[0] or "").split():
+            if tok.startswith("rpce::concept::"):
+                cid = tok.rsplit("::", 1)[-1]
+                counts[cid] = counts.get(cid, 0) + 1
+    return counts
+
+
+def concept_coverage_pct(col: Collection, min_items: int = 5) -> float:
+    """Fraction of the RP performance-expectation concepts with at least
+    ``min_items`` graded items (docs/rpce/SCORING.md). 0.0 if the registry is
+    empty. This replaces domain coverage as the exam-coverage signal."""
+    from . import concepts
+
+    cs = concepts.all_concepts()
+    if not cs:
+        return 0.0
+    counts = concept_item_counts(col)
+    covered = sum(1 for c in cs if counts.get(c.id, 0) >= min_items)
+    return covered / len(cs)
 
 
 def graded_scenarios(col: Collection) -> int:
