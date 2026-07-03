@@ -569,6 +569,20 @@ fn scalar_i64(sql: &str) -> i64 {
 /// coverage as the exam-coverage signal. The denominator is the set of concept
 /// tags present in the deck, which is the full 210-concept blueprint the shared
 /// starter deck seeds.
+/// True for a performance-expectation concept id (digits '.' digits, e.g.
+/// "3.29") — the format of every id in the desktop concept registry.
+fn is_pe_concept(id: &str) -> bool {
+    match id.split_once('.') {
+        Some((a, b)) => {
+            !a.is_empty()
+                && !b.is_empty()
+                && a.bytes().all(|c| c.is_ascii_digit())
+                && b.bytes().all(|c| c.is_ascii_digit())
+        }
+        None => false,
+    }
+}
+
 fn concept_coverage() -> (i64, i64, f64) {
     use std::collections::{HashMap, HashSet};
     let rows = match db_query(
@@ -591,6 +605,13 @@ fn concept_coverage() -> (i64, i64, f64) {
             let reps = a.get(1).and_then(|v| v.as_i64()).unwrap_or(0);
             for t in tags.split_whitespace() {
                 if let Some(id) = t.strip_prefix("rpce::concept::") {
+                    // Only performance-expectation concepts (PE-number ids like
+                    // "3.29") count — that set IS the desktop registry (210), so
+                    // the denominator matches desktop exactly. Legacy non-PE
+                    // concept tags on other notes are ignored.
+                    if !is_pe_concept(id) {
+                        continue;
+                    }
                     all.insert(id.to_string());
                     if reps > 0 {
                         *graded.entry(id.to_string()).or_insert(0) += 1;
