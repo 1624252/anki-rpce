@@ -130,6 +130,12 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 .overlay.hidden{display:none}  /* beat .overlay's display:flex so it starts hidden */
 .modal{background:#fff;border:1px solid var(--border);border-radius:20px;max-width:420px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(10,31,68,.32);text-align:center;animation:pop .16s ease-out}
 @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+/* Inline loading spinner (AI grading / simulation generation) */
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldr{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent1);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+/* Examiner ruling in Simulate — a distinct embedded card, set apart from the meeting transcript */
+.sim-exam{margin:10px 0;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--accent1);border-radius:12px}
+.sim-exam .who{font-weight:800;color:var(--accent1)}
 .modal .icon{font-size:42px;line-height:1}
 .modal h3{margin:12px 0 6px;font-size:20px;font-weight:800;color:var(--ink)}
 .modal p{color:var(--ink2);font-size:15px;line-height:1.5;margin:0 0 20px}
@@ -562,7 +568,10 @@ function setScore(ids, sc, abstained){
   }
 }
 // Relative "time ago" (no seconds) for the per-score last-updated stamp.
-function relTime(sec){
+// NB: takes epoch SECONDS (matches rpce:readiness_updated_at). Named distinctly
+// from the sync-bar relTime() below, which takes millisecond timestamps — a name
+// collision there made the score stamps read a bogus "huge time ago".
+function relTimeAgo(sec){
   var d=Math.max(0, Math.floor(Date.now()/1000)-sec);
   if(d<60) return 'just now';
   var m=Math.floor(d/60); if(m<60) return m+' minute'+(m!=1?'s':'')+' ago';
@@ -583,7 +592,7 @@ function openScores(){
   // e.g. "3 hours ago".
   var stamp=Math.floor(Date.now()/1000);
   try{ var c=j(Engine.configInt('rpce:readiness_updated_at')); if(c&&c.value) stamp=parseInt(c.value,10)||stamp; }catch(e){}
-  var upd='Updated '+relTime(stamp);
+  var upd='Updated '+relTimeAgo(stamp);
   ['u-mem','u-perf','u-1','u-2'].forEach(function(id){ var e=el(id); if(e) e.textContent=upd; });
   el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of '+(s.conceptTotal||210)+' concepts';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
@@ -630,6 +639,8 @@ function examinerBadge(usedAi){
   return usedAi
     ? '<div style="margin-top:8px;color:var(--ready);font-weight:700">🤖 AI examiner</div>'
     : '<div style="margin-top:8px;color:var(--warn);font-weight:700">🔌 Offline examiner'+(aiConfigured()?' (AI off or offline)':'')+'.</div>'; }
+/* Inline spinner + label for in-progress AI work (grading / generating). */
+function loadingHtml(t){ return '<span class="ldr"></span><span style="color:var(--accent1);font-weight:700">'+t+'</span>'; }
 /* Toggle button shown on the Section II screen when a key is bundled. */
 function aiToggleHtml(){
   if(!aiConfigured()) return '';
@@ -640,7 +651,16 @@ function aiToggleHtml(){
 }
 function toggleAi(){ setAiEnabled(!aiEnabled());
   var a=el('s2-ai-toggle'); if(a) a.innerHTML=aiToggleHtml();
-  var b=el('sim-ai-toggle'); if(b) b.innerHTML=aiToggleHtml(); }
+  var b=el('sim-ai-toggle'); if(b) b.innerHTML=simAiToggleHtml(); }
+/* Simulate toggle: AI-generated scenarios are graded by AI (required) — show a
+   locked ON pill, not a toggle. Scripted scenarios keep the normal toggle. */
+function simAiToggleHtml(){
+  var s=SIMS[simIdx];
+  if(s && s.ai) return '<span style="display:inline-block;border:1px solid var(--border);'+
+    'border-radius:999px;padding:7px 16px;font-weight:700;background:var(--surface2);'+
+    'color:var(--ready)">🤖 AI grading: ON (required)</span>';
+  return aiToggleHtml();
+}
 /* Ask the OpenAI chat API to grade via the NATIVE bridge (a WebView fetch to
    OpenAI is CORS-blocked from a file:// origin). Kotlin posts on a background
    thread and calls window.__aiGradeDone with the raw response; on ANY failure
@@ -724,7 +744,7 @@ function gradeS2(){
   Engine.recordScenario();
   try{ Engine.incrConfig("rpce:section2_graded"); }catch(e){}  // synced tally (combines across devices)
   if(aiActive()){
-    el('s2-feedback').classList.remove('hidden'); el('s2-feedback').innerHTML='🤖 Grading…';
+    el('s2-feedback').classList.remove('hidden'); el('s2-feedback').innerHTML=loadingHtml('AI examiner is grading…');
     aiGradeS2(s, ans, function(ai){
       if(ai){
         // AI score stands; also show the offline keyword hit/miss (informational).
@@ -758,7 +778,7 @@ var SIM_GEN_SYS='You are a parliamentary-procedure examiner authoring a practice
   'sentence"} ]}. 4-8 turns with 2-3 decision points. Output ONLY the JSON object.';
 function genSim(){
   if(!aiConfigured()) return;
-  el('sim-gen').innerHTML='<span style="color:var(--accent1);font-weight:700">🤖 Generating…</span>';
+  el('sim-gen').innerHTML=loadingHtml('Generating scenario…');
   var settled=false;
   function fail(){ if(settled)return; settled=true; window.__aiGradeDone=null;
     el('sim-gen').innerHTML=simGenHtml(); simAppend('<p style="color:var(--warn)">Could not generate a scenario — check your connection and try again.</p>'); }
@@ -771,7 +791,7 @@ function genSim(){
           gold:tn.gold||'',ref:{section:tn.cite||'',quote:tn.quote||''},expected:[]};
         return {speaker:tn.speaker||'',line:tn.line||''}; });
       if(!turns.some(function(x){return x.prompt;})) throw 0;  // need >=1 decision
-      SIMS.push({domain:0,title:'🤖 '+(o.title||'AI scenario'),setting:o.setting||'',turns:turns});
+      SIMS.push({domain:0,ai:true,title:'🤖 '+(o.title||'AI scenario'),setting:o.setting||'',turns:turns});
       simIdx=SIMS.length-1; loadSim();
     }catch(e){ el('sim-gen').innerHTML=simGenHtml(); simAppend('<p style="color:var(--warn)">Could not parse the generated scenario — try again.</p>'); }
   };
@@ -782,8 +802,8 @@ function loadSim(){
   var s=SIMS[simIdx]; if(!s) return;
   simTurn=0; simPending=null;
   el('sim-title').textContent=s.title;
-  el('sim-gen').innerHTML=simGenHtml();           // "Generate AI scenario" (like desktop)
-  el('sim-ai-toggle').innerHTML=aiToggleHtml();  // AI grading toggle (scripted sims)
+  el('sim-gen').innerHTML=simGenHtml();            // "Generate AI scenario" (like desktop)
+  el('sim-ai-toggle').innerHTML=simAiToggleHtml(); // AI toggle (locked ON for AI scenarios)
   el('sim-transcript').innerHTML="<p style='color:var(--ink2)'><i>"+s.setting+"</i></p>";
   el('sim-answer').value=''; el('sim-answer').disabled=false;
   playSim();
@@ -805,25 +825,34 @@ function simRespond(){
   Engine.recordScenario();
   try{ Engine.incrConfig("rpce:sim_responses"); }catch(e){}   // synced tally (combines across devices)
   var p=simPending;
+  simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>");   // echo the answer once
+  el('sim-answer').value='';
   function present(score, feedback, usedAi){
     var passed=score>=3;
     // Offline keyword hit/miss (from this step's expected key points) \u2014 shown with
     // BOTH the offline and the AI grade (informational; never changes the score).
     var kw=keywordNote({keywords:(p.expected||[]).map(function(g){return g[0];})}, ans).html;
-    simAppend("<p><b>You (parliamentarian):</b> "+ans+"</p>"+
-      "<p style='color:var(--ink2)'><b>Examiner:</b> "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+") \u2014 "+
-      feedback+"</p>"+kw+"<p style='color:var(--ink2)'><b>Model ruling:</b> "+p.gold+"</p>" + examinerBadge(usedAi) + refBlock(p.ref));
-    el('sim-answer').value=''; playSim();
+    var ldr=el('sim-ldr'); if(ldr && ldr.parentNode) ldr.parentNode.removeChild(ldr);  // drop the spinner
+    // The examiner's ruling sits in its own embedded card, set apart from the meeting.
+    simAppend("<div class='sim-exam'>"+
+      "<div class='who'>Examiner \u2014 "+score.toFixed(1)+"/5 ("+(passed?'pass':'keep practicing')+")</div>"+
+      "<div style='margin-top:4px'>"+feedback+"</div>"+kw+
+      "<div style='margin-top:8px'><b>Model ruling:</b> "+p.gold+"</div>"+
+      examinerBadge(usedAi)+refBlock(p.ref)+"</div>");
+    playSim();
   }
   function offline(){
     var gold=toks(p.gold); var overlap=gold.size? inter(toks(ans),gold)/gold.size : 0;
     var score=Math.round(5*overlap*100)/100;
     present(score, "your answer "+(score>=3?'matches':'misses key points from')+" the model ruling.", false);
   }
-  // AI grading when toggled on + configured + online (scripted sims); else offline.
-  if(aiActive()){
+  // AI grading is REQUIRED for AI-generated scenarios; otherwise it follows the
+  // toggle (on + configured + online). Show a spinner while the AI examiner grades.
+  var forceAi = !!(SIMS[simIdx] && SIMS[simIdx].ai);
+  if(forceAi || aiActive()){
     var pseudo={gold:p.gold, ref:p.ref, keywords:(p.expected||[]).map(function(g){return g[0];})};
     el('sim-answer').disabled=true;
+    simAppend("<p id='sim-ldr'>"+loadingHtml('Examiner is grading\u2026')+"</p>");
     aiGradeS2(pseudo, ans, function(ai){ el('sim-answer').disabled=false;
       if(ai) present(ai.score, ai.feedback, true); else offline(); });
     return;
