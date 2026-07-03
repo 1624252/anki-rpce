@@ -100,7 +100,7 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "debatable and is adopted by a majority vote — even though the main motion "
                 "might require a different threshold, an amendment needs only a majority.",
                 ref=refs.PRECEDENCE,
-                expected=(("majority", "second", "germane"),),
+                expected=(("majority",), ("second", "germane")),
             ),
             SimTurn("Member (Chen)", "Second the amendment!"),
             SimTurn(
@@ -199,7 +199,12 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "more than half of the votes cast. A plurality does not elect.",
                 ref=refs.PLURALITY,
                 rubric=RUBRIC_PLURALITY,
-                expected=(("majority",),),
+                # "no ... majority" conveys the ruling: a bare "no, majority"
+                # answer reads correctly ("no — a majority is required").
+                expected=(
+                    ("no", "not", "cannot", "does not elect", "not elected"),
+                    ("majority",),
+                ),
             ),
             SimTurn(
                 "Chair",
@@ -210,7 +215,12 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "Candidates are not dropped unless the bylaws so provide, and members may "
                 "change their votes on each ballot.",
                 ref=refs.PLURALITY,
-                expected=(("majority", "repeat", "again", "another"),),
+                # "repeat ... majority" = repeat balloting until someone has a
+                # majority; both concepts are required to convey the ruling.
+                expected=(
+                    ("repeat", "again", "another ballot", "re-ballot", "revote"),
+                    ("majority",),
+                ),
             ),
             SimTurn(
                 "Chair",
@@ -238,7 +248,10 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "because previous notice was given at the last regular meeting. A simple "
                 "majority is not sufficient.",
                 ref=refs.BYLAWS_AMENDMENT,
-                expected=(("two-thirds", "2/3", "two thirds"),),
+                expected=(
+                    ("two-thirds", "2/3", "two thirds"),
+                    ("notice", "previous notice", "noticed"),
+                ),
             ),
             SimTurn(
                 "Member (Ruiz)",
@@ -249,12 +262,206 @@ SIMULATIONS: tuple[Simulation, ...] = (
                 "$150 is out of order; a figure between the current $50 and the noticed $75 "
                 "would be in order.",
                 ref=refs.SCOPE_OF_NOTICE,
-                expected=(("scope", "notice"),),
+                expected=(
+                    ("no", "not in order", "out of order", "cannot", "exceed"),
+                    ("scope", "notice"),
+                ),
             ),
             SimTurn(
                 "Chair",
                 "The amendment to $150 is out of order — it exceeds the scope of the notice. "
                 "We'll vote on the $75 amendment as noticed.",
+            ),
+        ),
+    ),
+    Simulation(
+        5,
+        2,
+        "Reworking a proposal at the Riverside Garden Club",
+        "You are the parliamentarian at the Riverside Garden Club. A main motion "
+        '"that the Club hold its annual plant sale on the first Saturday of May" is '
+        "pending and has been debated for a while.",
+        (
+            SimTurn(
+                "Chair",
+                "The motion to hold the plant sale on the first Saturday of May is open "
+                "for debate.",
+            ),
+            SimTurn(
+                "Member (Okafor)",
+                "This needs more study than we can give it on the floor. I move to refer "
+                "the motion to a three-member committee to work out the details.",
+                prompt="Advise the chair: how is this motion to Commit/Refer handled, and what vote does it need?",
+                gold="The motion to Commit or Refer needs a second and is debatable. It "
+                "sends the pending question to a committee and is adopted by a majority "
+                "vote. If it passes, the main motion goes to the committee instead of "
+                "being decided now.",
+                ref=refs.COMMIT,
+                expected=(("commit", "refer", "committee"), ("majority", "second")),
+            ),
+            SimTurn(
+                "Chair",
+                "The motion to refer is defeated, so the main motion is again pending. "
+                "Further debate?",
+            ),
+            SimTurn(
+                "Member (Bianchi)",
+                'I move to substitute the whole motion with "that the Club hold a fall '
+                'harvest festival in October instead of a plant sale."',
+                prompt="Advise the chair: is a substitute in order here, and how is it treated?",
+                gold="A motion to substitute is a form of amendment and must be germane to "
+                "the pending question. It needs a second, is fully debatable on the merits "
+                "of both the original and the substitute, and is adopted by a majority "
+                "vote.",
+                ref=refs.SUBSTITUTE,
+                expected=(("substitute", "amend"), ("majority", "germane", "debat")),
+            ),
+            SimTurn(
+                "Chair",
+                "The substitute is lost; the original motion stands. It's getting late.",
+            ),
+            SimTurn(
+                "Member (Okafor)",
+                "I move to postpone this motion to our next regular meeting.",
+                prompt="Advise the chair: how is the motion to Postpone to a Certain Time handled?",
+                gold="The motion to Postpone to a Certain Time needs a second, is debatable, "
+                "and is adopted by a majority vote. It puts the question off to a definite "
+                "later time — here the next regular meeting. (A two-thirds vote is needed "
+                "only if it is made a special order.)",
+                ref=refs.POSTPONE,
+                expected=(("postpone", "put off", "defer"), ("majority", "second")),
+            ),
+            SimTurn(
+                "Chair",
+                "The motion is postponed to our next regular meeting. Thank you, "
+                "parliamentarian.",
+            ),
+        ),
+    ),
+    Simulation(
+        6,
+        3,
+        "Undoing a hasty vote at the Ridgeline Trail Alliance",
+        "You are the parliamentarian at the Ridgeline Trail Alliance. Earlier in this "
+        "same meeting the assembly adopted a motion to spend $2,000 on a trailhead "
+        "sign. New information has just come to light.",
+        (
+            SimTurn(
+                "Member (Nguyen)",
+                "I move to spend an additional $800 on landscaping around the new sign.",
+            ),
+            SimTurn(
+                "Chair",
+                "That motion is out of order because we already adjourned that item.",
+            ),
+            SimTurn(
+                "Member (Nguyen)",
+                "I disagree with that ruling and I appeal from the decision of the chair!",
+                prompt="Advise the chair: how is this Appeal handled, and who decides it?",
+                gold="An Appeal requires a second. It takes the question away from the chair "
+                "and gives it to the assembly, which decides by vote. A majority or a tie "
+                "vote sustains the chair's ruling; the assembly, not the chair, has the "
+                "final say.",
+                ref=refs.APPEAL,
+                expected=(
+                    ("assembly", "member"),
+                    ("second", "majority", "tie", "vote"),
+                ),
+            ),
+            SimTurn(
+                "Chair",
+                "On the appeal, the assembly reverses my ruling. (to you) Now a member "
+                "wants to revisit the $2,000 sign vote we adopted earlier tonight.",
+            ),
+            SimTurn(
+                "Member (Alvarado)",
+                "I voted for the $2,000, but the bids came in higher. I move to reconsider "
+                "that vote.",
+                prompt="Advise the chair: may this member move to Reconsider the vote?",
+                gold="Yes. In an ordinary meeting the motion to Reconsider must be made the "
+                "same day as the vote, and only by a member who voted on the prevailing "
+                "side. Alvarado voted for the motion that was adopted, so he is on the "
+                "prevailing side and may move it. It needs a second.",
+                ref=refs.RECONSIDER,
+                expected=(("prevailing", "voted", "winning side"),),
+            ),
+            SimTurn(
+                "Member (Alvarado)",
+                "Actually, rather than reconsider, could we just change the amount that's "
+                "already on the books to $2,500?",
+                prompt="Advise the chair: what motion is used to change a figure the assembly already adopted?",
+                gold="That is the motion to Amend Something Previously Adopted, used to "
+                "change part of an action already taken. Without previous notice it takes a "
+                "two-thirds vote or a majority of the entire membership; with notice, a "
+                "majority vote.",
+                ref=refs.AMEND_PREVIOUSLY_ADOPTED,
+                expected=(
+                    (
+                        "amend something previously adopted",
+                        "previously adopted",
+                        "amend",
+                    ),
+                ),
+            ),
+            SimTurn("Chair", "Understood. Thank you, parliamentarian."),
+        ),
+    ),
+    Simulation(
+        7,
+        6,
+        "The parliamentarian's proper role at the Metro Nonprofit Convention",
+        "You have been engaged as the professional parliamentarian for the annual "
+        "convention of the Metro Nonprofit Coalition. A contentious bylaws item is on "
+        "the floor and tempers are rising.",
+        (
+            SimTurn(
+                "Member (Delacroix)",
+                "(to you) You clearly know the rules best — just tell us how to vote and "
+                "rule on this point for us.",
+                prompt="Advise: what is your proper role, and who actually rules?",
+                gold="The parliamentarian's role during a meeting is purely advisory and "
+                "consultative. Parliamentary law gives the chair alone the power to rule "
+                "on questions of order; I advise the chair — usually privately — and the "
+                "chair makes and states the ruling.",
+                ref=refs.PARLIAMENTARIAN,
+                expected=(("advis", "consult"), ("chair",)),
+            ),
+            SimTurn(
+                "Chair",
+                "(quietly, to you) You're also a dues-paying member of this Coalition. "
+                "Can you just vote with us on this bylaws amendment to help it pass?",
+                prompt="Advise: as the member serving as parliamentarian, may you vote and debate on this question?",
+                gold="No. A member who serves as parliamentarian has the same duty as the "
+                "chair to maintain impartiality, and so does not make motions, debate, or "
+                "vote on questions — except on a ballot vote. I must forgo those rights "
+                "while serving in this role.",
+                ref=refs.PARLIAMENTARIAN_IMPARTIALITY,
+                expected=(("impartial", "not vote", "cannot vote", "forgo"),),
+            ),
+            SimTurn(
+                "Member (Delacroix)",
+                "This amendment is a fraud and the member who wrote it is a liar!",
+                prompt="Advise the chair: how should the chair handle this remark in debate?",
+                gold="Debate must be directed to the measure, not the member. A member may "
+                "not attack another's motives or use words like 'fraud' or 'liar' about a "
+                "member. The chair must act at once to call the speaker to order and "
+                "require decorum.",
+                ref=refs.DECORUM,
+                expected=(
+                    (
+                        "measure not the member",
+                        "measure, not the member",
+                        "motive",
+                        "personalit",
+                        "decorum",
+                        "order",
+                    ),
+                ),
+            ),
+            SimTurn(
+                "Chair",
+                "The member will confine his remarks to the measure. Thank you, "
+                "parliamentarian.",
             ),
         ),
     ),

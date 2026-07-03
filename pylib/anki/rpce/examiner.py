@@ -456,18 +456,28 @@ def grade_sim_step(
     """Lenient grader for a SIMULATION step (short, step-by-step answers) — NOT
     the longer Section II performance answers.
 
-    ``expected`` is a list of concept groups; each group is a tuple of accepted
-    synonyms. The candidate hits a concept if their answer contains ANY synonym
-    in the group. A step passes when every concept is hit — so a brief correct
-    reply ("wait for a second") is full credit. Feedback names the concepts the
-    candidate got and the ones still missing (the first synonym labels each)."""
+    ``expected`` is a list of REQUIRED concept groups; each group is a tuple of
+    accepted synonyms/phrases and the candidate hits that concept if ANY of them
+    appears (matched on WORD BOUNDARIES, so short keys like "no" don't match
+    "notice"). A step passes only when EVERY concept group is hit — so a step can
+    require several ideas at once (e.g. a negation AND "majority"). The concept
+    groups should be chosen so that a bare list of those keywords already reads
+    as a correct answer. The first synonym in each group is its display label."""
     text = answer.lower()
     if not expected:  # no rubric for this step → accept a non-empty reply
         return GradeResult(5.0, True, "Noted — the meeting continues.", citation, False)
+
+    def hit(syn: str) -> bool:
+        # Word-boundary, case-insensitive; hyphens/slashes/spaces matched
+        # literally. Lets "no" / "2/3" / "two-thirds" match as whole tokens.
+        return (
+            re.search(r"(?<!\w)" + re.escape(syn.lower()) + r"(?!\w)", text) is not None
+        )
+
     got, missing = [], []
     for group in expected:
         label = group[0]
-        if any(syn.lower() in text for syn in group):
+        if any(hit(syn) for syn in group):
             got.append(label)
         else:
             missing.append(label)

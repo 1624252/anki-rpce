@@ -749,24 +749,36 @@ def _s2_grade(answer_b64: str) -> None:
 
 
 def _s2_next() -> None:
-    """Advance to the next Section II scenario and re-render the page."""
+    """Jump to a RANDOM different Section II scenario and re-render the page."""
     global _S2_IDX
+    import random
+
     from anki.rpce import scenarios
 
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
-    _S2_IDX = (_S2_IDX + 1) % len(scenarios.all_scenarios())
+    n = len(scenarios.all_scenarios())
+    others = [i for i in range(n) if i != _S2_IDX]
+    _S2_IDX = random.choice(others) if others else 0
     mw.moveToState("deckBrowser")
 
 
 def _show_scenarios() -> None:
     """Section II is an in-window page (like the Dashboard), rendered through the
-    deck-browser content hook — not a popup dialog."""
-    global _RPCE_VIEW
+    deck-browser content hook — not a popup dialog. Picks a RANDOM scenario on
+    entry so you don't always start on the same one."""
+    global _RPCE_VIEW, _S2_IDX
+    import random
+
+    from anki.rpce import scenarios
+
     mw = aqt.mw
     if mw is None or mw.col is None:
         return
+    n = len(scenarios.all_scenarios())
+    if n:
+        _S2_IDX = random.randrange(n)
     _RPCE_VIEW = "section2"
     mw.moveToState("deckBrowser")
 

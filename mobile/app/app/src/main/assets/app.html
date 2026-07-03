@@ -559,9 +559,11 @@ function examinerBadge(){
   return examinerMode()==='ai'
     ? '<div style="margin-top:8px;color:var(--ready);font-weight:700">🤖 AI examiner</div>'
     : '<div style="margin-top:8px;color:var(--warn);font-weight:700">🔌 Offline examiner. Connect online for AI feedback.</div>'; }
+function rndIdx(len, cur){ if(len<=1) return 0; var i=cur; while(i===cur){ i=Math.floor(Math.random()*len); } return i; }
 function openSection2(){
   if(!SCEN.length){ SCEN=j(Engine.scenarios())||[]; }
-  sIdx=0; show('section2'); loadS2();
+  sIdx = SCEN.length ? Math.floor(Math.random()*SCEN.length) : 0;  // random on entry
+  show('section2'); loadS2();
 }
 function loadS2(){
   var s=SCEN[sIdx]; if(!s) return;
@@ -587,11 +589,11 @@ function gradeS2(){
     '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">'+
     '<b>Model ruling:</b> '+s.gold + refBlock(s.ref);
 }
-function nextS2(){ sIdx=(sIdx+1)%SCEN.length; loadS2(); }
+function nextS2(){ sIdx=rndIdx(SCEN.length, sIdx); loadS2(); }
 
 /* ---- Simulation mode: a scripted meeting; respond as the parliamentarian ---- */
 var SIMS=[], simIdx=0, simTurn=0, simPending=null;
-function openSim(){ if(!SIMS.length){ SIMS=j(Engine.simulations())||[]; } simIdx=0; show('simulate'); loadSim(); }
+function openSim(){ if(!SIMS.length){ SIMS=j(Engine.simulations())||[]; } simIdx=SIMS.length?Math.floor(Math.random()*SIMS.length):0; show('simulate'); loadSim(); }
 function loadSim(){
   var s=SIMS[simIdx]; if(!s) return;
   simTurn=0; simPending=null;
@@ -624,7 +626,7 @@ function simRespond(){
     "<b>Model ruling:</b> "+simPending.gold+"</p>" + examinerBadge() + refBlock(simPending.ref));
   el('sim-answer').value=''; playSim();
 }
-function nextSim(){ simIdx=(simIdx+1)%SIMS.length; loadSim(); }
+function nextSim(){ simIdx=rndIdx(SIMS.length, simIdx); loadSim(); }
 
 /* ---- account/sync message popup ---- */
 function popup(title, msg, icon){
