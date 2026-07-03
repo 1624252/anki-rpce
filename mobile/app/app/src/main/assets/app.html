@@ -219,7 +219,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
       <div class="scard"><div class="lab">Pass Section I</div><div class="val" id="s-1">–</div><span class="pill" id="p-1"></span><div class="srange" id="r-1"></div><div class="sreason" id="e-1"></div></div>
       <div class="scard"><div class="lab">Pass Section II</div><div class="val" id="s-2">–</div><span class="pill" id="p-2"></span><div class="srange" id="r-2"></div><div class="sreason" id="e-2"></div></div>
     </div>
-    <div class="covhead"><b>DOMAIN COVERAGE</b><span id="cov-txt"></span></div>
+    <div class="covhead"><b>CONCEPT COVERAGE</b><span id="cov-txt"></span></div>
     <div class="cov"><i id="cov-bar" style="width:0%"></i></div>
     <div class="note" id="abstain-note"></div>
     <p class="muted" id="best-next"></p>
@@ -536,7 +536,7 @@ function openScores(){
   setScore({v:'s-perf',p:'p-perf',r:'r-perf',e:'e-perf'}, s.performance, s.performance.point==null);
   setScore({v:'s-1',p:'p-1',r:'r-1',e:'e-1'}, s.sectionI, s.sectionI.abstained);
   setScore({v:'s-2',p:'p-2',r:'r-2',e:'e-2'}, s.sectionII, s.sectionII.abstained);
-  el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of 7 domains';
+  el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of '+(s.conceptTotal||210)+' concepts';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
   el('abstain-note').textContent = '';   // no 'readiness hidden / not enough data' note
   el('best-next').textContent = '';       // no 'best next topic'

@@ -443,6 +443,8 @@ const DOMAINS: [(i64, &str); 7] = [
 const MIN_REVIEWS: i64 = 200;
 const MIN_COVERAGE: f64 = 0.5;
 const MIN_SCENARIOS: i64 = 100;
+/// A concept counts as "covered" once it has this many graded items.
+const MIN_ITEMS_PER_CONCEPT: i64 = 5;
 
 /// Run a read-only SQL query through the shared backend's db command.
 fn db_query(sql: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
@@ -560,6 +562,54 @@ fn scalar_i64(sql: &str) -> i64 {
         .unwrap_or(0)
 }
 
+/// Concept coverage as (covered, total, pct). A concept (an
+/// 'rpce::concept::<id>' tag present in the deck) is "covered" once it has
+/// MIN_ITEMS_PER_CONCEPT graded (reps>0) cards. Mirrors desktop
+/// scores.concept_coverage_pct (docs/rpce/SCORING.md) — this replaces domain
+/// coverage as the exam-coverage signal. The denominator is the set of concept
+/// tags present in the deck, which is the full 210-concept blueprint the shared
+/// starter deck seeds.
+fn concept_coverage() -> (i64, i64, f64) {
+    use std::collections::{HashMap, HashSet};
+    let rows = match db_query(
+        "SELECT n.tags, c.reps FROM cards c JOIN notes n ON c.nid = n.id \
+         WHERE n.tags LIKE '%rpce::concept::%'",
+        serde_json::json!([]),
+    ) {
+        Ok(v) => v,
+        Err(_) => return (0, 0, 0.0),
+    };
+    let mut all: HashSet<String> = HashSet::new();
+    let mut graded: HashMap<String, i64> = HashMap::new();
+    if let Some(arr) = rows.as_array() {
+        for r in arr {
+            let a = match r.as_array() {
+                Some(a) => a,
+                None => continue,
+            };
+            let tags = a.first().and_then(|v| v.as_str()).unwrap_or("");
+            let reps = a.get(1).and_then(|v| v.as_i64()).unwrap_or(0);
+            for t in tags.split_whitespace() {
+                if let Some(id) = t.strip_prefix("rpce::concept::") {
+                    all.insert(id.to_string());
+                    if reps > 0 {
+                        *graded.entry(id.to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+    }
+    let total = all.len() as i64;
+    if total == 0 {
+        return (0, 0, 0.0);
+    }
+    let covered = graded
+        .values()
+        .filter(|&&c| c >= MIN_ITEMS_PER_CONCEPT)
+        .count() as i64;
+    (covered, total, covered as f64 / total as f64)
+}
+
 /// The RPCE concept id + readable domain name for a card, from its note tags
 /// ('rpce::concept::<id>' / 'rpce::domain::<code>'). Empty strings when unknown;
 /// feeds the session-complete concept breakdown (mirrors the desktop).
@@ -629,7 +679,12 @@ fn scores_json() -> String {
         }
         coverage_arr.push(serde_json::json!({ "code": code, "name": name, "cards": cards }));
     }
-    let cov_pct = covered as f64 / DOMAINS.len() as f64;
+    // Coverage is now measured by CONCEPT (per docs/rpce/SCORING.md), not by
+    // domain: the fraction of the ~210 performance-expectation concepts with
+    // >=5 graded items. (The per-domain `covered` count above still feeds the
+    // domain breakdown shown in the UI, but no longer drives the scores.)
+    let (concept_covered, concept_total, cov_pct) = concept_coverage();
+    let _ = covered; // domain-covered count retained for the breakdown only
     let best_next = best.map(|(_, n)| n).unwrap_or("");
     let n_domains = DOMAINS.len();
 
@@ -714,7 +769,7 @@ fn scores_json() -> String {
         }
         if cov_pct < MIN_COVERAGE {
             missing.push(format!(
-                "domain coverage {:.0}% of {:.0}% needed",
+                "concept coverage {:.0}% of {:.0}% needed",
                 cov_pct * 100.0,
                 MIN_COVERAGE * 100.0
             ));
@@ -763,7 +818,7 @@ fn scores_json() -> String {
             "evidence": format!(
                 "Maps a {:.0}% performance estimate through the 80% section bar to a \
                  pass probability. Evidence: {reviews} reviews across {:.0}% of \
-                 domains{scen_note}. Focus next on {best_next}.",
+                 concepts{scen_note}. Focus next on {best_next}.",
                 p * 100.0,
                 cov_pct * 100.0
             ),
@@ -777,6 +832,8 @@ fn scores_json() -> String {
         "sectionI": section(false),
         "sectionII": section(true),
         "coveragePct": cov_pct,
+        "conceptCovered": concept_covered,
+        "conceptTotal": concept_total,
         "reviews": reviews,
         "scenarios": scenarios,
         "bestNext": best_next,
