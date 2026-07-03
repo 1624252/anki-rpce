@@ -148,6 +148,13 @@ _REVIEWER_BOTTOM_CSS = (
     "<style>"
     "body,#innertable{background:#eef4ff !important}"
     "body{color:#35548c !important}"
+    # Reserve height for the tall rating buttons. Anki fits the bottom bar's fixed
+    # height ONCE, at review entry, by measuring the body while #middle is still
+    # empty — and since we hide Edit/More (below), an empty body collapses to ~15px,
+    # locking the bar too short so the 80px Again/Hard/Good/Easy buttons render
+    # off-screen below it. This floor keeps the measured height tall enough. The
+    # !important beats adjustHeightToFit's inline `min-height:0` before it measures.
+    "html,body{min-height:82px !important}"
     # Remove the reviewer's Edit and More buttons (not part of the RPCE flow).
     "button[onclick*='edit']{display:none !important}"
     "button[onclick*='more']{display:none !important}"
