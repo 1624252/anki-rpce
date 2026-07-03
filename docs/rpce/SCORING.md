@@ -6,10 +6,19 @@ Same formulas run on desktop (`pylib/anki/rpce/scores.py`) and phone (`mobile/jn
 
 ## Concepts and coverage
 
-Every practice item (Review card, Section II scenario, Simulate decision) carries a **concept**. A concept is **one numbered RP performance expectation** (1.1, 1.2, … 7.43 — roughly 180 in total; see `CONCEPTS` in `pylib/anki/rpce/concepts.py`, built from `data/rpce_concepts.json`). Each concept has a domain (1–7), a short label, its RONR (12th ed.) citations, and a section weight.
+Every practice item (Review card, Section II scenario, Simulate decision) carries a **concept**. A concept is **one numbered RP performance expectation** (1.1, 1.2, … 7.43 — **210** in total; see `CONCEPTS` in `pylib/anki/rpce/concepts.py`, built from `data/rpce_concepts.json`). Each concept has a domain (1–7), a short label, its RONR (12th ed.) citations, and a section weight.
 
-- **Coverage(section)** = (concepts in that section with ≥ `MIN_ITEMS_PER_CONCEPT` graded items) / (total concepts in that section). This is the "percent of the exam covered so far" shown with every score.
-- Section I concepts = all knowledge/recall concepts (the MCQ blueprint). Section II concepts = the concepts that have authored performance scenarios.
+### Coverage = mastered concepts
+
+**Coverage** is the fraction of the 210 performance-expectation concepts the candidate has **mastered** — the "percent of the exam covered so far" shown with every score.
+
+A concept counts as **mastered** once **one of its cards has its 2 most-recent reviews both a pass (Good or Easy) with the most recent rated Easy**. In other words: you have to have recently, consistently aced a question of that concept — not just seen it, and not just one lucky Easy.
+
+- Formally, over the card's most-recent `COVERAGE_RECENT_N = 2` reviews (newest first): the newest is **Easy** (ease 4) **and** every one is at least **Good** (ease ≥ 3).
+- **Why the last 2, not a longer all-Easy streak?** The concept-sibling burying (the fork's `BuryConceptSiblings`) buries a concept's other cards as soon as you answer one, so a given card is usually reviewed only once or twice before its siblings go away. An "N most-recent all Easy" rule with N ≥ 3 was therefore unreachable and left coverage stuck at 0%. Two recent passes ending in Easy is both attainable and a genuine mastery signal, and it rises naturally as more concepts are aced.
+- Implemented identically on both platforms: `concepts_mastered` / `concept_coverage_pct` in `pylib/anki/rpce/scores.py` and `concept_coverage` in `mobile/jni/src/lib.rs` (constants `COVERAGE_RECENT_N`, Easy = 4, Good = 3).
+
+Section I concepts = all knowledge/recall concepts (the MCQ blueprint); Section II concepts = the concepts that have authored performance scenarios. `MIN_ITEMS_PER_CONCEPT` (5) is a separate threshold — it gates when a *per-concept sub-score* is shown, not coverage (see the give-up rule below).
 
 ## The three scores
 
