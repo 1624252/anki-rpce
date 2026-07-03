@@ -151,6 +151,10 @@ _REVIEWER_BOTTOM_CSS = (
     # Remove the reviewer's Edit and More buttons (not part of the RPCE flow).
     "button[onclick*='edit']{display:none !important}"
     "button[onclick*='more']{display:none !important}"
+    # RPCE cards reveal inline (onComplete flips the card), so the "Show Answer"
+    # button is never used — hide it. This also removes it when the reviewer's
+    # bottom bar lingers into Section II / Simulate / the session-complete page.
+    "#ansbut{display:none !important}"
     # …and keep both side cells equal width so the rating buttons stay centered
     # now that the left (Edit) cell is empty.
     "td.stat{width:120px !important}"
@@ -567,7 +571,8 @@ def _banner_html(col) -> str:
 
 
 def _updated_str(col) -> str:
-    """Human-readable 'last updated' time for the readiness panel (spec §7.4)."""
+    """Relative 'last updated' time for the readiness panel (spec §7.4) — e.g.
+    "just now", "5 minutes ago", "3 hours ago", "2 days ago" (no seconds)."""
     import time
 
     from anki.rpce import scores
@@ -575,7 +580,17 @@ def _updated_str(col) -> str:
     ts = scores.last_updated(col)
     if not ts:
         return "not yet computed"
-    return time.strftime("%b %d, %Y %H:%M", time.localtime(ts))
+    secs = max(0, int(time.time()) - int(ts))
+    if secs < 60:
+        return "just now"
+    mins = secs // 60
+    if mins < 60:
+        return f"{mins} minute{'s' if mins != 1 else ''} ago"
+    hrs = mins // 60
+    if hrs < 24:
+        return f"{hrs} hour{'s' if hrs != 1 else ''} ago"
+    days = hrs // 24
+    return f"{days} day{'s' if days != 1 else ''} ago"
 
 
 #: Which page the deck-browser webview shows. Section II and Simulate are

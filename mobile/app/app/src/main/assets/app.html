@@ -185,7 +185,6 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     </div>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
-    <div style="text-align:center;margin-top:8px"><span class="chip" id="engine">engine…</span></div>
     <div id="activity" class="muted" style="margin-top:14px;line-height:1.7"></div>
     <p class="muted" id="home-msg"></p>
   </div>
@@ -235,9 +234,9 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <!-- SECTION II -->
   <div id="section2" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a></div>
-    <div class="muted" id="s2-domain" style="margin:2px 0 12px;line-height:1.4"></div>
+    <div class="muted" id="s2-domain" style="margin:2px 0 10px;line-height:1.4"></div>
+    <div id="s2-ai-toggle" style="text-align:center;margin:0 0 10px"></div>
     <div class="card" id="s2-prompt" style="font-size:17px"></div>
-    <div id="s2-ai-toggle" style="text-align:center;margin-bottom:8px"></div>
     <textarea id="s2-answer" placeholder="Your ruling & reasoning…"></textarea>
     <button class="btn" onclick="gradeS2()">Grade my answer</button>
     <div class="feedback hidden" id="s2-feedback"></div>
@@ -247,9 +246,9 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
   <!-- SIMULATION -->
   <div id="simulate" class="hidden">
     <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="sim-title"></span></div>
-    <div id="sim-ai-toggle" style="text-align:center;margin:8px 0"></div>
     <div class="card" id="sim-transcript" style="font-size:16px;min-height:120px"></div>
-    <p class="sub" id="sim-prompt" style="text-align:left;margin-top:14px"></p>
+    <div id="sim-ai-toggle" style="text-align:center;margin:12px 0 4px"></div>
+    <p class="sub" id="sim-prompt" style="text-align:left;margin-top:8px"></p>
     <textarea id="sim-answer" placeholder="Respond as the parliamentarian…"></textarea>
     <button class="btn" onclick="simRespond()">Respond</button>
     <button class="btn ghost" onclick="nextSim()" style="margin-top:12px">Next meeting ›</button>
@@ -332,7 +331,6 @@ function refreshCounts(){
   refreshActivity();
 }
 function initHome(){
-  try { el('engine').textContent = '✓ ' + Engine.engineInfo(); } catch(_){}
   if (window.RPCE_CSS) el('rpce-css').textContent = RPCE_CSS;  // shared renderer styles
   if (new URLSearchParams(location.search).get('status')==='error')
     el('home-msg').textContent = 'Engine failed to open the collection.';
@@ -568,6 +566,14 @@ function setScore(ids, sc, abstained){
       : '';
   }
 }
+// Relative "time ago" (no seconds) for the per-score last-updated stamp.
+function relTime(sec){
+  var d=Math.max(0, Math.floor(Date.now()/1000)-sec);
+  if(d<60) return 'just now';
+  var m=Math.floor(d/60); if(m<60) return m+' minute'+(m!=1?'s':'')+' ago';
+  var h=Math.floor(m/60); if(h<24) return h+' hour'+(h!=1?'s':'')+' ago';
+  var da=Math.floor(h/24); return da+' day'+(da!=1?'s':'')+' ago';
+}
 function openScores(){
   show('scores');
   var s=j(Engine.scores());
@@ -577,8 +583,12 @@ function openScores(){
   setScore({v:'s-perf',p:'p-perf',r:'r-perf',e:'e-perf'}, s.performance, s.performance.point==null);
   setScore({v:'s-1',p:'p-1',r:'r-1',e:'e-1'}, s.sectionI, s.sectionI.abstained);
   setScore({v:'s-2',p:'p-2',r:'r-2',e:'e-2'}, s.sectionII, s.sectionII.abstained);
-  // Per-score last-updated stamp (spec §4) — the moment these scores were computed.
-  var upd='Updated '+new Date().toLocaleString();
+  // Per-score last-updated stamp, RELATIVE to now (no seconds). Scores recompute
+  // on open, so this reads "just now"; a synced stamp from another device shows
+  // e.g. "3 hours ago".
+  var stamp=Math.floor(Date.now()/1000);
+  try{ var c=j(Engine.configInt('rpce:readiness_updated_at')); if(c&&c.value) stamp=parseInt(c.value,10)||stamp; }catch(e){}
+  var upd='Updated '+relTime(stamp);
   ['u-mem','u-perf','u-1','u-2'].forEach(function(id){ var e=el(id); if(e) e.textContent=upd; });
   el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of '+(s.conceptTotal||210)+' concepts';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
