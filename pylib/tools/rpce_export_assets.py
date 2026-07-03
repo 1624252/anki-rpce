@@ -60,6 +60,7 @@ def _simulations_json() -> list[dict]:
             if t.needs_response:
                 turn["prompt"] = t.prompt
                 turn["gold"] = t.gold
+                turn["concept"] = t.concept
                 turn["ref"] = _ref(t.ref)
                 # Step-by-step expected key concepts (groups of synonyms) for the
                 # phone's lenient sim grader, mirroring examiner.grade_sim_step.
@@ -77,12 +78,24 @@ def _simulations_json() -> list[dict]:
     return out
 
 
+def _concepts_json() -> dict:
+    """Concept id -> name, plus domain code -> name, for the by-concept session
+    summary on the phone (the engine only knows ids from tags)."""
+    from anki.rpce import DOMAINS
+
+    return {
+        "concepts": {c.id: c.name for c in concepts.all_concepts()},
+        "domains": {str(d.code): d.name for d in DOMAINS},
+    }
+
+
 def main(assets_dir: str) -> None:
     out_dir = Path(assets_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, data in (
         ("scenarios.json", _scenarios_json()),
         ("simulations.json", _simulations_json()),
+        ("concepts.json", _concepts_json()),
     ):
         path = out_dir / name
         path.write_text(

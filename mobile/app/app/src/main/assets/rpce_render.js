@@ -285,7 +285,11 @@ var RPCE_CSS = "\n.rpce-q{font-size:19px;line-height:1.6;color:#0a1f44}\n.rpce-h
         renumber(); host.appendChild(fb); submit(false); }
       return;
     }
-    shuffle(p.order.slice()).forEach(function(label){ list.appendChild(makeRow(label)); });
+    // Show a shuffled order that is NEVER already the correct one (a plain
+    // shuffle can randomly land on the solution, e.g. 1-in-6 for three items).
+    var correct=p.order.slice(), shown;
+    do { shown=shuffle(correct); } while(correct.length>1 && shown.join('')===correct.join(''));
+    shown.forEach(function(label){ list.appendChild(makeRow(label)); });
     renumber();
     var ctr=el('div','rpce-controls'); var sub=el('button','rpce-btn','Submit');
     sub.onclick=function(){ submit(true); }; ctr.appendChild(sub); host.appendChild(ctr);

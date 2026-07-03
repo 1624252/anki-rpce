@@ -639,8 +639,6 @@ def _section2_html(col) -> str:
             "border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;"
             f"color:{'var(--ready)' if on else 'var(--ink2)'}'>"
             f"{'🤖 AI grading: ON' if on else '🔌 AI grading: OFF'}</button>"
-            "<span style='color:var(--ink2);margin-left:10px;font-size:var(--fs-small)'>"
-            "AI addresses your answer &amp; cites RONR; offline keyword grading otherwise.</span>"
             "</div>"
         )
     return f"""{_theme_style()}{_S2_SUBMIT_JS}
@@ -1913,7 +1911,9 @@ def _on_answer_card(reviewer, card, ease) -> None:
     _session_stats["by_type"][kind] = _session_stats["by_type"].get(kind, 0) + 1
     concept, domain = _rpce_card_concept_domain(card)
     if concept:
-        _session_stats["concepts"].add(concept)
+        _session_stats["concepts"][concept] = (
+            _session_stats["concepts"].get(concept, 0) + 1
+        )
     if domain:
         _session_stats["by_domain"][domain] = (
             _session_stats["by_domain"].get(domain, 0) + 1
@@ -2020,7 +2020,7 @@ def _new_session_stats() -> dict:
         "total": 0,
         "ratings": {"again": 0, "hard": 0, "good": 0, "easy": 0},
         "by_type": {},
-        "concepts": set(),  # distinct concept ids practised this session
+        "concepts": {},  # concept id -> answers practised this session
         "by_domain": {},  # readable domain name -> answers
     }
 
@@ -2224,23 +2224,45 @@ def _session_done_html(col) -> str:
         ]
     )
 
-    def _breakdown(title: str, data: dict) -> str:
-        rows = "".join(
-            f"<div style='display:flex;justify-content:space-between;gap:12px;"
-            f"padding:6px 0;border-bottom:1px solid var(--border)'>"
-            f"<span>{name}</span><b>{cnt}</b></div>"
-            for name, cnt in sorted(data.items(), key=lambda kv: -kv[1])
-        )
+    # By-concept breakdown, grouped under each domain: the domain shows its total,
+    # and each concept is listed indented as "id. name    count".
+    from anki.rpce import concepts as _concepts
+    from anki.rpce import domain_by_code
+
+    def _row(label: str, cnt: int, indent: bool = False, bold: bool = False) -> str:
+        pad = "padding-left:22px;color:var(--ink2)" if indent else "font-weight:800"
+        wrap = ("<b>", "</b>") if bold else ("", "")
         return (
-            "<div style='margin-top:24px'><div style='font-weight:800;"
-            f"color:var(--ink);margin-bottom:6px'>{title}</div>{rows}</div>"
-            if rows
-            else ""
+            "<div style='display:flex;justify-content:space-between;gap:12px;"
+            f"padding:6px 0;border-bottom:1px solid var(--border);{pad}'>"
+            f"<span>{wrap[0]}{label}{wrap[1]}</span><b>{cnt}</b></div>"
         )
 
-    # Breakdowns by question type and by domain (the named concept groupings).
-    type_html = _breakdown("By question type", st.get("by_type") or {})
-    domain_html = _breakdown("Concepts by domain", st.get("by_domain") or {})
+    def _concept_breakdown(concept_counts: dict) -> str:
+        if not concept_counts:
+            return ""
+        by_dom: dict[int, list[str]] = {}
+        for cid in concept_counts:
+            dom = int(str(cid).split(".")[0]) if "." in str(cid) else 0
+            by_dom.setdefault(dom, []).append(cid)
+        blocks = ""
+        for dom in sorted(by_dom):
+            cids = by_dom[dom]
+            dom_total = sum(concept_counts[c] for c in cids)
+            d = domain_by_code(dom)
+            dom_label = f"Domain {dom}: {d.name}" if d else f"Domain {dom}"
+            blocks += _row(dom_label, dom_total, bold=True)
+            for cid in sorted(cids, key=lambda c: -concept_counts[c]):
+                c = _concepts.concept_by_id(cid)
+                name = f". {c.name}" if c else ""
+                blocks += _row(f"{cid}{name}", concept_counts[cid], indent=True)
+        return (
+            "<div style='margin-top:24px'><div style='font-weight:800;"
+            f"color:var(--ink);margin-bottom:6px'>By concept</div>{blocks}</div>"
+        )
+
+    type_html = ""
+    domain_html = _concept_breakdown(st.get("concepts") or {})
 
     return f"""{_theme_style()}
 <div class="rpce-root"><div class="rpce-hero">

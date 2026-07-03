@@ -123,6 +123,11 @@ class MainActivity : AppCompatActivity() {
         fun reference(): String =
             assets.open("reference.json").bufferedReader().use { it.readText() }
 
+        /** Concept id -> name + domain names, for the by-concept session summary. */
+        @JavascriptInterface
+        fun concepts(): String =
+            assets.open("concepts.json").bufferedReader().use { it.readText() }
+
         /** Real device connectivity (navigator.onLine is unreliable in a WebView).
          *  Checks ANY network for INTERNET capability, not just the active default:
          *  on the emulator the default network can lack the INTERNET flag while

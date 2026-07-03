@@ -380,17 +380,40 @@ function sessionComplete(){
 }
 function statTile(v,label){ return '<div class="stile"><div class="sval">'+v+'</div>'+
   '<div class="slabel">'+label+'</div></div>'; }
-function breakdown(title,data){
-  var keys=Object.keys(data); if(!keys.length) return '';
-  keys.sort(function(a,b){return data[b]-data[a];});
-  var rows=keys.map(function(k){return '<div class="srow"><span>'+escapeHtml(k)+'</span><b>'+data[k]+'</b></div>';}).join('');
-  return '<div class="sgroup"><div class="stitle">'+title+'</div>'+rows+'</div>';
+// Concept id -> name + domain code -> name, loaded once from the bundled asset.
+var CONCEPTS=null, DOMAIN_NAMES=null;
+function loadConcepts(){
+  if(CONCEPTS!==null) return;
+  CONCEPTS={}; DOMAIN_NAMES={};
+  try{ var c=JSON.parse(Engine.concepts()); CONCEPTS=c.concepts||{}; DOMAIN_NAMES=c.domains||{}; }catch(e){}
+}
+// Per-concept counts grouped under each domain: the domain shows its total, and
+// each concept is listed indented as "ID. Name    count".
+function conceptBreakdown(conceptCounts){
+  var ids=Object.keys(conceptCounts); if(!ids.length) return '';
+  loadConcepts();
+  var byDom={};
+  ids.forEach(function(id){ var dom=String(id).split('.')[0]; (byDom[dom]=byDom[dom]||[]).push(id); });
+  var html='';
+  Object.keys(byDom).sort(function(a,b){return (a-b)||a.localeCompare(b);}).forEach(function(dom){
+    var cids=byDom[dom];
+    var domTotal=cids.reduce(function(s,c){return s+conceptCounts[c];},0);
+    var dn=(DOMAIN_NAMES&&DOMAIN_NAMES[dom])?': '+escapeHtml(DOMAIN_NAMES[dom]):'';
+    html+='<div class="srow"><span><b>Domain '+dom+dn+'</b></span><b>'+domTotal+'</b></div>';
+    cids.sort(function(a,b){return conceptCounts[b]-conceptCounts[a];});
+    cids.forEach(function(id){
+      var nm=(CONCEPTS&&CONCEPTS[id])?'. '+escapeHtml(CONCEPTS[id]):'';
+      html+='<div class="srow" style="padding-left:20px;color:var(--ink2)">'+
+        '<span>'+escapeHtml(id)+nm+'</span><b>'+conceptCounts[id]+'</b></div>';
+    });
+  });
+  return '<div class="sgroup"><div class="stitle">By concept</div>'+html+'</div>';
 }
 function sessStatsHtml(total,recalled,effort,missed,concepts,byType,byDomain){
   return '<div class="stiles">'+
     statTile(total,'questions')+statTile(recalled,'recalled')+
     statTile(effort,'needed effort')+statTile(missed,'missed')+statTile(concepts,'concepts')+
-    '</div>'+breakdown('By question type',byType)+breakdown('Concepts by domain',byDomain);
+    '</div>'+conceptBreakdown(sessStats.concepts);
 }
 function resetReview(){
   el('rate').classList.add('hidden'); el('show-btn').classList.add('hidden');
@@ -438,7 +461,7 @@ function rate(r){ var res=j(Engine.answer(r)); if(!res.ok){ el('card').textConte
   if(current){
     var bkt=RATING_BUCKET[r]; if(bkt) sessStats.ratings[bkt]++;
     var lbl=KIND_LABEL[current.kind]||'Question'; sessStats.byType[lbl]=(sessStats.byType[lbl]||0)+1;
-    if(current.concept) sessStats.concepts[current.concept]=1;
+    if(current.concept) sessStats.concepts[current.concept]=(sessStats.concepts[current.concept]||0)+1;
     if(current.domain) sessStats.byDomain[current.domain]=(sessStats.byDomain[current.domain]||0)+1;
   }
   sessDone++;
@@ -567,16 +590,30 @@ function openSection2(){
 }
 function loadS2(){
   var s=SCEN[sIdx]; if(!s) return;
-  el('s2-domain').textContent='Domain '+s.domain;
+  // Label by concept (mirrors Review + the dashboard), falling back to domain.
+  var lbl='Domain '+s.domain;
+  if(s.concept) lbl+=' · Concept '+s.concept+(s.conceptName?': '+s.conceptName:'');
+  el('s2-domain').textContent=lbl;
   el('s2-prompt').textContent=s.prompt;
   el('s2-answer').value=''; el('s2-feedback').classList.add('hidden');
 }
 function gradeS2(){
   var s=SCEN[sIdx]; var ans=el('s2-answer').value.trim(); if(!ans) return;
-  var gold=toks(s.gold), ansT=toks(ans); var overlap=gold.size? inter(ansT,gold)/gold.size : 0;
-  var score=Math.round(5*overlap*100)/100; var passed=score>=3;
-  // Key terms from the model ruling the answer never mentioned (actionable feedback).
-  var missing=[]; gold.forEach(function(w){ if(!ansT.has(w)) missing.push(w); });
+  // Offline keyword grading: prefer the authored decisive keywords; fall back to
+  // model-ruling token overlap when a scenario has none.
+  var ansT=toks(ans), score, passed, missing=[];
+  if(s.keywords && s.keywords.length){
+    var hit=0;
+    s.keywords.forEach(function(k){
+      var kt=toks(k); var ok=kt.size>0; kt.forEach(function(w){ if(!ansT.has(w)) ok=false; });
+      if(ok) hit++; else missing.push(k);
+    });
+    score=Math.round(5*(hit/s.keywords.length)*100)/100; passed=score>=3;
+  } else {
+    var gold=toks(s.gold); var overlap=gold.size? inter(ansT,gold)/gold.size : 0;
+    score=Math.round(5*overlap*100)/100; passed=score>=3;
+    gold.forEach(function(w){ if(!ansT.has(w)) missing.push(w); });
+  }
   var missNote = missing.length
     ? " Your answer didn’t mention: <b>"+missing.slice(0,6).join(", ")+"</b>."
     : "";

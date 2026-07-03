@@ -48,6 +48,10 @@ class SimTurn:
     #: groups of accepted synonyms. Graded leniently by ``grade_sim_step`` — a
     #: brief correct reply gets full credit. ``()`` -> any non-empty reply passes.
     expected: tuple[tuple[str, ...], ...] = ()
+    #: The performance-expectation concept id this decision turn exercises (e.g.
+    #: "3.29"), so simulations are labelled + counted by concept like Review and
+    #: Section II. Empty on narrative turns and the legacy built-in sims.
+    concept: str = ""
 
     @property
     def needs_response(self) -> bool:
@@ -468,12 +472,66 @@ SIMULATIONS: tuple[Simulation, ...] = (
 )
 
 
+#: Authored meeting simulations (data/rpce_simulations.json), covering every
+#: performance-expectation concept in >=1 decision turn (docs/rpce Phase 4). Each
+#: decision turn carries its concept id + a verbatim RONR quote. Loaded lazily.
+_AUTHORED_SIMS: tuple[Simulation, ...] | None = None
+
+
+def _load_authored_sims() -> tuple[Simulation, ...]:
+    global _AUTHORED_SIMS
+    if _AUTHORED_SIMS is not None:
+        return _AUTHORED_SIMS
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[3] / "data" / "rpce_simulations.json"
+    out: list[Simulation] = []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        base = 1000  # keep authored ids clear of the built-in sims
+        for n, s in enumerate(data.get("simulations", [])):
+            turns: list[SimTurn] = []
+            for t in s["turns"]:
+                prompt = t.get("prompt")
+                if prompt:
+                    sec = str(t.get("section", "") or "")
+                    ref = refs.Ref(sec, t.get("quote", "")) if sec else None
+                    turns.append(
+                        SimTurn(
+                            t.get("speaker", ""),
+                            t.get("line", ""),
+                            prompt=prompt,
+                            gold=t.get("gold", ""),
+                            ref=ref,
+                            expected=tuple(tuple(g) for g in (t.get("expected") or ())),
+                            concept=str(t.get("concept", "")),
+                        )
+                    )
+                else:
+                    turns.append(SimTurn(t.get("speaker", ""), t.get("line", "")))
+            out.append(
+                Simulation(
+                    base + n,
+                    int(s["domain"]),
+                    s.get("title", ""),
+                    s.get("setting", ""),
+                    tuple(turns),
+                )
+            )
+    except Exception as exc:  # never break Simulation mode over the authored file
+        print(f"RPCE authored-simulation load error: {exc}")
+    _AUTHORED_SIMS = tuple(out)
+    return _AUTHORED_SIMS
+
+
 def all_simulations() -> tuple[Simulation, ...]:
-    return SIMULATIONS
+    # Built-in sims first, then the authored concept-covering bank.
+    return SIMULATIONS + _load_authored_sims()
 
 
 def simulation_by_id(sim_id: int) -> Simulation:
-    for sim in SIMULATIONS:
+    for sim in all_simulations():
         if sim.id == sim_id:
             return sim
     raise KeyError(f"unknown simulation id: {sim_id}")
