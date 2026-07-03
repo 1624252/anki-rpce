@@ -8,6 +8,34 @@ from anki.rpce import scores
 from tests.shared import getEmptyCol
 
 
+def _master_concepts(col, card_ids, concept_ids):
+    """Tag each card with a real registry concept id and give it two Easy reviews
+    (via revlog) so the concept is MASTERED — the bar coverage + the performance
+    projection both use. Returns the concept ids mastered."""
+    # Above "now" in ms so these are the NEWEST reviews (mastery reads the 2 most
+    # recent eases; the build's Good reviews are stamped at the current time).
+    base = 2_000_000_000_000
+    for i, cid in enumerate(card_ids):
+        note = col.get_card(cid).note()
+        note.add_tag(f"rpce::concept::{concept_ids[i % len(concept_ids)]}")
+        col.update_note(note)
+        for k in range(2):  # two Easy reviews -> mastered (2 most-recent == Easy)
+            col.db.execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, "
+                "time, type) values (?,?,?,?,?,?,?,?,?)",
+                base + i * 10 + k,
+                cid,
+                -1,
+                4,
+                1,
+                1,
+                2500,
+                1000,
+                1,
+            )
+    return concept_ids[: len(card_ids)]
+
+
 def test_readiness_snapshots_audit_trail_and_last_updated():
     col = getEmptyCol()
     rpce.build_starter_deck(col)
@@ -99,13 +127,19 @@ def test_memory_and_readiness_abstain_on_empty_collection():
 
 
 def test_readiness_unlocks_when_give_up_rule_met():
+    from anki.rpce import concepts as _concepts
+
     col = getEmptyCol()
     _build_and_study(col, 7)
 
-    # Loosened thresholds so the test doesn't need 200 real reviews. Concept
-    # coverage now requires a card's 2 most-recent reviews to both be a pass with
-    # the most recent rated Easy, over the 210 PE concepts; the curated test deck
-    # isn't PE-tagged, so drop the coverage gate here.
+    # Performance is a concept-weighted projection that credits only MASTERED
+    # concepts (2 most-recent reviews Easy), over the 210-concept PE registry. The
+    # curated starter deck uses non-registry concept ids, so master a few real
+    # registry concepts here so the projection + coverage have data to score.
+    reg_ids = [c.id for c in _concepts.all_concepts()[:8]]
+    _master_concepts(col, list(col.find_cards("rated:1"))[:8], reg_ids)
+
+    # Loosened thresholds so the test doesn't need 200 real reviews.
     rule = scores.GiveUpRule(min_graded_reviews=5, min_coverage=0.0, min_scenarios=1)
 
     # Section I needs no scenarios -> should produce a number.

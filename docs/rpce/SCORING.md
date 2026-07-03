@@ -31,24 +31,22 @@ Computed only over concepts/cards the candidate **has actually studied**.
 - **Memory point** = mean of per-card `r` over all reviewed cards.
 - **Range** = 95% normal interval: `point ± 1.96·(σ/√n)` clamped to [0,1] (σ = population stdev of the recalls; if n = 1, σ treated as 0.5 = maximum uncertainty).
 
-### 2. Performance — "will the candidate get a NEW, unseen exam-style question right?"
+### 2. Performance — "will the candidate get a NEW exam-style question right?"
 
-Generalization across the whole blueprint, so **unseen concepts count as 0** (incomplete coverage lowers the score — that is the honest signal).
+A **concept-weighted projection** across the whole blueprint. It is NOT an average of what you've studied (that's Memory) — it credits a concept only once you've **mastered** it (the coverage bar: the concept's 2 most-recent reviews are both a pass with the most recent Easy), and every un-mastered concept — whether never seen or merely glanced at once — counts as **0**. So partial coverage keeps the projected score low, which is the honest signal (with 9.5% mastered you should not read 73%).
 
-- Per concept recall `c_i` = mean card recall for concept `i` (0 if unstudied).
-- **Performance point** = `Σ wᵢ·cᵢ / Σ wᵢ` over ALL concepts in the section (weights `wᵢ` = concept weight), unseen `cᵢ = 0`.
+- Per-concept recall `cᵢ` = mean card recall for concept `i` (`r = (reps − lapses + 1)/(reps + 2)`).
+- Per-concept weight `wᵢ` = its domain's exam weight, split evenly across that domain's concepts (so each domain keeps its exam weight; there is no per-concept weight in the registry).
+- **Performance point** = `Σ wᵢ·cᵢ / Σ wᵢ` over ALL 210 concepts, where `cᵢ = 0` for any un-mastered concept.
+- Abstains (no number) until at least one concept is mastered.
 - **Range** margin widens when coverage is low: `margin = 0.10 + 0.40·(1 − coverage)`, clamped to [0,1].
 
-### 3. Readiness — projected section score, with a range (separate for Section I and Section II)
+### 3. Predicted Section I / Section II — projected section score, with a range
 
-Readiness is the probability of clearing the 80% bar on that section, expressed on the real 0–100% scale plus a range — never a single "78% ready".
+The predicted section score is the same **concept-weighted mastery-gated projection** as Performance (§2), expressed on the real 0–100% scale plus a range — a projection to exam day, where the candidate will not have mastered 100% of the blueprint. (The registry does not tag concepts by section, so both sections project over the full concept set; Section II additionally requires graded scenarios before it shows a number — see the give-up rule.)
 
-- Map the section's Performance estimate through the 80% bar with a logistic:
-  `P(pass) = 1 / (1 + exp(−k·(perf − 0.80)))`, with `k = 12`.
-- **Section I readiness**: `perf` = concept-weighted recall over Section-I (recall/MCQ) practice.
-- **Section II readiness**: `perf` = concept-weighted **scenario pass rate** over graded Section II scenarios (fraction scoring ≥ the examiner pass threshold), unseen concepts 0.
-- **Range**: push `perf_low` and `perf_high` through the same logistic → `[P(pass|perf_low), P(pass|perf_high)]`.
-- The projected **percent score** shown to the candidate is `perf` itself (0–100%), with the range from `perf_low..perf_high`; the pass probability drives the "on track / not yet" verdict.
+- The projected **percent score** shown is the projection `perf` itself (0–100%), with its range.
+- A logistic maps `perf` through the 80% bar to a pass probability for the "on track / not yet" verdict: `P(pass) = 1 / (1 + exp(−k·(perf − 0.80)))`, `k = 12`; the range endpoints go through the same logistic.
 
 ## What every score displays (spec §4 / §10)
 

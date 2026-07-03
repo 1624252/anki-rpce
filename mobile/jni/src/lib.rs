@@ -589,20 +589,31 @@ fn is_pe_concept(id: &str) -> bool {
     }
 }
 
-fn concept_coverage() -> (i64, i64, f64) {
+/// Returns (covered, total, coverage_pct, projection).
+/// - coverage: fraction of PE concepts MASTERED (a card's 2 most-recent reviews
+///   both a pass with the most recent Easy). Mirrors scores.concepts_mastered.
+/// - projection: the concept-weighted exam projection (mirrors
+///   scores._concept_weighted_projection) — the domain-weighted mean recall over
+///   MASTERED concepts, every un-mastered concept counting as 0, so partial
+///   coverage keeps the predicted score low. Used for Performance + both
+///   Predicted sections.
+fn concept_coverage() -> (i64, i64, f64, f64) {
     use std::collections::{HashMap, HashSet};
-    let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the Easy-streak rule below
-    // Cards + their concept tags (denominator = distinct PE concepts present).
+    let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the mastery rule below
+    // Cards + concept tags + reps/lapses (for per-concept recall).
     let rows = match db_query(
-        "SELECT c.id, n.tags FROM cards c JOIN notes n ON c.nid = n.id \
+        "SELECT c.id, n.tags, c.reps, c.lapses FROM cards c JOIN notes n ON c.nid = n.id \
          WHERE n.tags LIKE '%rpce::concept::%'",
         serde_json::json!([]),
     ) {
         Ok(v) => v,
-        Err(_) => return (0, 0, 0.0),
+        Err(_) => return (0, 0, 0.0, 0.0),
     };
     let mut all: HashSet<String> = HashSet::new();
     let mut card_concepts: HashMap<i64, Vec<String>> = HashMap::new();
+    let mut card_recall: HashMap<i64, f64> = HashMap::new();
+    // domain code -> distinct concept ids in that domain (present in the deck)
+    let mut domain_concepts: HashMap<i64, HashSet<String>> = HashMap::new();
     if let Some(arr) = rows.as_array() {
         for r in arr {
             let a = match r.as_array() {
@@ -611,6 +622,11 @@ fn concept_coverage() -> (i64, i64, f64) {
             };
             let cid = a.first().and_then(|v| v.as_i64()).unwrap_or(0);
             let tags = a.get(1).and_then(|v| v.as_str()).unwrap_or("");
+            let reps = a.get(2).and_then(|v| v.as_i64()).unwrap_or(0);
+            let lapses = a.get(3).and_then(|v| v.as_i64()).unwrap_or(0);
+            if reps > 0 {
+                card_recall.insert(cid, (reps - lapses + 1) as f64 / (reps + 2) as f64);
+            }
             for t in tags.split_whitespace() {
                 if let Some(id) = t.strip_prefix("rpce::concept::") {
                     if !is_pe_concept(id) {
@@ -618,19 +634,21 @@ fn concept_coverage() -> (i64, i64, f64) {
                     }
                     all.insert(id.to_string());
                     card_concepts.entry(cid).or_default().push(id.to_string());
+                    if let Some(dom) = id.split('.').next().and_then(|s| s.parse::<i64>().ok())
+                    {
+                        domain_concepts.entry(dom).or_default().insert(id.to_string());
+                    }
                 }
             }
         }
     }
     let total = all.len() as i64;
     if total == 0 {
-        return (0, 0, 0.0);
+        return (0, 0, 0.0, 0.0);
     }
-    // A concept is "covered" once one of its cards' 2 most-recent reviews are
-    // both a pass (>= Good=3) with the most recent rated Easy (=4) — consistent
-    // recent mastery. Mirrors scores.concepts_mastered. (A long all-Easy streak
-    // was unreachable — cards are buried after a couple of reviews — so coverage
-    // sat at 0%.)
+    // Mastered set: a card's 2 most-recent reviews both a pass (>=Good) with the
+    // most recent Easy (=4). (A long all-Easy streak was unreachable — cards are
+    // buried after a couple of reviews — so coverage used to sit at 0%.)
     let mut recent: HashMap<i64, Vec<i64>> = HashMap::new();
     if let Ok(v) = db_query(
         "SELECT cid, ease FROM revlog ORDER BY id DESC",
@@ -661,7 +679,35 @@ fn concept_coverage() -> (i64, i64, f64) {
         }
     }
     let covered = mastered.len() as i64;
-    (covered, total, covered as f64 / total as f64)
+
+    // Per-concept recall = mean of its reviewed cards' recall.
+    let mut concept_recall: HashMap<String, (f64, i64)> = HashMap::new();
+    for (cid, concepts) in &card_concepts {
+        if let Some(&rc) = card_recall.get(cid) {
+            for c in concepts {
+                let e = concept_recall.entry(c.clone()).or_insert((0.0, 0));
+                e.0 += rc;
+                e.1 += 1;
+            }
+        }
+    }
+    // Concept-weighted projection: each domain shares equal exam weight (1/7),
+    // split over its concepts; a concept earns credit only once mastered.
+    let n_dom = DOMAINS.len() as f64;
+    let mut num = 0.0;
+    let mut denom = 0.0;
+    for c in &all {
+        let dom = c.split('.').next().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+        let n_in = domain_concepts.get(&dom).map(|s| s.len()).unwrap_or(1).max(1) as f64;
+        let w = (1.0 / n_dom) / n_in;
+        denom += w;
+        if mastered.contains(c) {
+            let r = concept_recall.get(c).map(|(s, n)| s / *n as f64).unwrap_or(0.0);
+            num += w * r;
+        }
+    }
+    let projection = if denom > 0.0 { num / denom } else { 0.0 };
+    (covered, total, covered as f64 / total as f64, projection)
 }
 
 /// The RPCE concept id + readable domain name for a card, from its note tags
@@ -706,11 +752,9 @@ fn logistic_pass(performance: f64) -> f64 {
 
 /// The whole honest readiness payload as JSON (mirrors readiness_summary).
 fn scores_json() -> String {
-    // Per-domain recall + coverage.
+    // Per-domain recall drives only the weakest-topic hint + the domain coverage
+    // breakdown shown in the UI (the scores themselves are concept-weighted below).
     let weight = 1.0 / DOMAINS.len() as f64; // equal default split
-    let mut perf_point = 0.0;
-    let mut seen_any = false;
-    let mut seen = 0;
     let mut covered = 0;
     let mut best: Option<(f64, &str)> = None;
     let mut coverage_arr = Vec::new();
@@ -721,11 +765,6 @@ fn scores_json() -> String {
             covered += 1;
         }
         let recall = if rc.is_empty() { None } else { Some(mean(&rc)) };
-        if let Some(r) = recall {
-            seen_any = true;
-            seen += 1;
-            perf_point += weight * r;
-        }
         let gap = recall.map(|r| 1.0 - r).unwrap_or(1.0);
         let value = weight * gap;
         if best.map(|(bv, _)| value > bv).unwrap_or(true) {
@@ -733,12 +772,14 @@ fn scores_json() -> String {
         }
         coverage_arr.push(serde_json::json!({ "code": code, "name": name, "cards": cards }));
     }
-    // Coverage is now measured by CONCEPT (per docs/rpce/SCORING.md), not by
-    // domain: the fraction of the ~210 performance-expectation concepts with
-    // >=5 graded items. (The per-domain `covered` count above still feeds the
-    // domain breakdown shown in the UI, but no longer drives the scores.)
-    let (concept_covered, concept_total, cov_pct) = concept_coverage();
+    // Performance + both Predicted sections are concept-weighted projections that
+    // credit only MASTERED concepts (mirrors scores.performance_score). Coverage
+    // is measured by CONCEPT, not domain (docs/rpce/SCORING.md).
+    let (concept_covered, concept_total, cov_pct, projection) = concept_coverage();
     let _ = covered; // domain-covered count retained for the breakdown only
+    let perf_point = projection;
+    let seen_any = concept_covered > 0;
+    let seen = concept_covered;
     let best_next = best.map(|(_, n)| n).unwrap_or("");
     let n_domains = DOMAINS.len();
 
@@ -771,7 +812,8 @@ fn scores_json() -> String {
         )
     };
 
-    // Performance (exam-weighted recall; unseen domains count as 0).
+    // Performance: concept-weighted exam projection; un-mastered concepts = 0.
+    let _ = n_domains;
     let (perf_p, perf_lo, perf_hi, perf_conf, perf_explain) = if seen_any {
         let conf = if cov_pct >= 0.8 {
             "high"
@@ -782,10 +824,10 @@ fn scores_json() -> String {
         };
         let margin = 0.1 + 0.4 * (1.0 - cov_pct);
         let explain = format!(
-            "Exam-weighted recall across the {n_domains} domains; {seen}/{n_domains} \
-             have review history and unseen domains count as 0 (so incomplete coverage \
-             lowers the score). Weakest area: {best_next}. The range widens when \
-             coverage is low ({:.0}% covered).",
+            "Concept-weighted projection across all {concept_total} performance \
+             expectations; {seen} mastered and every un-mastered concept counts as 0 \
+             (so incomplete coverage lowers the score). Weakest area: {best_next}. The \
+             range widens when coverage is low ({:.0}% covered).",
             cov_pct * 100.0
         );
         (
@@ -802,8 +844,8 @@ fn scores_json() -> String {
             Some(1.0),
             "abstain",
             format!(
-                "No domain has review history yet — this bridges memory to new \
-                 exam-style questions once you have practised.{review_need}"
+                "No concept mastered yet — this projects your exam score once you're \
+                 consistently acing questions.{review_need}"
             ),
         )
     };

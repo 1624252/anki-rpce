@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from statistics import mean, pstdev
 from typing import TYPE_CHECKING
 
-from . import DOMAINS, coverage_pct, domain_tag, topic_weights
+from . import DOMAINS, domain_tag, topic_weights
 
 if TYPE_CHECKING:
     from anki.collection import Collection
@@ -370,27 +370,76 @@ def _domain_recall(col: Collection, code: int) -> float | None:
     return mean(recalls) if recalls else None
 
 
-def performance_score(col: Collection) -> ScoreRange:
-    """Exam-weighted recall across domains; unseen domains count as 0."""
+def _concept_recalls(col: Collection) -> dict[str, float]:
+    """Mean reps/lapses recall per concept, over that concept's reviewed cards
+    (reps > 0). Read from the ``rpce::concept::<id>`` tags in one DB pass."""
+    buckets: dict[str, list[float]] = {}
+    for reps, lapses, tags in col.db.execute(
+        "select c.reps, c.lapses, n.tags from cards c join notes n on c.nid = n.id "
+        "where c.reps > 0 and n.tags like '%rpce::concept::%'"
+    ):
+        r = _recall_estimate(int(reps), int(lapses))
+        for tok in (tags or "").split():
+            if tok.startswith("rpce::concept::"):
+                buckets.setdefault(tok.rsplit("::", 1)[-1], []).append(r)
+    return {cid: mean(v) for cid, v in buckets.items() if v}
+
+
+def _concept_weighted_projection(col: Collection) -> tuple[float, int, int]:
+    """Exam projection over ALL performance-expectation concepts; a concept only
+    contributes once it is COVERED (mastered — see :func:`concepts_mastered`).
+
+    Returns ``(point, mastered, total)``: ``point`` is the domain-exam-weighted
+    mean recall over the concepts you've mastered, with every un-mastered concept
+    (whether unseen or merely glanced at once) counting as 0. So this is a genuine
+    projection to exam day — you get credit only for what you've actually learned,
+    and low coverage keeps the projected score low. Each domain keeps its exam
+    weight, spread evenly across its concepts."""
+    from collections import Counter
+
+    from . import concepts as _concepts
+
+    cs = _concepts.all_concepts()
+    total = len(cs)
+    if total == 0:
+        return 0.0, 0, 0
     weights = topic_weights(col)
     total_weight = sum(weights.values()) or 1.0
-    point = 0.0
-    seen = 0
-    for d in DOMAINS:
-        recall = _domain_recall(col, d.code)
-        w = weights[domain_tag(d.code)] / total_weight
-        if recall is not None:
-            seen += 1
-            point += w * recall
-        # unseen domain contributes 0, penalising incomplete coverage
-    if seen == 0:
+    per_domain = Counter(c.domain for c in cs)
+    recalls = _concept_recalls(col)
+    mastered = concepts_mastered(col)
+    num = 0.0
+    denom = 0.0
+    scored = 0
+    for c in cs:
+        # domain exam weight, split evenly over that domain's concepts
+        w = (weights.get(domain_tag(c.domain), 0.0) / total_weight) / (
+            per_domain[c.domain] or 1
+        )
+        denom += w
+        if c.id in mastered:  # only mastered concepts earn credit
+            scored += 1
+            num += w * recalls.get(c.id, 0.0)
+        # un-mastered concept contributes 0 (projection penalises weak coverage)
+    return (num / denom if denom else 0.0), scored, total
+
+
+def performance_score(col: Collection) -> ScoreRange:
+    """Concept-weighted exam projection; un-mastered concepts count as 0.
+
+    Generalises Memory to the whole blueprint: a projection over all 210
+    performance-expectation concepts (not the 7 domains) that credits only the
+    concepts you've MASTERED (covered), so partial coverage lowers the score
+    instead of mirroring Memory."""
+    point, mastered, total = _concept_weighted_projection(col)
+    if mastered == 0:
         sr = ScoreRange(
             None,
             0.0,  # abstain, but still carry the full-uncertainty 0-100% range
             1.0,
             CONFIDENCE_ABSTAIN,
-            "No domain has review history yet — this bridges memory to new "
-            "exam-style questions once you have practised.",
+            "No concept mastered yet — this projects your exam score once you're "
+            "consistently acing questions (bridges memory to new questions).",
         )
         sr.confidence_label = confidence_label(sr.confidence)
         sr.elaboration = _performance_prose(
@@ -402,10 +451,10 @@ def performance_score(col: Collection) -> ScoreRange:
     margin = 0.1 + 0.4 * (1.0 - cov)
     weakest = best_next_topic(col)
     explanation = (
-        f"Exam-weighted recall across the 7 domains; {seen}/{len(DOMAINS)} have "
-        f"review history and unseen domains count as 0 (so incomplete coverage "
-        f"lowers the score). Weakest area: {weakest}. The range widens when "
-        f"coverage is low ({cov:.0%} covered)."
+        f"Concept-weighted projection across all {total} performance expectations; "
+        f"{mastered} mastered and every un-mastered concept counts as 0 (so "
+        f"incomplete coverage lowers the score). Weakest area: {weakest}. The "
+        f"range widens when coverage is low ({cov:.0%} covered)."
     )
     sr = ScoreRange(
         point,
