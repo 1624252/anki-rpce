@@ -180,12 +180,10 @@ def graded_reviews(col: Collection) -> int:
     )
 
 
-#: A concept counts as "covered" once you've practised it AND your mean recall on
-#: it clears this bar — i.e. you've answered it correctly, not just seen it. One
-#: passing answer (Hard/Good/Easy) gives recall (1-0+1)/(1+2) = 0.67 >= 0.6; a
-#: lapse (Again) gives 0.33 and does NOT count. So coverage = concepts practised
-#: and going well, and it climbs as you rate concepts well.
-COVERAGE_MIN_RECALL = 0.6
+#: Anki review ease for an "Easy" rating.
+_EASE_EASY = 4
+#: How many of a card's most-recent reviews must be "Easy" to count the concept.
+COVERAGE_EASY_STREAK = 3
 
 
 def concept_item_counts(col: Collection) -> dict[str, int]:
@@ -202,39 +200,47 @@ def concept_item_counts(col: Collection) -> dict[str, int]:
     return counts
 
 
-def concept_recall_means(col: Collection) -> dict[str, float]:
-    """Mean per-card recall estimate for each concept, over its graded (reps>0)
-    cards, from the ``rpce::concept::<id>`` tags in one pass."""
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    for tags, reps, lapses in col.db.execute(
-        "select n.tags, c.reps, c.lapses from cards c join notes n on c.nid = n.id "
-        "where c.reps > 0"
+def concepts_mastered(col: Collection) -> set[str]:
+    """Concept ids you've MASTERED: at least one card of the concept whose
+    ``COVERAGE_EASY_STREAK`` most-recent reviews were ALL rated Easy. This is the
+    bar for concept coverage — a concept counts only once you're consistently
+    rating a question of it Easy."""
+    # Most-recent eases per card, from the review log (one pass, newest first).
+    last: dict[int, list[int]] = {}
+    for cid, ease in col.db.execute("select cid, ease from revlog order by id desc"):
+        lst = last.setdefault(int(cid), [])
+        if len(lst) < COVERAGE_EASY_STREAK:
+            lst.append(int(ease))
+    mastered_cards = [
+        cid
+        for cid, es in last.items()
+        if len(es) == COVERAGE_EASY_STREAK and all(e == _EASE_EASY for e in es)
+    ]
+    if not mastered_cards:
+        return set()
+    out: set[str] = set()
+    ph = ",".join("?" * len(mastered_cards))
+    for (tags,) in col.db.execute(
+        f"select n.tags from cards c join notes n on c.nid = n.id where c.id in ({ph})",
+        *mastered_cards,
     ):
-        r = _recall_estimate(int(reps), int(lapses))
         for tok in (tags or "").split():
             if tok.startswith("rpce::concept::"):
-                cid = tok.rsplit("::", 1)[-1]
-                sums[cid] = sums.get(cid, 0.0) + r
-                counts[cid] = counts.get(cid, 0) + 1
-    return {cid: sums[cid] / counts[cid] for cid in sums}
+                out.add(tok.rsplit("::", 1)[-1])
+    return out
 
 
-def concept_coverage_pct(
-    col: Collection, min_recall: float = COVERAGE_MIN_RECALL
-) -> float:
-    """Fraction of the RP performance-expectation concepts you've practised AND
-    are recalling well (mean recall >= ``min_recall``). 0.0 if the registry is
-    empty. This is the exam-coverage signal — concepts you've actually learned,
-    so it climbs as you study and rate concepts well."""
+def concept_coverage_pct(col: Collection) -> float:
+    """Fraction of the RP performance-expectation concepts you've MASTERED — a
+    concept counts once one of its cards has its 3 most-recent reviews all rated
+    Easy (:func:`concepts_mastered`). 0.0 if the registry is empty."""
     from . import concepts
 
     cs = concepts.all_concepts()
     if not cs:
         return 0.0
-    means = concept_recall_means(col)
-    covered = sum(1 for c in cs if means.get(c.id, 0.0) >= min_recall)
-    return covered / len(cs)
+    mastered = concepts_mastered(col)
+    return sum(1 for c in cs if c.id in mastered) / len(cs)
 
 
 def graded_scenarios(col: Collection) -> int:
@@ -468,7 +474,7 @@ def readiness(
 ) -> ReadinessSnapshot:
     """P(pass `section` ≥ 80%) with full evidence, or abstain below the line."""
     rule = rule or GiveUpRule()
-    cov = concept_coverage_pct(col, rule.min_items_per_concept)
+    cov = concept_coverage_pct(col)
     reviews = graded_reviews(col)
     scenarios = graded_scenarios(col)
     next_topic = best_next_topic(col)

@@ -212,7 +212,7 @@ _THEME_CSS = (
     ".rpce-cf-low{color:var(--warn)}.rpce-pill.rpce-cf-low{background:rgba(180,83,9,.14)}"
     ".rpce-cf-medium{color:var(--mid)}.rpce-pill.rpce-cf-medium{background:rgba(37,99,235,.14)}"
     ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(21,128,61,.14)}"
-    ".rpce-covhead{display:flex;justify-content:space-between;font-size:var(--fs-small);margin:28px 0 10px;color:var(--ink2)}"
+    ".rpce-covhead{display:flex;justify-content:flex-start;gap:10px;text-align:left;font-size:var(--fs-small);margin:28px 0 10px;color:var(--ink2)}"
     ".rpce-covhead b{font-weight:700;letter-spacing:.4px;text-transform:uppercase}"
     ".rpce-cov{height:14px;border-radius:999px;background:var(--track);overflow:hidden}"
     ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
@@ -633,7 +633,7 @@ def _section2_html(col) -> str:
     if ai.ai_configured():
         on = ai.ai_enabled()
         ai_toggle = (
-            "<div style='margin-top:10px;text-align:left'>"
+            "<div style='margin-top:10px;text-align:center'>"
             "<button onclick=\"pycmd('rpce:aitoggle');return false;\" "
             "style='background:var(--surface);border:1px solid var(--border);"
             "border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;"

@@ -591,9 +591,10 @@ fn is_pe_concept(id: &str) -> bool {
 
 fn concept_coverage() -> (i64, i64, f64) {
     use std::collections::{HashMap, HashSet};
-    let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the recall threshold below
+    let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the Easy-streak rule below
+    // Cards + their concept tags (denominator = distinct PE concepts present).
     let rows = match db_query(
-        "SELECT n.tags, c.reps, c.lapses FROM cards c JOIN notes n ON c.nid = n.id \
+        "SELECT c.id, n.tags FROM cards c JOIN notes n ON c.nid = n.id \
          WHERE n.tags LIKE '%rpce::concept::%'",
         serde_json::json!([]),
     ) {
@@ -601,32 +602,22 @@ fn concept_coverage() -> (i64, i64, f64) {
         Err(_) => return (0, 0, 0.0),
     };
     let mut all: HashSet<String> = HashSet::new();
-    // Per-concept recall sum + count over graded cards, to average.
-    let mut recall_sum: HashMap<String, f64> = HashMap::new();
-    let mut recall_n: HashMap<String, i64> = HashMap::new();
+    let mut card_concepts: HashMap<i64, Vec<String>> = HashMap::new();
     if let Some(arr) = rows.as_array() {
         for r in arr {
             let a = match r.as_array() {
                 Some(a) => a,
                 None => continue,
             };
-            let tags = a.first().and_then(|v| v.as_str()).unwrap_or("");
-            let reps = a.get(1).and_then(|v| v.as_i64()).unwrap_or(0);
-            let lapses = a.get(2).and_then(|v| v.as_i64()).unwrap_or(0);
+            let cid = a.first().and_then(|v| v.as_i64()).unwrap_or(0);
+            let tags = a.get(1).and_then(|v| v.as_str()).unwrap_or("");
             for t in tags.split_whitespace() {
                 if let Some(id) = t.strip_prefix("rpce::concept::") {
-                    // Only performance-expectation concepts (PE-number ids like
-                    // "3.29") count — that set IS the desktop registry (210), so
-                    // the denominator matches desktop exactly.
                     if !is_pe_concept(id) {
                         continue;
                     }
                     all.insert(id.to_string());
-                    if reps > 0 {
-                        *recall_sum.entry(id.to_string()).or_insert(0.0) +=
-                            recall_estimate(reps, lapses);
-                        *recall_n.entry(id.to_string()).or_insert(0) += 1;
-                    }
+                    card_concepts.entry(cid).or_default().push(id.to_string());
                 }
             }
         }
@@ -635,12 +626,37 @@ fn concept_coverage() -> (i64, i64, f64) {
     if total == 0 {
         return (0, 0, 0.0);
     }
-    // A concept is "covered" once practised AND its mean recall clears 0.6 — i.e.
-    // answered correctly, not just seen (mirrors scores.COVERAGE_MIN_RECALL).
-    let covered = recall_n
-        .iter()
-        .filter(|(id, &n)| n > 0 && recall_sum[*id] / n as f64 >= 0.6)
-        .count() as i64;
+    // A concept is "covered" once one of its cards has its 3 most-recent reviews
+    // ALL rated Easy (ease=4) — mirrors scores.concepts_mastered.
+    let mut last3: HashMap<i64, Vec<i64>> = HashMap::new();
+    if let Ok(v) = db_query(
+        "SELECT cid, ease FROM revlog ORDER BY id DESC",
+        serde_json::json!([]),
+    ) {
+        if let Some(arr) = v.as_array() {
+            for r in arr {
+                if let Some(a) = r.as_array() {
+                    let cid = a.first().and_then(|x| x.as_i64()).unwrap_or(0);
+                    let ease = a.get(1).and_then(|x| x.as_i64()).unwrap_or(0);
+                    let e = last3.entry(cid).or_default();
+                    if e.len() < 3 {
+                        e.push(ease);
+                    }
+                }
+            }
+        }
+    }
+    let mut mastered: HashSet<String> = HashSet::new();
+    for (cid, eases) in &last3 {
+        if eases.len() == 3 && eases.iter().all(|&e| e == 4) {
+            if let Some(concepts) = card_concepts.get(cid) {
+                for c in concepts {
+                    mastered.insert(c.clone());
+                }
+            }
+        }
+    }
+    let covered = mastered.len() as i64;
     (covered, total, covered as f64 / total as f64)
 }
 

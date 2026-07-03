@@ -102,15 +102,18 @@ def test_readiness_unlocks_when_give_up_rule_met():
     col = getEmptyCol()
     _build_and_study(col, 7)
 
-    # Loosened thresholds so the test doesn't need 200 real reviews.
-    rule = scores.GiveUpRule(min_graded_reviews=5, min_coverage=0.5, min_scenarios=1)
+    # Loosened thresholds so the test doesn't need 200 real reviews. Concept
+    # coverage now requires a card's 3 most-recent reviews to be Easy over the 210
+    # PE concepts; the curated test deck isn't PE-tagged, so drop the coverage gate
+    # here (coverage itself is exercised in test_concept_coverage_*).
+    rule = scores.GiveUpRule(min_graded_reviews=5, min_coverage=0.0, min_scenarios=1)
 
     # Section I needs no scenarios -> should produce a number.
     sec1 = scores.readiness(col, "I", rule)
     assert sec1.abstained is False
     assert sec1.p_pass is not None
     assert 0.0 <= sec1.range_low <= sec1.p_pass <= sec1.range_high <= 1.0
-    assert sec1.pct_covered == 1.0
+    assert 0.0 <= sec1.pct_covered <= 1.0
 
     # Section II still abstains until a scenario is graded.
     assert scores.readiness(col, "II", rule).abstained is True
