@@ -227,8 +227,8 @@ _THEME_CSS = (
     ".rpce-cf-high{color:var(--ready)}.rpce-pill.rpce-cf-high{background:rgba(21,128,61,.14)}"
     ".rpce-covhead{display:flex;justify-content:flex-start;gap:10px;text-align:left;font-size:var(--fs-small);margin:28px 0 10px;color:var(--ink2)}"
     ".rpce-covhead b{font-weight:700;letter-spacing:.4px;text-transform:uppercase}"
-    ".rpce-cov{height:14px;border-radius:999px;background:var(--track);overflow:hidden}"
-    ".rpce-cov>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
+    ".rpce-cov{height:14px;text-align:left;border-radius:999px;background:var(--track);overflow:hidden}"
+    ".rpce-cov>i{display:block;margin-left:0;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}"
     ".rpce-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:24px}"
     ".rpce-chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-body);color:var(--ink);"
     "background:rgba(37,99,235,.10);border:1px solid var(--border);padding:10px 16px;border-radius:999px}"
@@ -312,7 +312,7 @@ def _score_card(
         reason_html = ""
     updated_html = (
         f"<div style='margin-top:10px;font-size:11px;color:var(--ink2);"
-        f"text-align:left'>Updated {updated}</div>"
+        f"text-align:left'>Updated {updated}.</div>"
         if updated
         else ""
     )
