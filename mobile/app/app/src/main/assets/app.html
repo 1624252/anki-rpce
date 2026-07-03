@@ -598,7 +598,7 @@ function openScores(){
   try{ var c=j(Engine.configInt('rpce:readiness_updated_at')); if(c&&c.value) stamp=parseInt(c.value,10)||stamp; }catch(e){}
   var upd='Updated '+relTimeAgo(stamp);
   ['u-mem','u-perf','u-1','u-2'].forEach(function(id){ var e=el(id); if(e) e.textContent=upd; });
-  el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% of '+(s.conceptTotal||210)+' concepts';
+  el('cov-txt').textContent = Math.round(s.coveragePct*100)+'% ('+(s.conceptCovered||0)+'/'+(s.conceptTotal||210)+')';
   el('cov-bar').style.width = Math.round(s.coveragePct*100)+'%';
   el('abstain-note').textContent = '';   // no 'readiness hidden / not enough data' note
   el('best-next').textContent = '';       // no 'best next topic'

@@ -416,6 +416,7 @@ def _banner_html(col) -> str:
 
     total = len(_concepts.all_concepts())
     pct = scores.concept_coverage_pct(col)
+    covered = len(scores.concepts_mastered(col))
     cal = scores.memory_calibration(col)
     cal_line = (
         f"Memory calibration: <b>Brier {cal['brier']:.3f}</b> · log-loss "
@@ -567,7 +568,7 @@ def _banner_html(col) -> str:
   </div>
   {session_html}
   <div class="rpce-grid">{cards}</div>
-  <div class="rpce-covhead"><b>Concept coverage</b><span>{pct:.0%} of {total} concepts</span></div>
+  <div class="rpce-covhead"><b>Concept coverage</b><span>{pct:.0%} ({covered}/{total})</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
