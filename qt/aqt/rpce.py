@@ -2604,6 +2604,18 @@ def _tab_study() -> None:
     mw = aqt.mw
     if mw is None or not _select_rpce_deck():
         return
+    # The concept-sibling burying hides same-concept cards until tomorrow; after a
+    # full day of study that buries almost the entire deck, so a fresh session would
+    # show "no cards due right now". Release them at session start so the speedrun
+    # never locks up (spacing still applies within the session as cards are answered).
+    try:
+        from anki.scheduler_pb2 import UnburyDeckRequest
+
+        mw.col.sched.unbury_deck(
+            deck_id=mw.col.decks.selected(), mode=UnburyDeckRequest.ALL
+        )
+    except Exception as exc:
+        print(f"RPCE unbury error: {exc}")
     # Leaving to Review: the home screen returns to the Dashboard afterward.
     _RPCE_VIEW = "dashboard"
     mw.moveToState("review")

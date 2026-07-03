@@ -1012,6 +1012,38 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configureDeck(
     }
 }
 
+/// Release every card the concept-sibling burying has buried in the RPCE deck.
+/// After a day of study that per-concept burying can bury almost the whole deck,
+/// so a fresh session shows "no cards due right now". Unburying at session start
+/// keeps the speedrun flowing; within-session spacing still re-buries as cards are
+/// answered. Idempotent (a no-op when nothing is buried).
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_unburyDeck(
+    env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let req = anki_proto::generic::String {
+        val: "RPCE".to_string(),
+    };
+    let did = match run(SVC_DECKS, 7, req.encode_to_vec()) {
+        Ok(bytes) => anki_proto::decks::DeckId::decode(bytes.as_slice())
+            .map(|d| d.did)
+            .unwrap_or(0),
+        Err(e) => return reply(env, err(&e)),
+    };
+    if did == 0 {
+        return reply(env, err("RPCE deck not found"));
+    }
+    let ureq = anki_proto::scheduler::UnburyDeckRequest {
+        deck_id: did,
+        mode: anki_proto::scheduler::unbury_deck_request::Mode::All as i32,
+    };
+    match run(SVC_SCHEDULER, 15, ureq.encode_to_vec()) {
+        Ok(_) => reply(env, ok()),
+        Err(e) => reply(env, err(&e)),
+    }
+}
+
 /// Sanity self-check callable from host tests: confirms engine symbols link.
 pub fn engine_info() -> String {
     format!("anki {} ({})", anki::version::version(), anki::version::buildhash())

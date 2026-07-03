@@ -52,6 +52,9 @@ object NativeBridge {
     /** Ensure the RPCE deck has no daily new-card cap + keeps add-order. */
     external fun configureDeck(): String
 
+    /** Release concept-buried cards in the RPCE deck (so a session isn't locked). */
+    external fun unburyDeck(): String
+
     /** Log in to a sync server; returns {hkey, endpoint}. */
     external fun syncLogin(username: String, password: String, endpoint: String): String
 

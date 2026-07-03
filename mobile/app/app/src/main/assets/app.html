@@ -369,7 +369,11 @@ function bumpSession(d){
   try{ localStorage.setItem('rpce_session_limit', SESSION_LIMIT); }catch(e){}
   var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;
 }
-function startStudy(){ sessDone=0; sessStats=newSessStats(); show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
+function startStudy(){ sessDone=0; sessStats=newSessStats();
+  // Release concept-buried siblings so the deck isn't locked ("no cards due");
+  // spacing still re-buries within the session as cards are answered.
+  try{ Engine.unbury(); }catch(e){}
+  show('review'); el('new-session-btn').classList.add('hidden'); updateProgress(); loadCard(); }
 function updateProgress(){
   var p=el('rev-progress'); if(!p) return;
   p.classList.remove('hidden');

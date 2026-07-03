@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface fun recordScenario(): String = NativeBridge.recordScenario()
         @JavascriptInterface fun incrConfig(key: String): String = NativeBridge.incrConfig(key)
         @JavascriptInterface fun configInt(key: String): String = NativeBridge.configInt(key)
+        @JavascriptInterface fun unbury(): String = NativeBridge.unburyDeck()
 
         /** The bundled Section II scenarios (mirrors anki.rpce.scenarios). */
         @JavascriptInterface
