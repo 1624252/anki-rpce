@@ -201,7 +201,7 @@ _THEME_CSS = (
     "linear-gradient(160deg,#ffffff 0%,#eef4ff 55%,#ffffff 100%) !important;"
     "background-attachment:fixed !important;color:var(--ink) !important}"
     ".rpce-root{font-family:" + _FONT + ";color:var(--ink);font-size:var(--fs-body)}"
-    ".rpce-hero{max-width:1060px;margin:44px auto 18px;padding:42px 46px;border-radius:26px;"
+    ".rpce-hero{max-width:1060px;margin:44px auto 18px 32px;padding:42px 46px;border-radius:26px;"
     "border:1px solid var(--border);box-shadow:0 20px 50px rgba(29,78,216,.14);"
     "background:radial-gradient(120% 140% at 0% 0%,rgba(59,130,246,.12),rgba(59,130,246,.04) 52%,rgba(255,255,255,0) 100%),"
     "var(--surface)}"
