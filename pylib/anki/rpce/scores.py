@@ -53,8 +53,12 @@ class GiveUpRule:
     min_graded_reviews: int = 200
     min_coverage: float = 0.5
     min_scenarios: int = 100
-    #: A concept counts as "covered" once it has this many graded items.
-    min_items_per_concept: int = 5
+    #: A concept counts as "covered" once you've PRACTICED it (this many graded
+    #: items). 1 = "you've studied at least one question of this concept," so
+    #: coverage reflects the breadth of concepts practised and climbs as you study
+    #: (a 20-card session touches ~20 concepts -> ~10%), instead of sitting at 0%
+    #: until every concept has 5 graded reviews.
+    min_items_per_concept: int = 1
 
 
 CONFIDENCE_LABELS = {
@@ -176,6 +180,14 @@ def graded_reviews(col: Collection) -> int:
     )
 
 
+#: A concept counts as "covered" once you've practised it AND your mean recall on
+#: it clears this bar — i.e. you've answered it correctly, not just seen it. One
+#: passing answer (Hard/Good/Easy) gives recall (1-0+1)/(1+2) = 0.67 >= 0.6; a
+#: lapse (Again) gives 0.33 and does NOT count. So coverage = concepts practised
+#: and going well, and it climbs as you rate concepts well.
+COVERAGE_MIN_RECALL = 0.6
+
+
 def concept_item_counts(col: Collection) -> dict[str, int]:
     """Graded (reps>0) card count per performance-expectation concept, keyed by
     concept id, read from the ``rpce::concept::<id>`` tags in one pass."""
@@ -190,17 +202,38 @@ def concept_item_counts(col: Collection) -> dict[str, int]:
     return counts
 
 
-def concept_coverage_pct(col: Collection, min_items: int = 5) -> float:
-    """Fraction of the RP performance-expectation concepts with at least
-    ``min_items`` graded items (docs/rpce/SCORING.md). 0.0 if the registry is
-    empty. This replaces domain coverage as the exam-coverage signal."""
+def concept_recall_means(col: Collection) -> dict[str, float]:
+    """Mean per-card recall estimate for each concept, over its graded (reps>0)
+    cards, from the ``rpce::concept::<id>`` tags in one pass."""
+    sums: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for tags, reps, lapses in col.db.execute(
+        "select n.tags, c.reps, c.lapses from cards c join notes n on c.nid = n.id "
+        "where c.reps > 0"
+    ):
+        r = _recall_estimate(int(reps), int(lapses))
+        for tok in (tags or "").split():
+            if tok.startswith("rpce::concept::"):
+                cid = tok.rsplit("::", 1)[-1]
+                sums[cid] = sums.get(cid, 0.0) + r
+                counts[cid] = counts.get(cid, 0) + 1
+    return {cid: sums[cid] / counts[cid] for cid in sums}
+
+
+def concept_coverage_pct(
+    col: Collection, min_recall: float = COVERAGE_MIN_RECALL
+) -> float:
+    """Fraction of the RP performance-expectation concepts you've practised AND
+    are recalling well (mean recall >= ``min_recall``). 0.0 if the registry is
+    empty. This is the exam-coverage signal — concepts you've actually learned,
+    so it climbs as you study and rate concepts well."""
     from . import concepts
 
     cs = concepts.all_concepts()
     if not cs:
         return 0.0
-    counts = concept_item_counts(col)
-    covered = sum(1 for c in cs if counts.get(c.id, 0) >= min_items)
+    means = concept_recall_means(col)
+    covered = sum(1 for c in cs if means.get(c.id, 0.0) >= min_recall)
     return covered / len(cs)
 
 

@@ -175,7 +175,13 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
     </div>
     <button class="btn" onclick="openScores()">📊 Readiness dashboard</button>
     <button class="btn" onclick="startStudy()">Review session</button>
-    <button class="setting-btn" onclick="setSessionLength()">⚙️ Review session: <span id="sess-len">20</span> questions</button>
+    <div class="setting-btn" style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <span>⚙️ Review session:</span>
+      <button onclick="bumpSession(-5)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:20px;font-weight:800;cursor:pointer;line-height:1">−</button>
+      <b id="sess-len" style="min-width:34px;text-align:center">20</b>
+      <button onclick="bumpSession(5)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:20px;font-weight:800;cursor:pointer;line-height:1">+</button>
+      <span>questions</span>
+    </div>
     <button class="btn ghost" onclick="openSection2()">Section II practice</button>
     <button class="btn ghost" onclick="openSim()">Meeting simulation</button>
     <div style="text-align:center;margin-top:8px"><span class="chip" id="engine">engine…</span></div>
@@ -227,7 +233,8 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
 
   <!-- SECTION II -->
   <div id="section2" class="hidden">
-    <div class="topbar"><a onclick="goHome()">‹ Home</a><span class="muted" id="s2-domain"></span></div>
+    <div class="topbar"><a onclick="goHome()">‹ Home</a></div>
+    <div class="muted" id="s2-domain" style="margin:2px 0 12px;line-height:1.4"></div>
     <div class="card" id="s2-prompt" style="font-size:17px"></div>
     <div id="s2-ai-toggle"></div>
     <textarea id="s2-answer" placeholder="Your ruling & reasoning…"></textarea>
@@ -348,16 +355,16 @@ function goHome(){ show('home'); refreshCounts(); updateNetStatus(); autoSync();
 /* ---- review loop (shared interactive renderer) ---- */
 var current=null;
 // A review session is capped; the user starts another afterward.
-var SESSION_LIMIT=Math.max(1,Math.min(500, parseInt(localStorage.getItem('rpce_session_limit'),10)||20)), sessDone=0;
+var SESSION_LIMIT=Math.max(5,Math.min(500, parseInt(localStorage.getItem('rpce_session_limit'),10)||20)), sessDone=0;
 // Per-session tally for the completion screen (mirrors the desktop).
 var KIND_LABEL={cloze:'Cloze',mcq:'Multiple choice',multi:'Select-all',order:'Ordering'};
 var sessStats=newSessStats();
 function newSessStats(){ return {ratings:{again:0,hard:0,good:0,easy:0}, byType:{}, byDomain:{}, concepts:{}}; }
 var RATING_BUCKET=['again','hard','good','easy'];  // answer(0..3)
-function setSessionLength(){
-  var v=prompt('Questions per review session:', SESSION_LIMIT);
-  if(v===null) return;
-  SESSION_LIMIT=Math.max(1,Math.min(500, parseInt(v,10)||SESSION_LIMIT));
+// WebView-safe session-length control: window.prompt() is blocked in Android
+// WebViews, so use inline -/+ steppers instead.
+function bumpSession(d){
+  SESSION_LIMIT=Math.max(5,Math.min(500, SESSION_LIMIT+d));
   try{ localStorage.setItem('rpce_session_limit', SESSION_LIMIT); }catch(e){}
   var s=el('sess-len'); if(s) s.textContent=SESSION_LIMIT;
 }
@@ -453,8 +460,7 @@ function loadCard(){
   } else {                                   // no-JS fallback
     el('card').innerHTML=r.question; el('show-btn').classList.remove('hidden');
   }
-  var c=j(Engine.deckCounts());
-  if(c.ok) el('rev-count').textContent=c.new+' new · '+c.learning+' lrn · '+c.review+' due';
+  // (new/learning/review counts intentionally not shown)
 }
 /* the notetype template embeds the base64 payload in a hidden #rpce-payload div */
 function extractPayload(html){

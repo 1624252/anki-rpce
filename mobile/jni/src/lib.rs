@@ -312,7 +312,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_answerCard(
         answered_at_millis: now_millis(),
         milliseconds_taken: 0,
     };
-    match run(SVC_SCHEDULER, 5, answer.encode_to_vec()) {
+    // Method 6 = AnswerCard. (Methods: 3 GetQueuedCards, 4 GetPointsAtStakeQueue,
+    // 5 BuryConceptSiblings, 6 AnswerCard.) This fork inserted BuryConceptSiblings
+    // before AnswerCard, so calling method 5 here silently buried siblings and
+    // never advanced the card — the reviewer got stuck re-serving the same card.
+    match run(SVC_SCHEDULER, 6, answer.encode_to_vec()) {
         Ok(_) => {
             if let Ok(mut last) = LAST_CARD.lock() {
                 *last = None;
@@ -443,8 +447,10 @@ const DOMAINS: [(i64, &str); 7] = [
 const MIN_REVIEWS: i64 = 200;
 const MIN_COVERAGE: f64 = 0.5;
 const MIN_SCENARIOS: i64 = 100;
-/// A concept counts as "covered" once it has this many graded items.
-const MIN_ITEMS_PER_CONCEPT: i64 = 5;
+/// A concept counts as "covered" once you've PRACTICED it (this many graded
+/// items). 1 = studied at least one question, so coverage climbs as you study
+/// instead of sitting at 0% until every concept has 5 graded reviews.
+const MIN_ITEMS_PER_CONCEPT: i64 = 1;
 
 /// Run a read-only SQL query through the shared backend's db command.
 fn db_query(sql: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
@@ -585,8 +591,9 @@ fn is_pe_concept(id: &str) -> bool {
 
 fn concept_coverage() -> (i64, i64, f64) {
     use std::collections::{HashMap, HashSet};
+    let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the recall threshold below
     let rows = match db_query(
-        "SELECT n.tags, c.reps FROM cards c JOIN notes n ON c.nid = n.id \
+        "SELECT n.tags, c.reps, c.lapses FROM cards c JOIN notes n ON c.nid = n.id \
          WHERE n.tags LIKE '%rpce::concept::%'",
         serde_json::json!([]),
     ) {
@@ -594,7 +601,9 @@ fn concept_coverage() -> (i64, i64, f64) {
         Err(_) => return (0, 0, 0.0),
     };
     let mut all: HashSet<String> = HashSet::new();
-    let mut graded: HashMap<String, i64> = HashMap::new();
+    // Per-concept recall sum + count over graded cards, to average.
+    let mut recall_sum: HashMap<String, f64> = HashMap::new();
+    let mut recall_n: HashMap<String, i64> = HashMap::new();
     if let Some(arr) = rows.as_array() {
         for r in arr {
             let a = match r.as_array() {
@@ -603,18 +612,20 @@ fn concept_coverage() -> (i64, i64, f64) {
             };
             let tags = a.first().and_then(|v| v.as_str()).unwrap_or("");
             let reps = a.get(1).and_then(|v| v.as_i64()).unwrap_or(0);
+            let lapses = a.get(2).and_then(|v| v.as_i64()).unwrap_or(0);
             for t in tags.split_whitespace() {
                 if let Some(id) = t.strip_prefix("rpce::concept::") {
                     // Only performance-expectation concepts (PE-number ids like
                     // "3.29") count — that set IS the desktop registry (210), so
-                    // the denominator matches desktop exactly. Legacy non-PE
-                    // concept tags on other notes are ignored.
+                    // the denominator matches desktop exactly.
                     if !is_pe_concept(id) {
                         continue;
                     }
                     all.insert(id.to_string());
                     if reps > 0 {
-                        *graded.entry(id.to_string()).or_insert(0) += 1;
+                        *recall_sum.entry(id.to_string()).or_insert(0.0) +=
+                            recall_estimate(reps, lapses);
+                        *recall_n.entry(id.to_string()).or_insert(0) += 1;
                     }
                 }
             }
@@ -624,9 +635,11 @@ fn concept_coverage() -> (i64, i64, f64) {
     if total == 0 {
         return (0, 0, 0.0);
     }
-    let covered = graded
-        .values()
-        .filter(|&&c| c >= MIN_ITEMS_PER_CONCEPT)
+    // A concept is "covered" once practised AND its mean recall clears 0.6 — i.e.
+    // answered correctly, not just seen (mirrors scores.COVERAGE_MIN_RECALL).
+    let covered = recall_n
+        .iter()
+        .filter(|(id, &n)| n > 0 && recall_sum[*id] / n as f64 >= 0.6)
         .count() as i64;
     (covered, total, covered as f64 / total as f64)
 }

@@ -1071,7 +1071,7 @@ def _simulate_html(col) -> str:
     # are always available regardless.
     sim_ai_control = ""
     ai_err_html = ""
-    if ai.ai_configured() and ai.ai_enabled():
+    if ai.ai_configured():
         if _SIM.get("generating"):
             sim_ai_control = (
                 "<span style='color:var(--accent1);font-weight:800'>"
@@ -1091,6 +1091,24 @@ def _simulate_html(col) -> str:
                     "<div style='margin-top:10px;color:#b45309;font-weight:700;"
                     f"text-align:right'>{err}</div>"
                 )
+    # AI-grading toggle: ON (forced) for AI-generated scenarios; a real on/off
+    # toggle for scripted scenarios. Only shown when a key/proxy is configured.
+    sim_grade_toggle = ""
+    if _SIM.get("ai"):
+        sim_grade_toggle = (
+            "<div style='margin-top:8px;color:var(--ready);font-weight:700'>"
+            "🤖 AI grading: ON (AI scenario)</div>"
+        )
+    elif ai.ai_configured():
+        on = ai.ai_enabled()
+        sim_grade_toggle = (
+            "<div style='margin-top:8px'>"
+            "<button onclick=\"pycmd('rpce:aitoggle');return false;\" "
+            "style='background:var(--surface);border:1px solid var(--border);"
+            "border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;"
+            f"color:{'var(--ready)' if on else 'var(--ink2)'}'>"
+            f"{'🤖 AI grading: ON' if on else '🔌 AI grading: OFF'}</button></div>"
+        )
     ai_tag = (
         "<span class='rpce-pill' style='background:rgba(21,128,61,.14);"
         "color:#15803d;margin-left:8px'>🤖 AI-generated</span>"
@@ -1139,6 +1157,7 @@ def _simulate_html(col) -> str:
   </div>
   <div class="rpce-h1">{sim.title}{ai_tag}</div>
   <div class="rpce-sub"><i>{sim.setting}</i></div>
+  {sim_grade_toggle}
   {ai_err_html}
   <div style="margin-top:20px;padding:16px 20px;background:var(--surface2);
     border:1px solid var(--border);border-radius:16px;text-align:left;
@@ -1161,6 +1180,7 @@ def _sim_respond(payload: str) -> None:
 
     ``payload`` is ``"<scrollY>:<base64 answer>"`` — the scroll offset is stashed
     so the re-rendered page can restore it (don't jump to the top on Respond)."""
+    from anki.rpce import ai as ai_mod
     from anki.rpce import examiner, scores
 
     mw = aqt.mw
@@ -1183,8 +1203,9 @@ def _sim_respond(payload: str) -> None:
     corpus = _load_corpus() or pending.gold
     rubric = getattr(pending, "rubric", None)
     gold = pending.gold
-    # AI examiner ONLY for AI-generated scenarios; scripted sims stay OFFLINE.
-    is_ai = bool(_SIM.get("ai"))
+    # AI grading for AI-generated scenarios always; for scripted scenarios only
+    # when the user has toggled AI grading on (and a key/proxy is configured).
+    is_ai = bool(_SIM.get("ai")) or (ai_mod.ai_configured() and ai_mod.ai_enabled())
     # Echo the response into the transcript before grading.
     _SIM["log"].append(
         f"<p style='margin:10px 0'><b>You (parliamentarian):</b> {answer}</p>"
@@ -1760,10 +1781,49 @@ def _build_or_import_rpce_deck(mw) -> None:
             mw.col.import_anki_package(
                 ie.ImportAnkiPackageRequest(package_path=apkg, options=opts)
             )
+            _interleave_new_cards(mw.col)
             return
         except Exception as exc:  # fall back to the curated deck
             print(f"RPCE starter-deck import failed ({exc}); building curated deck")
     build_starter_deck(mw.col)
+    _interleave_new_cards(mw.col)
+
+
+def _interleave_new_cards(col) -> None:
+    """Reposition RPCE NEW cards so the four question kinds interleave evenly
+    (mcq, cloze, multi, order, …). Anki's .apkg import clusters new cards by kind,
+    which on desktop buried every MCQ at the end of the queue (due 610+), so a
+    normal session only ever showed order/multi/cloze. Round-robin the kinds and
+    reassign ``due`` 1..N so each session gets a representative mix."""
+    try:
+        by_kind: dict[str, list[int]] = {}
+        for cid in col.find_cards("deck:RPCE"):
+            card = col.get_card(cid)
+            if card.queue != 0:  # only reorder NEW cards; never touch scheduling
+                continue
+            note = card.note()
+            kind = note.fields[0] if note.fields else ""
+            by_kind.setdefault(kind, []).append(cid)
+        if not by_kind:
+            return
+        order = ["mcq", "cloze", "multi", "order"]
+        order += [k for k in by_kind if k not in order]
+        idx = {k: 0 for k in by_kind}
+        merged: list[int] = []
+        while any(idx[k] < len(by_kind[k]) for k in by_kind):
+            for k in order:
+                lst = by_kind.get(k)
+                if lst and idx[k] < len(lst):
+                    merged.append(lst[idx[k]])
+                    idx[k] += 1
+        cards = []
+        for pos, cid in enumerate(merged, start=1):
+            card = col.get_card(cid)
+            card.due = pos
+            cards.append(card)
+        col.update_cards(cards)
+    except Exception as exc:  # never block deck setup over reordering
+        print(f"RPCE interleave error: {exc}")
 
 
 def _on_profile_open() -> None:
@@ -1824,6 +1884,10 @@ def _on_profile_open() -> None:
         deck = mw.col.decks.by_name("RPCE")
         if deck is not None:
             mw.col.decks.set_current(deck["id"])
+            # Interleave the four question kinds every launch (only touches NEW
+            # cards, so review progress is preserved) — Anki's apkg import can
+            # cluster them by kind and bury MCQs at the end of the queue.
+            _interleave_new_cards(mw.col)
             # Lift the daily cap on the existing deck too (build sets it for new
             # ones); idempotent so it's cheap on every open. NO_SORT keeps the
             # deck's built-in add-order, which the exporter lays out round-robin

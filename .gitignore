@@ -25,6 +25,8 @@ ts/.svelte-kit
 docs/_build/
 docs/autoapi/
 .complexipy_cache
+# data/ is its OWN git repo (the authored RPCE source JSONs are committed there);
+# ignore it here so the parent doesn't embed it as a gitlink.
 /data/
 # Android companion build artifacts (native libs are regenerated via cargo-ndk)
 /mobile/app/app/src/main/jniLibs/
