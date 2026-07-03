@@ -567,7 +567,6 @@ def _banner_html(col) -> str:
     practice <b>Section II</b>, or run a <b>Simulation</b>.</div>
   {activity_html}
   {logout_html}
-  <div class="rpce-foot" style="margin-top:12px">Readiness last updated: <b>{_updated_str(col)}</b></div>
 </div></div>
 """
 

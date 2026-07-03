@@ -98,7 +98,7 @@ def set_ai_enabled(on: bool) -> None:
 def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:
     """Call the chat API and parse a JSON object from the reply.
 
-    Returns None on ANY problem (no key, offline, HTTP/rate-limit error,
+    Returns None on ANY problem (no proxy, offline, HTTP/rate-limit error,
     timeout, non-JSON output) so callers fall back cleanly. Requests strict
     JSON via response_format so a stray sentence can't derail parsing."""
     # Calls go to the proxy, which holds the key server-side. No proxy → abstain
