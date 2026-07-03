@@ -119,6 +119,12 @@ class MainActivity : AppCompatActivity() {
         fun simulations(): String =
             assets.open("simulations.json").bufferedReader().use { it.readText() }
 
+        /** The RONR quote bank (flat list) the AI meeting simulator samples from
+         *  (mirrors anki.rpce.quotes). */
+        @JavascriptInterface
+        fun quotes(): String =
+            assets.open("quotes.json").bufferedReader().use { it.readText() }
+
         /** Reference tables (order of precedence, motion characteristics). */
         @JavascriptInterface
         fun reference(): String =

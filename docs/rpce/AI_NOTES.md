@@ -7,6 +7,11 @@ candidate's free-text ruling with an online LLM (OpenAI, default
 `gpt-4o-mini`). It scores 0–5 for accuracy against the model ruling and returns
 one or two sentences of feedback naming what was right and what was missing.
 
+The AI also **authors meeting simulations** on demand from a bank of verbatim
+RONR quotes (see "Simulation generation from the RONR quote bank" below) — the
+one place we let AI generate study content, and only because every rule it uses
+is a quote we supply and cite.
+
 - **Code:** `pylib/anki/rpce/ai.py` (key handling + hardened API call) and
   `AutoExaminer` / `LLMExaminer` in `pylib/anki/rpce/examiner.py`.
 - **Where it runs:** desktop Section II and Simulate screens. Enable it with
@@ -29,6 +34,38 @@ supporting RONR passage from the local corpus and pass it in as the grading
 context; the RONR `section:paragraph` shown with the verdict is **our**
 retrieval, not the model's invention. If no passage is found we fall back to the
 offline grader rather than cite something unverifiable.
+
+## Simulation generation from the RONR quote bank
+
+The **Simulate** screen can ask the AI to author a fresh meeting on demand
+("🤖 Generate AI scenario"). Instead of handing the model a raw slice of the
+corpus, we now feed it a **random set of verbatim RONR quotes** and ask it to
+build a meeting in which **each decision point turns on one of those quotes** —
+the situation is constructed so the correct ruling is exactly what the quote
+says. When the candidate's ruling is graded, the app shows the **governing
+quote** for that decision.
+
+- **Quote bank:** `data/rpce_quotes.json`, built by
+  `pylib/tools/rpce_build_quotes.py` from the corpus + the concept registry.
+  Every concept gets **≥ 4** quotes and **≥ 1 per referenced section** (that has
+  quotable prose); each quote is a **verbatim** sentence tagged with its exact
+  `section:paragraph`. The builder copies sentences straight from the book and
+  self-checks that each is a verbatim substring — so quotes are never paraphrased
+  and citations are never wrong. Rebuild with
+  `python pylib/tools/rpce_build_quotes.py`.
+- **Loader / sampling:** `pylib/anki/rpce/quotes.py` (`random_quotes(n)`).
+- **Generation + resolution:** `ai.generate_simulation(quotes)` and
+  `ai.continue_simulation(history, ruling, quotes)` number the quotes (`Q1`,
+  `Q2`, …); the model returns a `quote_id` per decision, and we attach **our**
+  bank quote+citation for that id (`_resolve_quotes`). So the quote shown at
+  grading is always our retrieval — the model never supplies the citation
+  (same "traceable source" rule as grading).
+- **Both platforms:** desktop (`qt/aqt/rpce.py` `_sim_ai` / `_sim_continue_ai`)
+  and mobile (`app.html` `genSim` + the bundled `quotes.json` via the JNI
+  `Engine.quotes()`) draw from the same bank and use the same `quote_id` prompt.
+- **Still optional / offline-safe:** generation runs only when the proxy/key is
+  configured; any failure (offline, timeout, malformed output) falls back to the
+  scripted simulations, so Simulate always works.
 
 ## Beats a simpler method (measured)
 

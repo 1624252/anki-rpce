@@ -1350,7 +1350,7 @@ def _sim_continue_ai(last_ruling: str) -> None:
     script. Runs OFF the UI thread with a "the meeting continues…" spinner state,
     is bounded by ``_SIM_AI_MAX_ROUNDS``, and ends the meeting gracefully with a
     note if the continuation is unavailable (offline/error)."""
-    from anki.rpce import ai, simulations
+    from anki.rpce import ai, quotes, simulations
 
     mw = aqt.mw
     if mw is None or mw.col is None or _SIM is None:
@@ -1376,9 +1376,10 @@ def _sim_continue_ai(last_ruling: str) -> None:
     mw.moveToState("deckBrowser")
 
     def op():
-        # Runs OFF the UI thread. Bound the prompt to a corpus slice (DATA).
-        context = _corpus_slice(_load_corpus(), 12000)
-        return ai.continue_simulation(history, last_ruling, context)
+        # Runs OFF the UI thread. Seed the continuation with a fresh random set
+        # of bank quotes so the next decision turns on a verbatim RONR rule.
+        qs = [q.as_dict() for q in quotes.random_quotes(6)]
+        return ai.continue_simulation(history, last_ruling, qs)
 
     def on_done(future) -> None:
         if _SIM is None:
@@ -1436,18 +1437,6 @@ def _sim_next() -> None:
     _SIM = {"sim_idx": idx, "turn": 0, "pending": None, "log": [], "done": False}
     _sim_play()
     mw.moveToState("deckBrowser")
-
-
-def _corpus_slice(corpus: str, size: int) -> str:
-    """A bounded chunk of the RONR corpus to keep the generation prompt small.
-    Picks a random window so repeated generations draw on different sections."""
-    corpus = corpus or ""
-    if len(corpus) <= size:
-        return corpus
-    import random
-
-    start = random.randint(0, len(corpus) - size)
-    return corpus[start : start + size]
 
 
 def _ai_turns_from_json(turns):
@@ -1524,7 +1513,7 @@ def _sim_ai() -> None:
     "generating…" state first; on any failure it shows a small message and stays
     on the current scenario, so the page never breaks."""
     global _SIM
-    from anki.rpce import ai
+    from anki.rpce import ai, quotes
 
     mw = aqt.mw
     if mw is None or mw.col is None or _SIM is None:
@@ -1535,9 +1524,10 @@ def _sim_ai() -> None:
     mw.moveToState("deckBrowser")
 
     def op():
-        # Runs OFF the UI thread. Bound the prompt to a corpus slice.
-        context = _corpus_slice(_load_corpus(), 12000)
-        return ai.generate_simulation(context)
+        # Runs OFF the UI thread. Feed a random set of bank quotes so the model
+        # builds each decision around a verbatim RONR rule we can cite at grading.
+        qs = [q.as_dict() for q in quotes.random_quotes(8)]
+        return ai.generate_simulation(qs)
 
     def on_done(future) -> None:
         global _SIM

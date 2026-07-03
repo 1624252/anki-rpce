@@ -51,6 +51,6 @@ No Memory/Performance/Section-I score until ≥200 graded reviews AND ≥50% Sec
 
 ## Cross-cutting
 
-- **Both platforms** every phase: desktop Python + Qt, and mobile Rust engine + `app.html` + regenerated `scenarios.json` / `simulations.json` / `rpce_render.js`.
+- **Both platforms** every phase: desktop Python + Qt, and mobile Rust engine + `app.html` + regenerated `scenarios.json` / `simulations.json` / `quotes.json` / `rpce_render.js`.
 - Deck content changes bump `RPCE_DECK_VERSION` and re-import in place (preserve scheduling).
 - Sequence: Phase 0 → 1 → (2, 3, 4 in parallel via subagents) → 5. Each phase committed, tested, and deployed to desktop + emulator before the next.

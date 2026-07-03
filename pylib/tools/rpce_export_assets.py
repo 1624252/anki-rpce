@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from anki.rpce import concepts, scenarios, simulations
+from anki.rpce import concepts, quotes, scenarios, simulations
 
 
 def _ref(ref) -> dict | None:
@@ -78,6 +78,13 @@ def _simulations_json() -> list[dict]:
     return out
 
 
+def _quotes_json() -> list[dict]:
+    """The RONR quote bank as a flat ``[{"section","quote"}, …]`` list — the
+    phone samples a random set of these to seed an AI meeting (mirrors
+    ``anki.rpce.quotes``; each quote is verbatim with an exact citation)."""
+    return [{"section": q.section, "quote": q.quote} for q in quotes.all_quotes()]
+
+
 def _concepts_json() -> dict:
     """Concept id -> name, plus domain code -> name, for the by-concept session
     summary on the phone (the engine only knows ids from tags)."""
@@ -96,6 +103,7 @@ def main(assets_dir: str) -> None:
         ("scenarios.json", _scenarios_json()),
         ("simulations.json", _simulations_json()),
         ("concepts.json", _concepts_json()),
+        ("quotes.json", _quotes_json()),
     ):
         path = out_dir / name
         path.write_text(

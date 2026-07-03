@@ -73,3 +73,89 @@ def test_examiner_grades_a_good_response_as_passing():
 def test_simulation_by_id_unknown_raises():
     with pytest.raises(KeyError):
         simulations.simulation_by_id(9999)
+
+
+# --- AI generation grounded in the quote bank ---------------------------------
+
+_QUOTES = [
+    {"section": "6:1", "quote": "A main motion brings business before the assembly."},
+    {"section": "44:1", "quote": "The basic requirement is a majority vote."},
+]
+
+
+def _fake_reply(monkeypatch, obj):
+    from anki.rpce import ai
+
+    monkeypatch.setattr(ai, "chat_json", lambda *a, **k: obj)
+
+
+def test_generate_simulation_attaches_bank_quote_by_id(monkeypatch):
+    from anki.rpce import ai
+
+    # The model picks Q2 but supplies a WRONG cite/quote — we must override with
+    # our verbatim bank quote for Q2 (traceable source).
+    _fake_reply(
+        monkeypatch,
+        {
+            "title": "T",
+            "setting": "S",
+            "turns": [
+                {"speaker": "Chair", "line": "Order."},
+                {
+                    "decision": "What vote adopts this?",
+                    "gold": "A majority.",
+                    "quote_id": "Q2",
+                    "cite": "99:9",
+                    "quote": "WRONG",
+                },
+            ],
+        },
+    )
+    obj = ai.generate_simulation(_QUOTES)
+    dec = [t for t in obj["turns"] if t.get("decision")][0]
+    assert dec["cite"] == "44:1"
+    assert dec["quote"] == _QUOTES[1]["quote"]
+
+
+def test_generate_simulation_bad_quote_id_falls_back_to_first(monkeypatch):
+    from anki.rpce import ai
+
+    _fake_reply(
+        monkeypatch,
+        {
+            "title": "T",
+            "setting": "S",
+            "turns": [{"decision": "d", "gold": "g", "quote_id": "Q99"}],
+        },
+    )
+    obj = ai.generate_simulation(_QUOTES)
+    dec = [t for t in obj["turns"] if t.get("decision")][0]
+    assert dec["cite"] == "6:1"  # first supplied quote
+
+
+def test_generate_simulation_no_quotes_returns_none():
+    from anki.rpce import ai
+
+    assert ai.generate_simulation([]) is None
+
+
+def test_generate_simulation_malformed_reply_returns_none(monkeypatch):
+    from anki.rpce import ai
+
+    _fake_reply(monkeypatch, {"title": "T"})  # no turns
+    assert ai.generate_simulation(_QUOTES) is None
+
+
+def test_continue_simulation_resolves_quote_and_adjourn(monkeypatch):
+    from anki.rpce import ai
+
+    _fake_reply(
+        monkeypatch,
+        {
+            "turns": [{"decision": "d", "gold": "g", "quote_id": "Q1"}],
+            "adjourned": True,
+        },
+    )
+    obj = ai.continue_simulation("history", "ruling", _QUOTES)
+    assert obj["adjourned"] is True
+    assert obj["turns"][0]["cite"] == "6:1"
