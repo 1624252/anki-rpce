@@ -11205,5 +11205,437 @@
       "section": "51:4",
       "quote": "A board or committee is usually best fitted to prepare resolutions to carry out its recommendations, and it should never leave this responsibility to others."
     }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Parliamentarian Devon Ackerly received his first parliamentary credential two months ago and has only advised a small garden club. The membership chair of the Statewide Educators Federation, planning a heated 400-delegate convention, asks how much large-convention experience Devon has. Wanting the job, Devon replies, \"I've staffed dozens of national conventions this size for years.\" Impressed, she engages him on the spot. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian knew he lacked large-convention experience and misrepresented his experience and qualifications to obtain the engagement. This breaches Joint Code section 3.1.",
+    "keywords": [
+      "3.1",
+      "misrepresented",
+      "experience",
+      "obtain",
+      "engagement",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Coretta Vance holds a Registered Parliamentarian credential but is not certified as a Professional Registered Parliamentarian. The Harborview Credit Union asks whether she is a PRP because their policy requires one. Coretta answers, \"Yes, I'm a PRP,\" and is hired for the annual meeting on that basis. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian falsely claimed a credential she does not hold in order to obtain the engagement, misrepresenting her qualifications. This breaches Joint Code section 3.1.",
+    "keywords": [
+      "3.1",
+      "misrepresenting",
+      "qualifications",
+      "obtain",
+      "engagement",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "The Ridgeline Homeowners Association asks parliamentarian Marcus Ohl whether he has ever handled a disciplinary trial, which is the sensitive matter on their agenda. Marcus has never done one and says so: \"I have not conducted a disciplinary procedure before, though I have studied the process thoroughly and can advise on it.\" The board weighs this and still hires him. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian honestly disclosed his lack of experience and did not misrepresent his qualifications to obtain the engagement, so there is no breach of Joint Code section 3.1.",
+    "keywords": [
+      "3.1",
+      "honestly",
+      "did not misrepresent",
+      "no breach",
+      "experience"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "A national trade association interviewing parliamentarian Priya Sundaram asks if she is experienced with electronic and hybrid meetings, which their convention will use. Priya has never advised a single electronic meeting but replies, \"Absolutely, hybrid meetings are my specialty and I run them all the time.\" On the strength of that claim she is selected over other candidates. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian misrepresented her competence with electronic meetings to obtain the engagement when she knew she had none. This breaches Joint Code section 3.1.",
+    "keywords": [
+      "3.1",
+      "misrepresented",
+      "competence",
+      "obtain",
+      "engagement",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Parliamentarian Gordon Reyes prints business cards and a website banner reading \"Gordon Reyes, PRP, Certified Parliamentarian-Teacher,\" though he has never earned either designation. He distributes the cards at a state association conference to attract new clients. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. Advertising credentials he does not hold is a false statement about himself and his services. This breaches Joint Code section 3.3.",
+    "keywords": [
+      "3.3",
+      "false statement",
+      "credentials",
+      "services",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "After a meeting of the Lakeside Rotary, a satisfied member tells parliamentarian Alicia Bunt she did fine work. Alicia responds, \"Thank you, I'm the top-rated parliamentarian in the entire tri-state area and no ruling of mine has ever been reversed,\" though she has no such ranking and rulings of hers have been overturned. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian made false statements about herself and her services when she claimed a ranking and record that do not exist. This breaches Joint Code section 3.3.",
+    "keywords": [
+      "3.3",
+      "false statements",
+      "services",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Parliamentarian Nathaniel Cruz mails a brochure to prospective clients promising, \"Hire me and I guarantee your motions will never be challenged and every vote will hold up to any appeal.\" No parliamentarian can guarantee such outcomes, and Nathaniel knows it. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. Guaranteeing outcomes he cannot deliver is a false statement about his services. This breaches Joint Code section 3.3.",
+    "keywords": [
+      "3.3",
+      "false statement",
+      "services",
+      "guarantee",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Parliamentarian Yusuf Kane, a Registered Parliamentarian, describes his services to the Meadowbrook Library Board as follows: \"I am a Registered Parliamentarian with eight years advising nonprofit boards; I cannot guarantee any particular outcome, but I will advise the chair accurately.\" Every statement he makes is true. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian described himself and his services accurately and made no false statement, so there is no breach of Joint Code section 3.3.",
+    "keywords": [
+      "3.3",
+      "accurately",
+      "no false statement",
+      "no breach",
+      "services"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "The executive director of the Coastal Arts Guild engages parliamentarian Helen Morday for a contested board meeting but says she cannot send the bylaws \"for legal reasons.\" Helen accepts and serves at the meeting anyway, rendering opinions on questions governed by those bylaws without ever having read them. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian served and gave opinions without obtaining and reviewing the governing documents before the meeting. This breaches Joint Code section 4.1.",
+    "keywords": [
+      "4.1",
+      "governing documents",
+      "before the meeting",
+      "review",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Parliamentarian Owen Trask reads the bylaws of the Ferndale Teachers Union before their assembly but does not ask for or review the union's adopted special rules of order and standing rules, which were available on request and directly govern the pending amendments. He advises the chair based on the bylaws alone. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian failed to obtain and review all relevant governing documents, including the special rules and standing rules, before serving. This breaches Joint Code section 4.1.",
+    "keywords": [
+      "4.1",
+      "governing documents",
+      "standing rules",
+      "before",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "The Summit Athletic Association calls parliamentarian Rosa Delk at 8 a.m. to staff a special meeting at 9 a.m. that same morning. She agrees and shows up without requesting the bylaws, standing rules, or the adopted parliamentary authority, and begins advising the chair. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian began serving without obtaining or reviewing any of the relevant governing documents beforehand. This breaches Joint Code section 4.1.",
+    "keywords": [
+      "4.1",
+      "governing documents",
+      "beforehand",
+      "review",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "Before agreeing to advise the Grandview Symphony Society board, parliamentarian Ibrahim Nadeer requests and studies the bylaws, the standing rules, and the society's adopted parliamentary authority, and reviews the prior minutes relevant to the disputed motion. Only then does he attend and advise the chair. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian obtained and reviewed all relevant governing documents before serving, so there is no breach of Joint Code section 4.1.",
+    "keywords": [
+      "4.1",
+      "governing documents",
+      "reviewed",
+      "before serving",
+      "no breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "During a meeting of the Northgate Condominium Association, the chair announces that a motion to amend the bylaws will pass on a simple majority. Parliamentarian Dana Whitcombe knows the bylaws require a two-thirds vote with prior notice, but because the room is calm and she does not want to interrupt, she says nothing and the chair proceeds on the wrong threshold. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian knew the chair was misapplying the vote requirement and failed to advise the chair of the proper application of the rules. This breaches Joint Code section 4.2.",
+    "keywords": [
+      "4.2",
+      "advise the chair",
+      "proper application",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "At the Willow Creek Booster Club, the chair is about to rule a properly moved and seconded main motion out of order simply because he personally dislikes it. Parliamentarian Leon Prewitt recognizes the motion is in order but remains silent, and the chair improperly declares it dead. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian recognized the chair was misapplying the rules and failed to advise him of their proper application. This breaches Joint Code section 4.2.",
+    "keywords": [
+      "4.2",
+      "advise",
+      "proper application",
+      "rules",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "During the Eastvale Chamber of Commerce meeting, the chair starts to treat a motion to Postpone Indefinitely as though it were amendable. Parliamentarian Sofia Grendel immediately and quietly advises the chair that the motion is not amendable and explains the correct handling, which the chair then follows. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian promptly advised the chair of the proper application of the rules, which is exactly what the Code requires, so there is no breach of Joint Code section 4.2.",
+    "keywords": [
+      "4.2",
+      "advised the chair",
+      "proper application",
+      "no breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "At the Pinehill Alumni Association assembly, the chair mistakenly announces that a main motion carried on a tie vote. Parliamentarian Curtis Mabry knows a tie fails a motion requiring a majority, but he decides it is not his place to speak up and lets the erroneous announcement stand. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian knew the chair was wrongly applying the majority rule on a tie vote and failed to advise the chair of its proper application. This breaches Joint Code section 4.2.",
+    "keywords": [
+      "4.2",
+      "advise the chair",
+      "proper application",
+      "majority",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "When parliamentarian Bethany Locke receives payment from the Cedar Falls Foundation for a contested meeting, the check exceeds her invoice by 25 percent, with a note from the chair: \"A little extra for helping our side win.\" She deposits the full amount and continues advising the board on remaining matters. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. Accepting a bonus tied to the outcome creates the appearance that her advice is not impartial. This breaches Joint Code section 4.3.",
+    "keywords": [
+      "4.3",
+      "bonus",
+      "appearance",
+      "impartial",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "The evening before a divisive vote at the Brightwater Yacht Club, a board member who strongly favors one side sends parliamentarian Hector Salas an expensive watch and tickets to a resort weekend, saying he hopes Hector will \"see things our way.\" Hector accepts the gifts and serves at the meeting the next day. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. Accepting a valuable gift from an interested member creates the appearance that his advice is not impartial. This breaches Joint Code section 4.3.",
+    "keywords": [
+      "4.3",
+      "gift",
+      "appearance",
+      "impartial",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "After a heated meeting of the Oakmont Village Council, the winning faction's leader tries to hand parliamentarian Grace Ilnyk a cash \"thank-you bonus\" on top of her agreed fee. Grace declines it, saying, \"I can only accept my invoiced fee; anything more could make my advice look partial,\" and takes only the amount she billed. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian declined the bonus and accepted only her agreed fee, avoiding any appearance that her advice was not impartial, so there is no breach of Joint Code section 4.3.",
+    "keywords": [
+      "4.3",
+      "declined",
+      "bonus",
+      "impartial",
+      "no breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "While advising the Rivertown Merchants Guild on a proposal that would benefit one member's business, parliamentarian Simon Delacroix accepts that member's offer of a lavish paid dinner and a share of season tickets before rendering his opinions on the proposal. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. Accepting the dinner and tickets from a member with a stake in the outcome creates the appearance that his advice is not impartial. This breaches Joint Code section 4.3.",
+    "keywords": [
+      "4.3",
+      "appearance",
+      "impartial",
+      "dinner",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "At the Fairmont Parent-Teacher Association meeting, one member declares that anyone who teaches the fee-based tutoring cannot vote on the tutoring policy, and the chair announces those members may not vote and takes the vote without them. Parliamentarian Tomas Bergen knows these members retain the right to vote but says nothing, and the exclusion changes the result. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian failed to advise regarding the members' rights when they were improperly denied the right to vote. This breaches Joint Code section 4.6.",
+    "keywords": [
+      "4.6",
+      "members' rights",
+      "right to vote",
+      "denied",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "During the Glenwood Neighborhood Association meeting, the chair refuses to recognize a member who has properly risen to make a motion, telling her, \"You've said enough tonight,\" and moves on. Parliamentarian Aisha Farrow knows the member has a right to make her motion but chooses not to advise the chair, and the member is shut out. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian failed to advise regarding the member's right to make a motion when the chair improperly denied it. This breaches Joint Code section 4.6.",
+    "keywords": [
+      "4.6",
+      "member's right",
+      "denied",
+      "advise",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "At the Harmony Choir Society assembly, the chair says members who are behind on dues may not vote, though the bylaws impose no such disqualification. Parliamentarian Nolan Priest immediately advises the chair that these members retain the right to vote and must be allowed to do so, and the chair corrects course. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "No. The parliamentarian advised the chair regarding the members' right to vote and prevented their improper exclusion, so there is no breach of Joint Code section 4.6.",
+    "keywords": [
+      "4.6",
+      "right to vote",
+      "advised",
+      "members",
+      "no breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
+  },
+  {
+    "domain": 6,
+    "concept": "6.24",
+    "conceptName": "Respond to ethical-dilemma scenarios",
+    "prompt": "During a contentious Bayshore Cooperative meeting, the chair orders that all members seated in the back section be barred from the pending vote because they \"came in late,\" though nothing in the rules disqualifies them. Parliamentarian Renee Coyle recognizes this improperly denies their right to vote but stays silent, and the barred members are not counted. Did the parliamentarian breach the Joint Code? Why or why not? Which section?",
+    "gold": "Yes. The parliamentarian failed to advise regarding the members' rights when they were improperly denied the right to vote. This breaches Joint Code section 4.6.",
+    "keywords": [
+      "4.6",
+      "members' rights",
+      "right to vote",
+      "denied",
+      "breach"
+    ],
+    "ref": {
+      "section": "",
+      "quote": ""
+    }
   }
 ]
