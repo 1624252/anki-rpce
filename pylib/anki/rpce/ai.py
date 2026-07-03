@@ -40,9 +40,11 @@ TIMEOUT = float(os.environ.get("RPCE_OPENAI_TIMEOUT", "20"))
 _ENDPOINT = "https://api.openai.com/v1/chat/completions"
 
 
-#: Obfuscated key bundled into the shipping build (git-ignored; written at build
-#: time by pylib/tools/rpce_embed_key.py). Absent in the source tree / dev builds.
-_BUNDLED_KEY_PATH = Path(__file__).with_name("_bundled_key")
+#: Build-time AI config, written by pylib/tools/rpce_embed_key.py (all git-ignored,
+#: absent in the source tree / dev builds).
+_BUNDLED_KEY_PATH = Path(__file__).with_name("_bundled_key")  # obfuscated key
+_AI_PROXY_PATH = Path(__file__).with_name("_ai_proxy")  # proxy URL (preferred)
+_AI_TOKEN_PATH = Path(__file__).with_name("_ai_token")  # optional proxy shared token
 
 
 def _bundled_key() -> str:
@@ -54,6 +56,35 @@ def _bundled_key() -> str:
     from ._keybundle import deobfuscate
 
     return deobfuscate(blob)
+
+
+def ai_proxy_url() -> str:
+    """The grading-proxy URL, if configured. Priority: ``RPCE_AI_PROXY_URL`` env,
+    then the local ``~/.rpce/ai_proxy_url``, then the URL bundled into the build.
+    When set, requests go to the proxy (which holds the key) — the app needs no
+    OpenAI key. See scripts/rpce-ai-proxy/."""
+    url = os.environ.get("RPCE_AI_PROXY_URL", "").strip()
+    if url:
+        return url
+    for p in (KEY_PATH.with_name("ai_proxy_url"), _AI_PROXY_PATH):
+        try:
+            v = p.read_text(encoding="utf-8").strip()
+            if v:
+                return v
+        except OSError:
+            pass
+    return ""
+
+
+def _ai_token() -> str:
+    """Optional shared token the proxy checks (git-ignored / env)."""
+    v = os.environ.get("RPCE_AI_PROXY_TOKEN", "").strip()
+    if v:
+        return v
+    try:
+        return _AI_TOKEN_PATH.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def openai_key() -> str:
@@ -81,8 +112,9 @@ def set_openai_key(key: str) -> None:
 
 
 def ai_configured() -> bool:
-    """True if a key is present (does not check connectivity)."""
-    return bool(openai_key())
+    """True if AI grading can run: a proxy URL is set (key lives on the proxy) or
+    a key is present. Does not check connectivity."""
+    return bool(ai_proxy_url() or openai_key())
 
 
 def ai_enabled() -> bool:
@@ -106,8 +138,11 @@ def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:
     Returns None on ANY problem (no key, offline, HTTP/rate-limit error,
     timeout, non-JSON output) so callers fall back cleanly. Requests strict
     JSON via response_format so a stray sentence can't derail parsing."""
+    # Prefer the proxy (key stays server-side); else call OpenAI directly with a
+    # key. If neither is configured, abstain so the caller falls back offline.
+    proxy = ai_proxy_url()
     key = openai_key()
-    if not key:
+    if not proxy and not key:
         return None
     body = json.dumps(
         {
@@ -121,11 +156,16 @@ def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:
             "response_format": {"type": "json_object"},
         }
     ).encode("utf-8")
-    req = urllib.request.Request(
-        _ENDPOINT,
-        data=body,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-    )
+    headers = {"Content-Type": "application/json"}
+    if proxy:
+        endpoint = proxy
+        token = _ai_token()
+        if token:
+            headers["x-app-token"] = token
+    else:
+        endpoint = _ENDPOINT
+        headers["Authorization"] = f"Bearer {key}"
+    req = urllib.request.Request(endpoint, data=body, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             data = json.load(resp)

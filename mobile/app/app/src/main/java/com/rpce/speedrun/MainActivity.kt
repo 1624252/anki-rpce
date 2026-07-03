@@ -140,17 +140,29 @@ class MainActivity : AppCompatActivity() {
                 ""
             }
 
+        /** True when a grading proxy URL is bundled (key lives on the proxy, so
+         *  the app needs no OpenAI key of its own). */
+        @JavascriptInterface
+        fun aiProxyConfigured(): Boolean =
+            try {
+                assets.open("rpce_ai_proxy").bufferedReader().use { it.readText().trim().isNotEmpty() }
+            } catch (e: Exception) {
+                false
+            }
+
         /** Grade a Section II answer via the OpenAI chat API on a background
          *  thread (a WebView fetch is CORS-blocked from file://), then hand the
          *  raw response back to JS via window.__aiGradeDone. Any failure yields an
          *  {"error":...} payload so JS falls back to offline keyword grading. */
         @JavascriptInterface
         fun aiGrade(system: String, user: String) {
-            val key = bundledOpenAiKey()
-            if (key.isEmpty()) {
+            val proxy = asset("rpce_ai_proxy")   // preferred: key lives on the proxy
+            val key = if (proxy.isEmpty()) bundledOpenAiKey() else ""
+            if (proxy.isEmpty() && key.isEmpty()) {
                 deliverAiResult("{\"error\":\"no key\"}")
                 return
             }
+            val token = asset("rpce_ai_token")
             thread {
                 val result = try {
                     val body = org.json.JSONObject()
@@ -162,14 +174,18 @@ class MainActivity : AppCompatActivity() {
                                 .put(org.json.JSONObject().put("role", "system").put("content", system))
                                 .put(org.json.JSONObject().put("role", "user").put("content", user)),
                         ).toString()
-                    val conn = java.net.URL("https://api.openai.com/v1/chat/completions")
-                        .openConnection() as java.net.HttpURLConnection
+                    val url = if (proxy.isNotEmpty()) proxy else "https://api.openai.com/v1/chat/completions"
+                    val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                     conn.requestMethod = "POST"
                     conn.connectTimeout = 20000
                     conn.readTimeout = 20000
                     conn.doOutput = true
-                    conn.setRequestProperty("Authorization", "Bearer $key")
                     conn.setRequestProperty("Content-Type", "application/json")
+                    if (proxy.isNotEmpty()) {
+                        if (token.isNotEmpty()) conn.setRequestProperty("x-app-token", token)
+                    } else {
+                        conn.setRequestProperty("Authorization", "Bearer $key")
+                    }
                     conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                     val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
                     stream.bufferedReader().use { it.readText() }
@@ -179,6 +195,14 @@ class MainActivity : AppCompatActivity() {
                 deliverAiResult(result)
             }
         }
+
+        /** Read a bundled asset (git-ignored build-time config), or "" if absent. */
+        private fun asset(name: String): String =
+            try {
+                assets.open(name).bufferedReader().use { it.readText().trim() }
+            } catch (e: Exception) {
+                ""
+            }
 
         private fun deliverAiResult(raw: String) {
             runOnUiThread {

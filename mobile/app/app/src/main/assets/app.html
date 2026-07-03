@@ -601,7 +601,10 @@ function aiKey(){
 function aiOnline(){ try{ return !!Engine.online(); }catch(e){ return false; } }
 function aiEnabled(){ try{ return localStorage.getItem('rpce_ai_off')!=='1'; }catch(e){ return true; } }
 function setAiEnabled(on){ try{ localStorage.setItem('rpce_ai_off', on?'0':'1'); }catch(e){} }
-function aiConfigured(){ return !!aiKey(); }
+// AI is available when a proxy URL is bundled (key stays on the proxy) OR a key
+// blob is bundled. Proxy is preferred and needs no key in the app.
+function aiProxyConfigured(){ try{ return !!(Engine.aiProxyConfigured&&Engine.aiProxyConfigured()); }catch(e){ return false; } }
+function aiConfigured(){ return aiProxyConfigured() || !!aiKey(); }
 function aiActive(){ return aiConfigured() && aiOnline() && aiEnabled(); }
 function examinerBadge(usedAi){
   return usedAi

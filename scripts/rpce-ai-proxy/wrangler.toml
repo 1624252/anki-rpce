@@ -1,0 +1,8 @@
+name = "rpce-ai-proxy"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Deploy:  wrangler secret put OPENAI_API_KEY   (paste your key — server-side only)
+#          wrangler secret put APP_TOKEN        (optional shared secret)
+#          wrangler deploy
+# The key is a Worker SECRET, never in this file or the repo.
