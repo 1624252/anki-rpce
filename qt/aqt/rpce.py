@@ -2286,7 +2286,7 @@ def _session_done_html(col) -> str:
       style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;
       border-radius:14px;padding:15px 30px;font-size:var(--fs-lead);font-weight:800;
       cursor:pointer;box-shadow:0 6px 18px rgba(29,78,216,.28)">
-      Start new session</button>
+      Start a new review session</button>
   </div>
   <div style="text-align:center;margin-top:18px">
     <a href="#" onclick="pycmd('rpce:home');return false;"

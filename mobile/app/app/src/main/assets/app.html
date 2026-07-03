@@ -204,7 +204,7 @@ label{display:block;color:var(--ink2);font-size:var(--fs-small);margin-top:12px}
       <div class="big">✅</div><h2>All caught up</h2>
       <p class="sub">No more cards due right now.</p>
       <div id="done-stats"></div>
-      <button class="btn hidden" id="new-session-btn" onclick="startStudy()" style="margin-top:16px">Start new session</button>
+      <button class="btn hidden" id="new-session-btn" onclick="startStudy()" style="margin-top:16px">Start a new review session</button>
       <button class="btn ghost" onclick="goHome()" style="margin-top:12px">Back to home</button>
     </div>
   </div>
@@ -289,6 +289,9 @@ function j(s){ try { return JSON.parse(s); } catch(e){ return {ok:false,error:St
 function el(id){ return document.getElementById(id); }
 function show(id){
   ['home','review','scores','section2','simulate','sync','reference'].forEach(function(x){ el(x).classList.toggle('hidden', x!==id); });
+  // The "Show answer" + rating controls belong ONLY to a live review card; make
+  // sure they never linger on Section II, Simulate, or any other screen.
+  if(id!=='review'){ el('show-btn').classList.add('hidden'); el('rate').classList.add('hidden'); }
   updateNetStatus();  // keep the persistent sync bar current on every screen
 }
 function pct(x){ return (x==null) ? '—' : Math.round(x*100)+'%'; }
@@ -434,7 +437,8 @@ function loadCard(){
     el('done').querySelector('.big').textContent='✅';
     el('done').querySelector('h2').textContent='All caught up';
     el('done').querySelector('.sub').textContent='No more cards due right now.';
-    el('new-session-btn').classList.add('hidden');
+    el('show-btn').classList.add('hidden'); el('rate').classList.add('hidden');
+    el('new-session-btn').classList.remove('hidden');  // always offer a restart
     el('done').classList.remove('hidden'); el('rev-count').textContent=''; return; }
   updateProgress();
   current=r;
