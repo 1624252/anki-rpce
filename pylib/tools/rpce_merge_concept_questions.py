@@ -21,7 +21,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "rpce_authored_questions.json"
 CORPUS = ROOT / "data" / "roberts_rules_of_order_12th_edition.md"
-BATCHES = ["q_d1_d2.json", "q_d3_d4.json", "q_d5_d6.json", "q_d7.json"]
+BATCHES = [
+    "q_d1_d2.json",
+    "q_d3_d4.json",
+    "q_d5_d6.json",
+    "q_d7.json",
+    "q_backfill.json",
+    "q_fill.json",
+]
 
 
 def _norm(t: str) -> str:

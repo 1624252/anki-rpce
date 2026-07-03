@@ -140,7 +140,7 @@ CONCEPT_NOTETYPE = "RPCE Concept 1"
 
 #: Deck content version. Bump when regenerating so the desktop re-seeds from the
 #: refreshed starter deck (notes carry an ``rpce::ver::N`` tag; see _on_profile_open).
-RPCE_DECK_VERSION = "16"
+RPCE_DECK_VERSION = "17"
 
 #: Question kinds (payload["kind"]).
 KIND_CLOZE = "cloze"

@@ -390,9 +390,13 @@ def _banner_html(col) -> str:
     s = scores.readiness_summary(col)
     mem, perf = s["memory"], s["performance"]
     sec1, sec2 = s["section_I"], s["section_II"]
-    covered = sum(1 for c in s["coverage"] if c.cards > 0)
-    total = len(s["coverage"])
-    pct = covered / total if total else 0.0
+    # Concept coverage: fraction of the RP performance-expectation concepts with
+    # enough graded practice (docs/rpce/SCORING.md), not the 7 domains.
+    from anki.rpce import concepts as _concepts
+
+    total = len(_concepts.all_concepts())
+    pct = scores.concept_coverage_pct(col)
+    covered = round(pct * total)
     cal = scores.memory_calibration(col)
     cal_line = (
         f"Memory calibration: <b>Brier {cal['brier']:.3f}</b> · log-loss "
@@ -539,7 +543,7 @@ def _banner_html(col) -> str:
   </div>
   {session_html}
   <div class="rpce-grid">{cards}</div>
-  <div class="rpce-covhead"><b>Domain coverage</b><span>{pct:.0%} of {total} domains</span></div>
+  <div class="rpce-covhead"><b>Concept coverage</b><span>{pct:.0%} of {total} concepts</span></div>
   <div class="rpce-cov"><i style="width:{pct * 100:.0f}%"></i></div>
   <div class="rpce-foot" style="margin-top:22px">{cal_line}</div>
   <div class="rpce-foot" style="margin-top:6px">Use the tabs above — start a <b>Review session</b>,
@@ -1776,7 +1780,14 @@ def _on_profile_open() -> None:
         current = bool(mw.col.find_cards(f"tag:rpce::ver::{RPCE_DECK_VERSION}"))
         did_reseed = False
         if _rpce_starter_apkg() and not current:
-            # In-place update: no remove_notes() here — that wiped scheduling.
+            # Version bump = a new question bank whose notes have new GUIDs, so an
+            # in-place import would leave the OLD questions lingering alongside the
+            # new ones. Remove the existing RPCE notes first, then import fresh.
+            # This is gated by the version tag, so it runs ONCE per content version
+            # — not every launch (the bug fixed by the note:RPCE* stale query).
+            old = mw.col.find_notes("note:RPCE*")
+            if old:
+                mw.col.remove_notes(old)
             _build_or_import_rpce_deck(mw)
             did_reseed = True
         elif not mw.col.find_cards("note:RPCE*"):

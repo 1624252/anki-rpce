@@ -347,10 +347,10 @@ def performance_score(col: Collection) -> ScoreRange:
         )
         sr.confidence_label = confidence_label(sr.confidence)
         sr.elaboration = _performance_prose(
-            None, coverage_pct(col), best_next_topic(col)
+            None, concept_coverage_pct(col), best_next_topic(col)
         )
         return sr
-    cov = coverage_pct(col)
+    cov = concept_coverage_pct(col)
     # Wider band when coverage is low (less certain about unseen material).
     margin = 0.1 + 0.4 * (1.0 - cov)
     weakest = best_next_topic(col)
@@ -435,7 +435,7 @@ def readiness(
 ) -> ReadinessSnapshot:
     """P(pass `section` ≥ 80%) with full evidence, or abstain below the line."""
     rule = rule or GiveUpRule()
-    cov = coverage_pct(col)
+    cov = concept_coverage_pct(col, rule.min_items_per_concept)
     reviews = graded_reviews(col)
     scenarios = graded_scenarios(col)
     next_topic = best_next_topic(col)
@@ -449,7 +449,7 @@ def readiness(
             f"({reviews}/{rule.min_graded_reviews})"
         )
     if cov < rule.min_coverage:
-        missing.append(f"domain coverage {cov:.0%} of {rule.min_coverage:.0%} needed")
+        missing.append(f"concept coverage {cov:.0%} of {rule.min_coverage:.0%} needed")
     if needs_scenarios and scenarios < rule.min_scenarios:
         missing.append(
             f"{rule.min_scenarios - scenarios} more graded scenarios needed "
