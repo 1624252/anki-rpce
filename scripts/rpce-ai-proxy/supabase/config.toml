@@ -1,0 +1,8 @@
+# Minimal Supabase config so `supabase functions deploy` works from this dir.
+# The real project is chosen by `supabase link --project-ref <ref>`.
+project_id = "rpce-ai-proxy"
+
+# Publicly callable (no Supabase JWT required); access is gated by the optional
+# APP_TOKEN secret checked inside the function.
+[functions.rpce-grade]
+verify_jwt = false

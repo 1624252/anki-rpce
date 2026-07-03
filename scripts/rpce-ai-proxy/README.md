@@ -9,17 +9,32 @@ the key and forwards to OpenAI.
 app  ──POST messages──▶  your proxy (holds the key)  ──▶  OpenAI
 ```
 
-## Option A — Cloudflare Worker (free, no server to run)
+## Option A — Supabase Edge Function (free tier, no server to run)
+
+Free tier: ~500K function invocations/month. From `scripts/rpce-ai-proxy/`:
 
 ```bash
-npm i -g wrangler
-cd scripts/rpce-ai-proxy
-wrangler secret put OPENAI_API_KEY     # paste your key — stored server-side only
-wrangler secret put APP_TOKEN          # optional: a shared secret the apps send
-wrangler deploy                        # prints https://rpce-ai-proxy.<you>.workers.dev
+npx supabase login
+npx supabase link --project-ref <your-project-ref>   # from your Supabase dashboard
+npx supabase secrets set OPENAI_API_KEY=sk-...        # server-side only
+npx supabase secrets set APP_TOKEN=<random>           # optional gate
+npx supabase functions deploy rpce-grade              # verify_jwt=false is in config.toml
+# URL: https://<your-project-ref>.supabase.co/functions/v1/rpce-grade
 ```
 
-## Option B — self-host (VPS)
+Function code: `supabase/functions/rpce-grade/index.ts`.
+
+## Option B — Cloudflare Worker (free, no server to run)
+
+```bash
+cd scripts/rpce-ai-proxy
+npx wrangler login
+npx wrangler secret put OPENAI_API_KEY     # paste your key — stored server-side only
+npx wrangler secret put APP_TOKEN          # optional: a shared secret the apps send
+npx wrangler deploy                        # prints https://rpce-ai-proxy.<you>.workers.dev
+```
+
+## Option C — self-host (VPS)
 
 ```bash
 pip install flask requests
