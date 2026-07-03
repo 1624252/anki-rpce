@@ -1065,34 +1065,32 @@ def _simulate_html(col) -> str:
         _sim_reset()
     sim = _sim_current()
     transcript = "".join(_SIM["log"])
-    # AI scenario controls: a Generate button, a "generating…" state, and any
-    # last-generation error. Only shown when a key is set and AI is enabled;
-    # scripted simulations are always available regardless.
-    ai_html = ""
+    # AI scenario control: a Generate button pinned to the TOP-RIGHT (or a
+    # "generating…" indicator in its place), plus any last-generation error shown
+    # below. Only when a key/proxy is set and AI is enabled; scripted simulations
+    # are always available regardless.
+    sim_ai_control = ""
+    ai_err_html = ""
     if ai.ai_configured() and ai.ai_enabled():
         if _SIM.get("generating"):
-            ai_html = (
-                "<div style='margin-top:18px;color:var(--accent1);font-weight:800'>"
-                "🤖 Generating a scenario…</div>"
+            sim_ai_control = (
+                "<span style='color:var(--accent1);font-weight:800'>"
+                "🤖 Generating a scenario…</span>"
             )
         else:
-            err = _SIM.get("ai_error")
-            err_html = (
-                "<div style='margin-top:10px;color:#b45309;font-weight:700'>"
-                f"{err}</div>"
-                if err
-                else ""
-            )
-            ai_html = (
-                "<div style='margin-top:18px;border-top:1px solid var(--border);"
-                "padding-top:16px'>"
+            sim_ai_control = (
                 "<button onclick=\"pycmd('rpce:simai');return false;\" "
                 "style='background:var(--surface);color:var(--accent1);"
-                "border:1px solid var(--border);border-radius:14px;padding:11px 22px;"
-                "font-size:var(--fs-body);font-weight:800;cursor:pointer'>"
-                "🤖 Generate AI scenario</button>"
-                f"{err_html}</div>"
+                "border:1px solid var(--border);border-radius:12px;padding:9px 16px;"
+                "font-size:var(--fs-body);font-weight:800;cursor:pointer;"
+                "white-space:nowrap'>🤖 Generate AI scenario</button>"
             )
+            err = _SIM.get("ai_error")
+            if err:
+                ai_err_html = (
+                    "<div style='margin-top:10px;color:#b45309;font-weight:700;"
+                    f"text-align:right'>{err}</div>"
+                )
     ai_tag = (
         "<span class='rpce-pill' style='background:rgba(21,128,61,.14);"
         "color:#15803d;margin-left:8px'>🤖 AI-generated</span>"
@@ -1134,17 +1132,18 @@ def _simulate_html(col) -> str:
         )
     return f"""{_theme_style()}{_SIM_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
-  <div style="text-align:left;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
     <a href="#" onclick="pycmd('rpce:home');return false;"
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
+    <span>{sim_ai_control}</span>
   </div>
   <div class="rpce-h1">{sim.title}{ai_tag}</div>
   <div class="rpce-sub"><i>{sim.setting}</i></div>
+  {ai_err_html}
   <div style="margin-top:20px;padding:16px 20px;background:var(--surface2);
     border:1px solid var(--border);border-radius:16px;text-align:left;
     font-size:var(--fs-body);line-height:1.5">{transcript}</div>
   {controls}
-  {ai_html}
 </div></div>
 <script>
   // Restore the scroll position captured on Respond, so the page doesn't jump
