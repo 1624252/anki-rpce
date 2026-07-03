@@ -1,16 +1,16 @@
 # Copyright: Ankitects Pty Ltd and contributors
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-"""Optional online AI (OpenAI) for the RPCE examiner.
+"""Optional online AI for the RPCE examiner, via the grading proxy.
 
 Design rules (spec §5, §7g, §10, grading "AI checking and safety"):
 
 - **Never required.** Everything degrades to the offline `KeywordExaminer`
-  (`AutoExaminer` in ``examiner.py``). No key / offline / rate-limited / a
+  (`AutoExaminer` in ``examiner.py``). No proxy / offline / rate-limited / a
   timeout / malformed output → the app still grades and still scores.
-- **The key is a secret.** It is read from the ``OPENAI_API_KEY`` env var or a
-  local file at ``~/.rpce/openai_key`` — NEVER committed and NEVER written to
-  the (syncing) collection config, so it can't leak to AnkiWeb or git.
+- **No key in the app.** Grading calls go to the proxy (a Supabase edge
+  function), which holds the OpenAI key server-side. The app only knows the
+  proxy URL (and an optional shared token) — no secret ships in the build.
 - **Traceable source.** The model never supplies the RONR citation; the caller
   retrieves the supporting passage and passes it in, and we attach that
   citation to the result (spec: "AI claims with no traceable source" is zero).
@@ -28,45 +28,32 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-#: Local, git-ignored key file (outside any synced/tracked location).
-KEY_PATH = Path.home() / ".rpce" / "openai_key"
 #: Presence of this file means "AI off" — lets the user disable AI grading even
-#: with a key configured and a connection available.
+#: with a proxy configured and a connection available.
 AI_OFF_PATH = Path.home() / ".rpce" / "ai_off"
+#: Local, git-ignored proxy-URL override (outside any synced/tracked location).
+_PROXY_URL_FILE = Path.home() / ".rpce" / "ai_proxy_url"
 #: Chat model; override with RPCE_OPENAI_MODEL.
 MODEL = os.environ.get("RPCE_OPENAI_MODEL", "gpt-4o-mini")
 #: Hard timeout (s): a slow/rate-limited API must fall back quickly, not hang.
 TIMEOUT = float(os.environ.get("RPCE_OPENAI_TIMEOUT", "20"))
-_ENDPOINT = "https://api.openai.com/v1/chat/completions"
 
 
 #: Build-time AI config, written by pylib/tools/rpce_embed_key.py (all git-ignored,
 #: absent in the source tree / dev builds).
-_BUNDLED_KEY_PATH = Path(__file__).with_name("_bundled_key")  # obfuscated key
-_AI_PROXY_PATH = Path(__file__).with_name("_ai_proxy")  # proxy URL (preferred)
+_AI_PROXY_PATH = Path(__file__).with_name("_ai_proxy")  # proxy URL
 _AI_TOKEN_PATH = Path(__file__).with_name("_ai_token")  # optional proxy shared token
-
-
-def _bundled_key() -> str:
-    """The de-obfuscated key shipped in the packaged app, or "" if not bundled."""
-    try:
-        blob = _BUNDLED_KEY_PATH.read_text(encoding="utf-8")
-    except OSError:
-        return ""
-    from ._keybundle import deobfuscate
-
-    return deobfuscate(blob)
 
 
 def ai_proxy_url() -> str:
     """The grading-proxy URL, if configured. Priority: ``RPCE_AI_PROXY_URL`` env,
     then the local ``~/.rpce/ai_proxy_url``, then the URL bundled into the build.
-    When set, requests go to the proxy (which holds the key) — the app needs no
-    OpenAI key. See scripts/rpce-ai-proxy/."""
+    Requests go to the proxy (a Supabase edge function), which holds the key —
+    the app needs no OpenAI key. See scripts/rpce-ai-proxy/."""
     url = os.environ.get("RPCE_AI_PROXY_URL", "").strip()
     if url:
         return url
-    for p in (KEY_PATH.with_name("ai_proxy_url"), _AI_PROXY_PATH):
+    for p in (_PROXY_URL_FILE, _AI_PROXY_PATH):
         try:
             v = p.read_text(encoding="utf-8").strip()
             if v:
@@ -87,34 +74,10 @@ def _ai_token() -> str:
         return ""
 
 
-def openai_key() -> str:
-    """The configured key, or "" if none. Priority: ``OPENAI_API_KEY`` env var,
-    then the user's local ``~/.rpce/openai_key``, then the key bundled into the
-    shipping build (so downloaded apps grade with AI out of the box)."""
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if key:
-        return key
-    try:
-        user_key = KEY_PATH.read_text(encoding="utf-8").strip()
-    except OSError:
-        user_key = ""
-    return user_key or _bundled_key()
-
-
-def set_openai_key(key: str) -> None:
-    """Persist (or clear) the key in the local file — never in the repo/config."""
-    key = (key or "").strip()
-    KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if key:
-        KEY_PATH.write_text(key, encoding="utf-8")
-    elif KEY_PATH.exists():
-        KEY_PATH.unlink()
-
-
 def ai_configured() -> bool:
-    """True if AI grading can run: a proxy URL is set (key lives on the proxy) or
-    a key is present. Does not check connectivity."""
-    return bool(ai_proxy_url() or openai_key())
+    """True if AI grading can run: a proxy URL is set (the key lives on the
+    proxy). Does not check connectivity."""
+    return bool(ai_proxy_url())
 
 
 def ai_enabled() -> bool:
@@ -138,11 +101,10 @@ def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:
     Returns None on ANY problem (no key, offline, HTTP/rate-limit error,
     timeout, non-JSON output) so callers fall back cleanly. Requests strict
     JSON via response_format so a stray sentence can't derail parsing."""
-    # Prefer the proxy (key stays server-side); else call OpenAI directly with a
-    # key. If neither is configured, abstain so the caller falls back offline.
-    proxy = ai_proxy_url()
-    key = openai_key()
-    if not proxy and not key:
+    # Calls go to the proxy, which holds the key server-side. No proxy → abstain
+    # so the caller falls back to the offline examiner.
+    endpoint = ai_proxy_url()
+    if not endpoint:
         return None
     body = json.dumps(
         {
@@ -157,14 +119,9 @@ def chat_json(system: str, user: str, *, max_tokens: int = 400) -> dict | None:
         }
     ).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    if proxy:
-        endpoint = proxy
-        token = _ai_token()
-        if token:
-            headers["x-app-token"] = token
-    else:
-        endpoint = _ENDPOINT
-        headers["Authorization"] = f"Bearer {key}"
+    token = _ai_token()
+    if token:
+        headers["x-app-token"] = token
     req = urllib.request.Request(endpoint, data=body, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:

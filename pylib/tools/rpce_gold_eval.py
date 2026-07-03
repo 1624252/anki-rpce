@@ -65,8 +65,9 @@ def main() -> int:
     print(f"Leakage scan (test items in study content): "
           f"{'CLEAN' if best.leaks == 0 else f'{best.leaks} LEAK(S)'}")
     if not ai_on:
-        print("Note: no AI key configured — showing the offline baselines only. "
-              "Set OPENAI_API_KEY (or ~/.rpce/openai_key) for the AI row.")
+        print("Note: no AI proxy configured — showing the offline baselines "
+              "only. Set RPCE_AI_PROXY_URL (or ~/.rpce/ai_proxy_url) for the "
+              "AI row.")
     # Gate: leakage clean AND the best grader clears the accuracy cutoff.
     ok = best.leaks == 0 and best.accuracy >= best.accuracy_cutoff
     return 0 if ok else 1

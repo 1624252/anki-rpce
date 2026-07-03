@@ -30,7 +30,6 @@ app the corpus is `data/roberts_rules_of_order_12th_edition.md`.
 from __future__ import annotations
 
 import json
-import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -826,10 +825,11 @@ _EXAMINER_SYSTEM = (
 
 
 class AutoExaminer(Examiner):
-    """The shipping grader: use the online LLM when a key is configured AND the
-    call succeeds; otherwise fall back to the offline :class:`KeywordExaminer`.
+    """The shipping grader: use the online LLM (via the grading proxy) when the
+    proxy is configured AND the call succeeds; otherwise fall back to the offline
+    :class:`KeywordExaminer`.
 
-    This is the offline guarantee (spec §7g): no key, offline, rate-limited, a
+    This is the offline guarantee (spec §7g): no proxy, offline, rate-limited, a
     timeout, or malformed output all fall through to the deterministic grader,
     so the app ALWAYS returns a grade. ``used`` records which grader produced
     the last result ("ai" or "offline") for the UI badge. The RONR citation is
@@ -887,37 +887,12 @@ class AutoExaminer(Examiner):
 def make_examiner(call_fn: Callable[[str], str] | None = None) -> Examiner:
     """Return the shipping grader. With an injected `call_fn` (tests), use the
     LLM directly. Otherwise return :class:`AutoExaminer`, which uses the online
-    LLM when a key is configured and the call succeeds, and always falls back to
-    the offline grader (so the app scores with AI off — spec §7g)."""
+    LLM (via the proxy) when the proxy is configured and the call succeeds, and
+    always falls back to the offline grader (so the app scores with AI off —
+    spec §7g)."""
     if call_fn is not None:
         return LLMExaminer(call_fn)
     return AutoExaminer()
-
-
-def _default_llm_call(prompt: str) -> str:  # pragma: no cover - requires network + key
-    """Minimal OpenAI-compatible chat call using only the stdlib. Reads
-    RPCE_AI_KEY/OPENAI_API_KEY, optional RPCE_AI_BASE_URL and RPCE_AI_MODEL.
-    Only invoked when a key is configured; never exercised in tests."""
-    import urllib.request
-
-    key = os.environ.get("RPCE_AI_KEY") or os.environ["OPENAI_API_KEY"]
-    base = os.environ.get("RPCE_AI_BASE_URL", "https://api.openai.com/v1")
-    model = os.environ.get("RPCE_AI_MODEL", "gpt-4o-mini")
-    body = json.dumps(
-        {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0,
-        }
-    ).encode()
-    req = urllib.request.Request(
-        f"{base}/chat/completions",
-        data=body,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"]
 
 
 @dataclass
