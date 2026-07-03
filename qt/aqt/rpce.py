@@ -1089,10 +1089,9 @@ def _simulate_html(col) -> str:
         )
     return f"""{_theme_style()}{_SIM_SUBMIT_JS}
 <div class="rpce-root"><div class="rpce-hero">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <div style="text-align:left;margin-bottom:8px">
     <a href="#" onclick="pycmd('rpce:home');return false;"
        style="color:var(--accent1);font-weight:700;text-decoration:none">‹ Home</a>
-    {_ai_toggle_html()}
   </div>
   <div class="rpce-h1">{sim.title}{ai_tag}</div>
   <div class="rpce-sub"><i>{sim.setting}</i></div>
