@@ -23,24 +23,30 @@ def test_scenarios_have_prompt_and_gold_answer():
 def test_every_scenario_cites_ronr_with_a_quote():
     import re
 
-    # RONR citations are section:paragraph, allowing a sub-item "(4)" or a
-    # range "15-16" (e.g. "10:26(4)", "6:15-16").
-    pat = re.compile(r"\d+:\d+(?:-\d+)?(?:\(\d+\))?")
+    # RONR citations are section:paragraph, allowing a range "15-16" and a
+    # sub-item that may be a number or a letter (e.g. "10:26(4)", "6:15-16",
+    # "50:13(d)").
+    pat = re.compile(r"\d+:\d+(?:-\d+)?(?:\([0-9a-z]+\))?")
     for s in scenarios.all_scenarios():
         assert pat.fullmatch(s.ref.section), s.ref.section
         assert len(s.ref.quote.strip()) > 20, s.ref.section
 
 
 def test_baseline_examiner_grades_a_scenario_answer():
-    s = scenarios.scenarios_for(2)[0]  # Previous Question -> two-thirds vote
+    # Self-contained gold ruling (Previous Question) so the test is independent
+    # of which authored scenario happens to be first.
+    gold = (
+        "The Previous Question needs a second, is not debatable, and requires a "
+        "two-thirds vote to adopt."
+    )
     ex = examiner.BaselineExaminer(pass_score=2.0)
     # A strong answer should score well against the gold ruling.
     good = ex.grade(
         "It needs a second, is not debatable, and takes a two-thirds vote.",
-        s.gold_answer,
-        corpus=s.gold_answer,  # use gold as a stand-in corpus for grounding
+        gold,
+        corpus=gold,  # use gold as a stand-in corpus for grounding
     )
     assert good.score > 0
     # A clearly wrong answer should score lower than the good one.
-    weak = ex.grade("Just let them keep talking.", s.gold_answer, corpus=s.gold_answer)
+    weak = ex.grade("Just let them keep talking.", gold, corpus=gold)
     assert weak.score < good.score

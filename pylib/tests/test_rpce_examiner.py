@@ -111,7 +111,8 @@ def test_make_examiner_returns_auto_and_falls_back_offline(monkeypatch):
     assert isinstance(auto, ex.AutoExaminer)
     r = auto.grade(
         "The Previous Question needs a two-thirds vote.",
-        "Previous Question requires a two-thirds vote.", CORPUS,
+        "Previous Question requires a two-thirds vote.",
+        CORPUS,
     )
     assert auto.used == "offline" and not r.abstained and r.score > 0
     # Providing a call_fn opts straight into the LLM examiner.
@@ -128,7 +129,8 @@ def test_auto_examiner_falls_back_when_ai_call_fails(monkeypatch):
     auto = ex.make_examiner()
     r = auto.grade(
         "The Previous Question needs a two-thirds vote.",
-        "Previous Question requires a two-thirds vote.", CORPUS,
+        "Previous Question requires a two-thirds vote.",
+        CORPUS,
     )
     assert auto.used == "offline" and not r.abstained and r.score > 0
 
@@ -160,14 +162,30 @@ def test_positive_phrase_keywords_normalize():
 # A Previous Question rubric authored explicitly for these tests.
 _PQ_RUBRIC = ex.Rubric(
     (
-        ex.RubricElement("the motion", ("previousquestion",), weight=2.0,
-                         essential=True, expects="the Previous Question"),
-        ex.RubricElement("the vote threshold", ("twothirds",), weight=2.0,
-                         essential=True, forbidden=("majority",), expects="two-thirds"),
-        ex.RubricElement("the second", ("second",), forbidden=("nosecond",),
-                         expects="a second"),
-        ex.RubricElement("debatability", ("nodebate",), forbidden=("debatable",),
-                         expects="not debatable"),
+        ex.RubricElement(
+            "the motion",
+            ("previousquestion",),
+            weight=2.0,
+            essential=True,
+            expects="the Previous Question",
+        ),
+        ex.RubricElement(
+            "the vote threshold",
+            ("twothirds",),
+            weight=2.0,
+            essential=True,
+            forbidden=("majority",),
+            expects="two-thirds",
+        ),
+        ex.RubricElement(
+            "the second", ("second",), forbidden=("nosecond",), expects="a second"
+        ),
+        ex.RubricElement(
+            "debatability",
+            ("nodebate",),
+            forbidden=("debatable",),
+            expects="not debatable",
+        ),
     )
 )
 _PQ_GOLD = "The Previous Question needs a second, is not debatable, and requires a two-thirds vote."
@@ -177,7 +195,9 @@ def test_keyword_examiner_passes_a_correct_ruling_with_high_score():
     kw = ex.KeywordExaminer(pass_score=3.0)
     r = kw.grade(
         "The previous question needs a second, is not debatable, and takes a two-thirds vote.",
-        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+        _PQ_GOLD,
+        CORPUS,
+        _PQ_RUBRIC,
     )
     assert r.passed and not r.abstained
     assert r.score >= 4.5
@@ -190,7 +210,9 @@ def test_keyword_examiner_fails_wrong_threshold_on_forbidden_penalty():
     # twin + the missed essential threshold must sink it below a pass.
     wrong = kw.grade(
         "The previous question needs a second, is not debatable, and takes a majority vote.",
-        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+        _PQ_GOLD,
+        CORPUS,
+        _PQ_RUBRIC,
     )
     assert not wrong.passed
     assert wrong.score < 3.0
@@ -199,15 +221,21 @@ def test_keyword_examiner_fails_wrong_threshold_on_forbidden_penalty():
     # scores the wrong answer strictly below the correct one.
     right = kw.grade(
         "The previous question needs a second, is not debatable, and takes a two-thirds vote.",
-        _PQ_GOLD, CORPUS, _PQ_RUBRIC,
+        _PQ_GOLD,
+        CORPUS,
+        _PQ_RUBRIC,
     )
     assert wrong.score < right.score
 
 
 def test_keyword_examiner_gives_partial_credit_with_breakdown():
     kw = ex.KeywordExaminer(pass_score=3.0)
-    r = kw.grade("The previous question requires a two-thirds vote.", _PQ_GOLD,
-                 CORPUS, _PQ_RUBRIC)
+    r = kw.grade(
+        "The previous question requires a two-thirds vote.",
+        _PQ_GOLD,
+        CORPUS,
+        _PQ_RUBRIC,
+    )
     assert 0.0 < r.score < 5.0
     # Per-element breakdown names what was identified and what wasn't addressed.
     assert "the motion" in r.feedback
@@ -235,16 +263,31 @@ def test_keyword_examiner_matches_synonyms_and_paraphrases():
     main_gold = "A main motion requires a second and a majority vote to adopt."
     rubric = ex.Rubric(
         (
-            ex.RubricElement("the second", ("second",), weight=2.0, essential=True,
-                             forbidden=("nosecond",), expects="a second"),
-            ex.RubricElement("the vote threshold", ("majority",), weight=2.0,
-                             essential=True, forbidden=("twothirds",),
-                             expects="a majority"),
+            ex.RubricElement(
+                "the second",
+                ("second",),
+                weight=2.0,
+                essential=True,
+                forbidden=("nosecond",),
+                expects="a second",
+            ),
+            ex.RubricElement(
+                "the vote threshold",
+                ("majority",),
+                weight=2.0,
+                essential=True,
+                forbidden=("twothirds",),
+                expects="a majority",
+            ),
         )
     )
     # "more than half" == majority; "seconded" == second (via the alias table).
-    r = kw.grade("It must be seconded and pass by more than half of the votes.",
-                 main_gold, CORPUS, rubric)
+    r = kw.grade(
+        "It must be seconded and pass by more than half of the votes.",
+        main_gold,
+        CORPUS,
+        rubric,
+    )
     assert r.passed and r.score >= 4.0
 
 
@@ -271,13 +314,17 @@ def test_alias_table_folds_thresholds_and_phrases():
 
 
 def test_scenario_rubric_grades_the_curated_scenario():
-    # The curated Previous Question scenario carries an explicit rubric; a wrong
-    # threshold fails against it.
-    s = scenarios.scenarios_for(2)[0]
-    assert s.rubric is not None
+    # An explicit Previous Question rubric fails a wrong-threshold answer (the
+    # shared RUBRIC_PREVIOUS_QUESTION the simulation turns use).
+    rubric = scenarios.RUBRIC_PREVIOUS_QUESTION
+    gold = (
+        "The Previous Question needs a second, is not debatable, and requires a "
+        "two-thirds vote to adopt."
+    )
     kw = ex.KeywordExaminer(pass_score=3.0)
-    r = kw.grade("The previous question just needs a majority vote.", s.gold_answer,
-                 s.gold_answer, s.rubric)
+    r = kw.grade(
+        "The previous question just needs a majority vote.", gold, gold, rubric
+    )
     assert not r.passed
 
 
