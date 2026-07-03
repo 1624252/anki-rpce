@@ -340,14 +340,14 @@ def _examiner_badge(used: str = "offline") -> str:
         )
     return (
         "<div style='margin-top:8px;color:#b45309;font-weight:700'>"
-        "🔌 Offline examiner. Set an AI examiner key (Tools menu) for "
-        "richer feedback when online.</div>"
+        "🔌 Offline examiner. Connect to the internet for richer AI "
+        "feedback.</div>"
     )
 
 
 def _ai_toggle_html() -> str:
     """A small in-page AI on/off control for the Section II / Simulate pages, so
-    the switch is visible where grading happens (also on Tools ▸ AI examiner)."""
+    the switch is visible where grading happens."""
     from anki.rpce import ai
 
     if not ai.ai_configured():
@@ -1708,23 +1708,11 @@ def _brand_main_window() -> None:
         print(f"RPCE window-size error: {exc}")
     # Tools ▸ RPCE actions: session length + AnkiWeb logout.
     try:
-        from anki.rpce import ai
         from aqt.qt import QAction
 
         act = QAction("Review session length…", mw)
         qconnect(act.triggered, _set_session_length)
         mw.form.menuTools.addAction(act)
-        aikey = QAction("Set AI examiner key…", mw)
-        qconnect(aikey.triggered, _set_ai_key)
-        mw.form.menuTools.addAction(aikey)
-        # Checkable AI on/off — only meaningful once a key is configured. Toggling
-        # flips online grading (offline examiner is the fallback either way).
-        ai_toggle = QAction("AI examiner (online grading)", mw)
-        ai_toggle.setCheckable(True)
-        ai_toggle.setChecked(ai.ai_enabled())
-        ai_toggle.setEnabled(ai.ai_configured())
-        qconnect(ai_toggle.toggled, _toggle_ai_examiner)
-        mw.form.menuTools.addAction(ai_toggle)
         logout = QAction("Log out of AnkiWeb", mw)
         qconnect(logout.triggered, _logout_ankiweb)
         mw.form.menuTools.addAction(logout)
@@ -2227,52 +2215,6 @@ def _set_session_length() -> None:
         # Re-render the dashboard so the ⚙️ pill shows the new length immediately.
         if mw.state == "deckBrowser":
             mw.moveToState("deckBrowser")
-
-
-def _set_ai_key() -> None:
-    """Set/clear the OpenAI examiner key. Stored in a local git-ignored file
-    (~/.rpce/openai_key) — NEVER in the collection (which syncs) or the repo, so
-    the secret can't leak. Blank clears it; the app then uses the offline
-    examiner. Enables the online AI examiner for Section II + simulations."""
-    from anki.rpce import ai
-    from aqt.qt import QInputDialog, QLineEdit
-    from aqt.utils import tooltip
-
-    mw = aqt.mw
-    if mw is None:
-        return
-    current = "•••• (set)" if ai.ai_configured() else ""
-    key, ok = QInputDialog.getText(
-        mw,
-        "AI examiner key",
-        "OpenAI API key (leave blank to clear and use the offline examiner):",
-        QLineEdit.EchoMode.Password,
-        current,
-    )
-    if not ok or key.strip() == "••••  (set)".strip():
-        return  # unchanged
-    if key.strip().startswith("••"):
-        return  # user left the masked placeholder untouched
-    ai.set_openai_key(key.strip())
-    tooltip(
-        "AI examiner enabled — online grading with offline fallback."
-        if key.strip()
-        else "AI key cleared — using the offline examiner."
-    )
-
-
-def _toggle_ai_examiner(checked: bool) -> None:
-    """Turn online AI grading on/off (works even when online). The offline
-    examiner is the fallback either way; only meaningful when a key is set."""
-    from anki.rpce import ai
-    from aqt.utils import tooltip
-
-    ai.set_ai_enabled(checked)
-    tooltip(
-        "AI grading on — online with offline fallback."
-        if checked
-        else "AI grading off — using the offline examiner."
-    )
 
 
 def _logout_ankiweb() -> None:
