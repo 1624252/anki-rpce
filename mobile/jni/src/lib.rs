@@ -626,9 +626,12 @@ fn concept_coverage() -> (i64, i64, f64) {
     if total == 0 {
         return (0, 0, 0.0);
     }
-    // A concept is "covered" once one of its cards has its 3 most-recent reviews
-    // ALL rated Easy (ease=4) — mirrors scores.concepts_mastered.
-    let mut last3: HashMap<i64, Vec<i64>> = HashMap::new();
+    // A concept is "covered" once one of its cards' 2 most-recent reviews are
+    // both a pass (>= Good=3) with the most recent rated Easy (=4) — consistent
+    // recent mastery. Mirrors scores.concepts_mastered. (A long all-Easy streak
+    // was unreachable — cards are buried after a couple of reviews — so coverage
+    // sat at 0%.)
+    let mut recent: HashMap<i64, Vec<i64>> = HashMap::new();
     if let Ok(v) = db_query(
         "SELECT cid, ease FROM revlog ORDER BY id DESC",
         serde_json::json!([]),
@@ -638,8 +641,8 @@ fn concept_coverage() -> (i64, i64, f64) {
                 if let Some(a) = r.as_array() {
                     let cid = a.first().and_then(|x| x.as_i64()).unwrap_or(0);
                     let ease = a.get(1).and_then(|x| x.as_i64()).unwrap_or(0);
-                    let e = last3.entry(cid).or_default();
-                    if e.len() < 3 {
+                    let e = recent.entry(cid).or_default();
+                    if e.len() < 2 {
                         e.push(ease);
                     }
                 }
@@ -647,8 +650,9 @@ fn concept_coverage() -> (i64, i64, f64) {
         }
     }
     let mut mastered: HashSet<String> = HashSet::new();
-    for (cid, eases) in &last3 {
-        if eases.len() == 3 && eases.iter().all(|&e| e == 4) {
+    for (cid, eases) in &recent {
+        // eases[0] is the most recent review (revlog ordered by id DESC).
+        if eases.len() == 2 && eases[0] == 4 && eases.iter().all(|&e| e >= 3) {
             if let Some(concepts) = card_concepts.get(cid) {
                 for c in concepts {
                     mastered.insert(c.clone());

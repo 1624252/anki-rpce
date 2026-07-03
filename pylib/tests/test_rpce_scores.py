@@ -103,9 +103,9 @@ def test_readiness_unlocks_when_give_up_rule_met():
     _build_and_study(col, 7)
 
     # Loosened thresholds so the test doesn't need 200 real reviews. Concept
-    # coverage now requires a card's 3 most-recent reviews to be Easy over the 210
-    # PE concepts; the curated test deck isn't PE-tagged, so drop the coverage gate
-    # here (coverage itself is exercised in test_concept_coverage_*).
+    # coverage now requires a card's 2 most-recent reviews to both be a pass with
+    # the most recent rated Easy, over the 210 PE concepts; the curated test deck
+    # isn't PE-tagged, so drop the coverage gate here.
     rule = scores.GiveUpRule(min_graded_reviews=5, min_coverage=0.0, min_scenarios=1)
 
     # Section I needs no scenarios -> should produce a number.

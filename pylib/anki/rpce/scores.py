@@ -180,10 +180,15 @@ def graded_reviews(col: Collection) -> int:
     )
 
 
-#: Anki review ease for an "Easy" rating.
+#: Anki review ease for an "Easy" rating, and the minimum "pass" (Good) rating.
 _EASE_EASY = 4
-#: How many of a card's most-recent reviews must be "Easy" to count the concept.
-COVERAGE_EASY_STREAK = 3
+_EASE_GOOD = 3
+#: How many most-recent reviews of a card define coverage. Cards are reviewed
+#: only a couple of times before their concept siblings are buried, so requiring
+#: a long all-Easy streak was unreachable (coverage stuck at 0%). Coverage now
+#: looks at the last COVERAGE_RECENT_N reviews: the most recent must be Easy and
+#: every one of them at least Good — consistent recent mastery, not one fluke.
+COVERAGE_RECENT_N = 2
 
 
 def concept_item_counts(col: Collection) -> dict[str, int]:
@@ -202,19 +207,21 @@ def concept_item_counts(col: Collection) -> dict[str, int]:
 
 def concepts_mastered(col: Collection) -> set[str]:
     """Concept ids you've MASTERED: at least one card of the concept whose
-    ``COVERAGE_EASY_STREAK`` most-recent reviews were ALL rated Easy. This is the
-    bar for concept coverage — a concept counts only once you're consistently
-    rating a question of it Easy."""
+    ``COVERAGE_RECENT_N`` most-recent reviews were all a pass (>= Good) with the
+    most recent rated Easy. This is the bar for concept coverage — a concept
+    counts once you're recently, consistently acing a question of it."""
     # Most-recent eases per card, from the review log (one pass, newest first).
     last: dict[int, list[int]] = {}
     for cid, ease in col.db.execute("select cid, ease from revlog order by id desc"):
         lst = last.setdefault(int(cid), [])
-        if len(lst) < COVERAGE_EASY_STREAK:
+        if len(lst) < COVERAGE_RECENT_N:
             lst.append(int(ease))
     mastered_cards = [
         cid
         for cid, es in last.items()
-        if len(es) == COVERAGE_EASY_STREAK and all(e == _EASE_EASY for e in es)
+        if len(es) == COVERAGE_RECENT_N
+        and es[0] == _EASE_EASY  # most recent review is Easy
+        and all(e >= _EASE_GOOD for e in es)  # and every recent review a pass
     ]
     if not mastered_cards:
         return set()
@@ -232,8 +239,9 @@ def concepts_mastered(col: Collection) -> set[str]:
 
 def concept_coverage_pct(col: Collection) -> float:
     """Fraction of the RP performance-expectation concepts you've MASTERED — a
-    concept counts once one of its cards has its 3 most-recent reviews all rated
-    Easy (:func:`concepts_mastered`). 0.0 if the registry is empty."""
+    concept counts once one of its cards has its 2 most-recent reviews both a
+    pass with the most recent rated Easy (:func:`concepts_mastered`). 0.0 if the
+    registry is empty."""
     from . import concepts
 
     cs = concepts.all_concepts()
