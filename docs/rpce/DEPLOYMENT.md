@@ -184,8 +184,34 @@ an emulator.
 1. Ensure the assets are bundled (§1): `rpce_starter.apkg`, `scenarios.json`,
    `simulations.json`, plus the native lib from §3c.
 2. Open `mobile/app/` in Android Studio and sync Gradle (or use `./gradlew`).
-3. Select an emulator or connected device and **Run**, or build a debug APK:
+3. Start a device: pick one in Android Studio's **Device Manager** and hit ▶, or
+   launch the bundled `rpce` AVD from the CLI (see **Emulator from the CLI** below).
+4. Select an emulator or connected device and **Run**, or build a debug APK:
    `./gradlew assembleDebug` → `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
+
+> **`./gradlew` needs JDK 21 (AGP 8.5.2).** The system JDK is too new. Point
+> `JAVA_HOME` at Android Studio's bundled JBR before building from the CLI:
+> `JAVA_HOME="C:\Program Files\Android\Android Studio\jbr" ./gradlew :app:assembleDebug --no-daemon`.
+
+#### Emulator from the CLI
+
+The SDK tools live under `%LOCALAPPDATA%\Android\Sdk` (already on `ANDROID_HOME`):
+`emulator\emulator.exe` starts virtual devices, `platform-tools\adb.exe` talks to
+running ones. This box ships one AVD, `rpce`.
+
+```powershell
+$sdk = "$env:LOCALAPPDATA\Android\Sdk"
+& "$sdk\emulator\emulator.exe" -list-avds          # -> rpce
+& "$sdk\emulator\emulator.exe" -avd rpce           # launch (own terminal, or Start-Process to background)
+
+$adb = "$sdk\platform-tools\adb.exe"
+& $adb wait-for-device                             # window appears before Android is ready
+& $adb shell getprop sys.boot_completed            # prints 1 once fully booted
+& $adb devices                                      # emulator-5554  device  = ready
+
+& $adb install -r mobile\app\app\build\outputs\apk\debug\app-debug.apk
+& $adb -s emulator-5554 emu kill                    # shut it down
+```
 
 On first launch the app imports the bundled RPCE deck and starts a real review
 session; open **Readiness** for the three scores.
