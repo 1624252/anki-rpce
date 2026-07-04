@@ -412,8 +412,10 @@ class Toolbar:
 
     def set_sync_active(self, active: bool) -> None:
         method = "add" if active else "remove"
+        # spinner may be absent if the sync button was replaced by a custom toolbar
         self.web.eval(
-            f"document.getElementById('sync-spinner').classList.{method}('spin')"
+            f"{{const s=document.getElementById('sync-spinner');"
+            f"if(s)s.classList.{method}('spin');}}"
         )
 
     def set_sync_status(self, status: SyncStatus) -> None:
