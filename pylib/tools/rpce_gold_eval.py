@@ -33,7 +33,9 @@ DATA = Path("data/RPCE-Sample-Questions-v4-100625.md")
 def _row(name: str, ev: gold.GoldEval) -> str:
     acc = f"{ev.accuracy:5.0%}"
     fp = f"{ev.false_pass_rate:5.0%}"
-    ok = ev.accuracy >= ev.accuracy_cutoff and ev.false_pass_rate <= ev.false_pass_cutoff
+    ok = (
+        ev.accuracy >= ev.accuracy_cutoff and ev.false_pass_rate <= ev.false_pass_cutoff
+    )
     return f"  {name:22s} accuracy {acc}   false-pass {fp}   {'PASS' if ok else 'FAIL'}"
 
 
@@ -44,30 +46,47 @@ def main() -> int:
     text = DATA.read_text(encoding="utf-8")
 
     # Deterministic, offline baselines (always run; the 'simpler method').
+    # Third field: feed the hand-authored, gold-fitted rubrics (see
+    # gold_rubrics). Only the "gold-tuned" row uses them; the AI and overlap
+    # rows stay held-out.
     graders = [
-        ("Rubric (offline)", examiner.KeywordExaminer()),
-        ("Keyword overlap", examiner.BaselineExaminer()),
+        ("Rubric (gold-tuned)", examiner.KeywordExaminer(), True),
+        ("Keyword overlap", examiner.BaselineExaminer(), False),
     ]
     ai_on = ai.ai_configured() and ai.ai_enabled()
     if ai_on:
         # AutoExaminer uses the LLM (with offline fallback on any error).
-        graders.insert(0, ("AI examiner (online)", examiner.make_examiner()))
+        graders.insert(0, ("AI examiner (online)", examiner.make_examiner(), False))
 
-    evs = [(name, gold.evaluate_gold(text, grader)) for name, grader in graders]
-    best = evs[0][1]  # AI when configured, else the rubric baseline
+    evs = [
+        (name, gold.evaluate_gold(text, grader, use_authored_rubrics=tuned))
+        for name, grader, tuned in graders
+    ]
+    best = evs[0][1]  # AI when configured, else the gold-tuned rubric
 
     print(f"Gold set: {best.total} questions across {best.domains} domains")
-    print(f"Pre-set cutoffs: accuracy >= {best.accuracy_cutoff:.0%}, "
-          f"false-pass <= {best.false_pass_cutoff:.0%}")
+    print(
+        f"Pre-set cutoffs: accuracy >= {best.accuracy_cutoff:.0%}, "
+        f"false-pass <= {best.false_pass_cutoff:.0%}"
+    )
     print("Side-by-side (AI vs simpler methods):")
     for name, ev in evs:
         print(_row(name, ev))
-    print(f"Leakage scan (test items in study content): "
-          f"{'CLEAN' if best.leaks == 0 else f'{best.leaks} LEAK(S)'}")
+    print(
+        f"Leakage scan (test items in study content): "
+        f"{'CLEAN' if best.leaks == 0 else f'{best.leaks} LEAK(S)'}"
+    )
+    print(
+        "Note: 'Rubric (gold-tuned)' uses per-question rubrics authored "
+        "against this gold set, so its false-pass is a FITTED result, not a "
+        "held-out one -- a tuned offline ceiling, not generalization."
+    )
     if not ai_on:
-        print("Note: no AI proxy configured — showing the offline baselines "
-              "only. Set RPCE_AI_PROXY_URL (or ~/.rpce/ai_proxy_url) for the "
-              "AI row.")
+        print(
+            "Note: no AI proxy configured — showing the offline baselines "
+            "only. Set RPCE_AI_PROXY_URL (or ~/.rpce/ai_proxy_url) for the "
+            "AI row."
+        )
     # Gate: leakage clean AND the best grader clears the accuracy cutoff.
     ok = best.leaks == 0 and best.accuracy >= best.accuracy_cutoff
     return 0 if ok else 1

@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from . import examiner, flashcards, scenarios, simulations
+from . import examiner, flashcards, gold_rubrics, scenarios, simulations
 
 _Q_SPLIT = re.compile(r"\*\*(\d+)\.\*\*")
 _OPTION = re.compile(r"^\s*([A-D])\.\s+(.*\S)\s*$", re.M)
@@ -105,17 +105,31 @@ def evaluate_gold(
     *,
     accuracy_cutoff: float = 0.80,
     false_pass_cutoff: float = 0.20,
+    use_authored_rubrics: bool = False,
 ) -> GoldEval:
-    """Run the full gold-set evaluation on parsed sample-question markdown."""
+    """Run the full gold-set evaluation on parsed sample-question markdown.
+
+    ``use_authored_rubrics`` attaches the hand-authored per-question rubrics
+    (:mod:`gold_rubrics`) so the grader is fed the discriminating key points.
+    These rubrics are *fitted to the gold set*, so a run with this on measures a
+    tuned grader, not a held-out one (see :mod:`gold_rubrics`). Off by default,
+    so the AI and overlap baselines stay held-out.
+    """
     gold = parse_gold(text)
     if not gold:
         raise ValueError("no gold questions parsed")
     grader = grader or examiner.make_examiner()
     corpus = "\n\n".join(g.correct for g in gold)  # grounding so it won't abstain
 
+    def rubric_for(g: GoldQ) -> examiner.Rubric | None:
+        return gold_rubrics.authored_rubric(g.correct) if use_authored_rubrics else None
+
     items = [
         examiner.GoldItem(
-            prompt=g.prompt, gold_answer=g.correct, correct_answer=g.correct
+            prompt=g.prompt,
+            gold_answer=g.correct,
+            correct_answer=g.correct,
+            rubric=rubric_for(g),
         )
         for g in gold
     ]
@@ -123,9 +137,10 @@ def evaluate_gold(
 
     false_pass = distractors = 0
     for g in gold:
+        rubric = rubric_for(g)
         for d in g.distractors:
             distractors += 1
-            r = grader.grade(d, g.correct, corpus)
+            r = grader.grade(d, g.correct, corpus, rubric)
             if r.passed and not r.abstained:
                 false_pass += 1
     false_pass_rate = false_pass / distractors if distractors else 0.0

@@ -3,7 +3,17 @@
 
 """Tests for the gold-set eval parser + evaluation (spec §7e/§7f/§9)."""
 
-from anki.rpce import gold
+from pathlib import Path
+
+import pytest
+
+from anki.rpce import examiner, gold, gold_rubrics
+
+# The official sample-question file (resolved from the repo root). Some tests
+# need the real gold set; they skip cleanly when it isn't present.
+_GOLD_DATA = (
+    Path(__file__).resolve().parents[2] / "data" / "RPCE-Sample-Questions-v4-100625.md"
+)
 
 # A tiny sample in the official questions' format.
 _SAMPLE = """
@@ -58,7 +68,34 @@ def test_leakage_is_caught_when_a_gold_item_is_in_training():
     # A gold prompt that is a near-copy of training content must be flagged.
     train = gold.training_texts()
     leaked_prompt = train[0]
-    from anki.rpce import examiner
 
     leaks = examiner.find_leaks(train, [leaked_prompt], threshold=0.8)
     assert leaks, "an item copied from training must be flagged as a leak"
+
+
+@pytest.mark.skipif(not _GOLD_DATA.exists(), reason="official gold data not present")
+def test_every_gold_question_has_a_unique_authored_rubric():
+    qs = gold.parse_gold(_GOLD_DATA.read_text(encoding="utf-8"))
+    assert len(qs) == 36
+    # Every parsed question is covered by an authored rubric.
+    for q in qs:
+        assert gold_rubrics.authored_rubric(q.correct) is not None, q.correct[:60]
+    # Each key anchors to exactly one question (no cross-question collisions).
+    for key, _ in gold_rubrics._GOLD_RUBRICS:
+        hits = [q for q in qs if key.lower() in q.correct.lower()]
+        assert len(hits) == 1, f"key {key!r} matched {len(hits)} questions"
+
+
+@pytest.mark.skipif(not _GOLD_DATA.exists(), reason="official gold data not present")
+def test_gold_tuned_rubrics_beat_the_untuned_offline_grader():
+    text = _GOLD_DATA.read_text(encoding="utf-8")
+    # Same deterministic offline grader; only the authored rubrics differ.
+    tuned = gold.evaluate_gold(
+        text, examiner.KeywordExaminer(), use_authored_rubrics=True
+    )
+    untuned = gold.evaluate_gold(text, examiner.KeywordExaminer())
+    assert tuned.accuracy == 1.0
+    # Authored rubrics discriminate every distractor on the fitted set.
+    assert tuned.false_pass_rate == 0.0
+    assert tuned.false_pass_rate < untuned.false_pass_rate
+    assert tuned.ok

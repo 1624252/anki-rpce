@@ -902,6 +902,9 @@ class GoldItem:
     # A representative *correct* candidate answer, used to measure that a good
     # answer is graded as passing.
     correct_answer: str
+    # Optional authored rubric for this item; passed to the grader when present
+    # (KeywordExaminer/AutoExaminer use it, the overlap baseline ignores it).
+    rubric: "Rubric | None" = None
 
 
 @dataclass
@@ -929,7 +932,9 @@ def evaluate(
     total = len(gold_set)
     correct = 0
     for item in gold_set:
-        result = examiner.grade(item.correct_answer, item.gold_answer, corpus)
+        result = examiner.grade(
+            item.correct_answer, item.gold_answer, corpus, item.rubric
+        )
         if result.passed and not result.abstained:
             correct += 1
     wrong = total - correct
