@@ -286,8 +286,9 @@ def package(args: argparse.Namespace) -> None:
         cwd=out_dir,
     )
     package_path = next((out_dir / "dist").iterdir())
+    # RPCE: brand the installer filename as the app, not "anki".
     package_path.rename(
-        package_path.with_stem(f"anki-{version}{get_platform_suffix()}")
+        package_path.with_stem(f"speedrun-rpce-{version}{get_platform_suffix()}")
     )
 
 
