@@ -33,7 +33,6 @@ from aqt.utils import (
     show_warning,
     showText,
     showWarning,
-    tooltip,
     tr,
 )
 
@@ -75,38 +74,19 @@ def handle_sync_error(mw: aqt.main.AnkiQt, err: Exception) -> None:
     show_warning(str(err), parent=mw)
 
 
-def on_normal_sync_timer(mw: aqt.main.AnkiQt) -> None:
-    progress = mw.col.latest_progress()
-    if not progress.HasField("normal_sync"):
-        return
-    sync_progress = progress.normal_sync
-
-    mw.progress.update(
-        label=f"{sync_progress.added}\n{sync_progress.removed}",
-        process=False,
-    )
-    mw.progress.set_title(sync_progress.stage)
-
-    if mw.progress.want_cancel():
-        mw.col.abort_sync()
-
-
 def sync_collection(mw: aqt.main.AnkiQt, on_done: Callable[[], None]) -> None:
+    # RPCE: the collection sync runs SILENTLY in the background — no modal
+    # "added/removed" progress dialog and no "collection complete" tooltip. Sync
+    # state is shown only by the RPCE toolbar status indicator (driven by the
+    # sync_will_start / sync_did_finish hooks). Collection tasks are serialized by
+    # the task manager, so a background sync can't race other DB access.
     auth = mw.pm.sync_auth()
     if not auth:
         raise Exception("expected auth")
 
-    def on_timer() -> None:
-        on_normal_sync_timer(mw)
-
-    timer = QTimer(mw)
-    qconnect(timer.timeout, on_timer)
-    timer.start(150)
-
     def on_future_done(fut: Future[SyncOutput]) -> None:
         # scheduler version may have changed
         mw.col._load_scheduler()
-        timer.stop()
         try:
             out = fut.result()
         except Exception as err:
@@ -119,19 +99,15 @@ def sync_collection(mw: aqt.main.AnkiQt, on_done: Callable[[], None]) -> None:
         if out.server_message:
             showText(out.server_message, parent=mw, type="rich")
         if out.required == out.NO_CHANGES:
-            tooltip(parent=mw, msg=tr.sync_collection_complete())
             # all done; track media progress
             mw.media_syncer.start_monitoring()
             return on_done()
         else:
             full_sync(mw, out, on_done)
 
-    mw.taskman.with_progress(
+    mw.taskman.run_in_background(
         lambda: mw.col.sync_collection(auth, mw.pm.media_syncing_enabled()),
         on_future_done,
-        label=tr.sync_checking(),
-        immediate=True,
-        title=tr.sync_checking(),
     )
 
 
