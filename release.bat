@@ -147,20 +147,26 @@ if %TRIES% GEQ 45 (echo Release not created after ~3 min. Check the Actions tab.
 ping -n 5 127.0.0.1 >nul
 goto :waitrel
 :haverel
+REM Read the release id: run python directly (for /f mangles quoted commands),
+REM writing the id to a temp file we slurp with set /p.
+"%PY%" -c "import json;print(json.load(open(r'%REL%'))['id'])" > "%TEMP%\rpce_rid.txt" 2>nul
 set "RID="
-for /f "usebackq tokens=*" %%i in (`"%PY%" -c "import json;print(json.load(open(r'%REL%'))['id'])"`) do set "RID=%%i"
+set /p RID=<"%TEMP%\rpce_rid.txt"
 if not defined RID (echo could not read release id & popd & exit /b 1)
 echo Release id %RID%.
 
 echo.
 echo === [6/6] Uploading MSI + APK ===
 set "UP=https://uploads.github.com/repos/%OWNER%/%REPO%/releases/%RID%/assets"
-for /f %%c in ('curl -s -o nul -w "%%{http_code}" -H "Authorization: Bearer %GH_TOKEN%" -H "Content-Type: application/octet-stream" --data-binary "@%MSI%" "%UP%?name=%MSINAME%"') do set "MCODE=%%c"
-echo   MSI -^> HTTP !MCODE!
-for /f %%c in ('curl -s -o nul -w "%%{http_code}" -H "Authorization: Bearer %GH_TOKEN%" -H "Content-Type: application/octet-stream" --data-binary "@%APK%" "%UP%?name=%APKNAME%"') do set "ACODE=%%c"
-echo   APK -^> HTTP !ACODE!
-if not "!MCODE!"=="201" echo WARNING: MSI upload returned !MCODE! ^(asset may already exist for this tag^).
-if not "!ACODE!"=="201" echo WARNING: APK upload returned !ACODE! ^(asset may already exist for this tag^).
+set "CODEFILE=%TEMP%\rpce_code.txt"
+curl -s -o nul -w "%%{http_code}" -H "Authorization: Bearer %GH_TOKEN%" -H "Content-Type: application/octet-stream" --data-binary "@%MSI%" "%UP%?name=%MSINAME%" > "%CODEFILE%"
+set "MCODE=" & set /p MCODE=<"%CODEFILE%"
+echo   MSI -^> HTTP %MCODE%
+curl -s -o nul -w "%%{http_code}" -H "Authorization: Bearer %GH_TOKEN%" -H "Content-Type: application/octet-stream" --data-binary "@%APK%" "%UP%?name=%APKNAME%" > "%CODEFILE%"
+set "ACODE=" & set /p ACODE=<"%CODEFILE%"
+echo   APK -^> HTTP %ACODE%
+if not "%MCODE%"=="201" echo WARNING: MSI upload returned %MCODE% ^(asset may already exist for this tag^).
+if not "%ACODE%"=="201" echo WARNING: APK upload returned %ACODE% ^(asset may already exist for this tag^).
 
 echo.
 echo Done: https://github.com/%OWNER%/%REPO%/releases/tag/%TAG%
