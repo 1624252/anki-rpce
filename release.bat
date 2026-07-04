@@ -6,8 +6,9 @@ REM
 REM   Usage:  release.bat <version> [--check]      e.g.  release.bat 0.1.2
 REM   --check  validate config + toolchain and print the plan, then stop.
 REM
-REM Requires: GH_TOKEN = a GitHub PAT with 'repo' + 'workflow' scopes, e.g.
-REM   set GH_TOKEN=ghp_xxx  &&  release.bat 0.1.2
+REM Requires: GH_TOKEN = a GitHub PAT with 'repo' + 'workflow' scopes.
+REM   PowerShell:  $env:GH_TOKEN = "ghp_xxx"; .\release.bat 0.1.2
+REM   cmd.exe   :  set "GH_TOKEN=ghp_xxx" && release.bat 0.1.2
 setlocal enabledelayedexpansion
 pushd "%~dp0"
 
@@ -76,7 +77,11 @@ if defined CHECK (
 )
 
 if not defined GH_TOKEN (
-  echo ERROR: set GH_TOKEN to a PAT with 'repo' + 'workflow' scopes.
+  echo ERROR: GH_TOKEN is not set in the environment.
+  echo   PowerShell:  $env:GH_TOKEN = "ghp_xxx"
+  echo   cmd.exe   :  set "GH_TOKEN=ghp_xxx"
+  echo   then re-run:  release.bat %VER%
+  echo   ^(the PAT needs 'repo' + 'workflow' scopes^)
   popd & exit /b 1
 )
 
