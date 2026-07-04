@@ -15,8 +15,9 @@ NAP Criteria for Credentialing (see docs/rpce/CRITERIA_IMPLEMENTATION_PLAN.md).
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
+
+from ._paths import data_path
 
 
 @dataclass(frozen=True)
@@ -35,10 +36,10 @@ def _load() -> tuple[Concept, ...]:
     global _CONCEPTS
     if _CONCEPTS is not None:
         return _CONCEPTS
-    path = Path(__file__).resolve().parents[3] / "data" / "rpce_concepts.json"
+    path = data_path("rpce_concepts.json")
     out: list[Concept] = []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8")) if path else {}
         for c in data.get("concepts", []):
             out.append(
                 Concept(

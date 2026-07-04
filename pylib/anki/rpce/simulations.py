@@ -483,12 +483,13 @@ def _load_authored_sims() -> tuple[Simulation, ...]:
     if _AUTHORED_SIMS is not None:
         return _AUTHORED_SIMS
     import json
-    from pathlib import Path
 
-    path = Path(__file__).resolve().parents[3] / "data" / "rpce_simulations.json"
+    from ._paths import data_path
+
+    path = data_path("rpce_simulations.json")
     out: list[Simulation] = []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8")) if path else {}
         base = 1000  # keep authored ids clear of the built-in sims
         for n, s in enumerate(data.get("simulations", [])):
             turns: list[SimTurn] = []

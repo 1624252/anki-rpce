@@ -117,6 +117,38 @@ def get_briefcase_config_args(args: argparse.Namespace) -> list[str]:
     return config_args
 
 
+# RPCE runtime data the app reads from anki/rpce/data/ once installed (the repo
+# top-level data/ is not shipped). Mirrors anki.rpce._paths.data_path.
+_RPCE_DATA_FILES = (
+    "roberts_rules_of_order_12th_edition.md",  # RONR corpus (grading/grounding)
+    "rpce_quotes.json",  # simulation quote bank
+    "rpce_concepts.json",  # concept registry
+    "rpce_section2_scenarios.json",  # authored Section II scenarios
+    "rpce_simulations.json",  # authored meeting simulations
+)
+
+
+def bundle_rpce_data(out_dir: Path) -> None:
+    """Copy the RPCE data files into the packaged app's ``anki/rpce/data/`` so
+    the corpus, quote bank, and authored banks are available on a clean machine
+    (the repo ``data/`` folder is not part of the wheels)."""
+    src = Path("data")
+    dest = (
+        get_briefcase_sources_path(out_dir) / "app_packages" / "anki" / "rpce" / "data"
+    )
+    dest.mkdir(parents=True, exist_ok=True)
+    missing = []
+    for name in _RPCE_DATA_FILES:
+        s = src / name
+        if s.exists():
+            shutil.copy2(s, dest / name)
+        else:
+            missing.append(name)
+    if missing:
+        # Warn but don't fail: the app degrades gracefully without these.
+        print(f"WARNING: RPCE data not bundled (missing in data/): {missing}")
+
+
 def compile_sources(out_dir: Path, version: str) -> bool:
     """Compile Python sources to .pyc"""
 
@@ -210,6 +242,7 @@ def build(args: argparse.Namespace) -> None:
         cwd=out_dir,
     )
     prune_webengine_locales(out_dir)
+    bundle_rpce_data(out_dir)
     compile_sources(out_dir, version)
     if not args.skip_fcitx:
         bundle_fcitx(out_dir)  # pragma: no cover

@@ -71,13 +71,20 @@ def _apply_app_icon() -> None:
 
 
 def _load_corpus() -> str:
-    """Load the transcribed RONR 12th-ed. corpus if present (for citations)."""
-    for path in (
-        "data/roberts_rules_of_order_12th_edition.md",
-        os.path.join(
-            os.path.dirname(__file__), "data", "roberts_rules_of_order_12th_edition.md"
-        ),
-    ):
+    """Load the transcribed RONR 12th-ed. corpus if present (for citations).
+
+    Checks the shared RPCE data locations (repo ``data/`` in dev, the bundled
+    ``anki/rpce/data/`` in an installed build) plus the legacy dev-tree paths."""
+    from anki.rpce._paths import data_path
+
+    corpus = "roberts_rules_of_order_12th_edition.md"
+    candidates: list[str] = []
+    bundled = data_path(corpus)
+    if bundled is not None:
+        candidates.append(str(bundled))
+    candidates.append(f"data/{corpus}")
+    candidates.append(os.path.join(os.path.dirname(__file__), "data", corpus))
+    for path in candidates:
         if os.path.exists(path):
             try:
                 with open(path, encoding="utf-8") as f:

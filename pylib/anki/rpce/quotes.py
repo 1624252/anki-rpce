@@ -19,7 +19,8 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass
-from pathlib import Path
+
+from ._paths import data_path
 
 
 @dataclass(frozen=True)
@@ -40,11 +41,11 @@ def _load() -> dict[str, tuple[Quote, ...]]:
     global _BY_CONCEPT, _ALL
     if _BY_CONCEPT is not None:
         return _BY_CONCEPT
-    path = Path(__file__).resolve().parents[3] / "data" / "rpce_quotes.json"
+    path = data_path("rpce_quotes.json")
     by_concept: dict[str, tuple[Quote, ...]] = {}
     flat: list[Quote] = []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8")) if path else {}
         for cid, items in (data.get("quotes") or {}).items():
             qs = tuple(
                 Quote(str(it.get("section", "")), str(it.get("quote", "")), str(cid))

@@ -254,12 +254,13 @@ def _load_authored() -> tuple[Scenario, ...]:
     if _AUTHORED is not None:
         return _AUTHORED
     import json
-    from pathlib import Path
 
-    path = Path(__file__).resolve().parents[3] / "data" / "rpce_section2_scenarios.json"
+    from ._paths import data_path
+
+    path = data_path("rpce_section2_scenarios.json")
     out: list[Scenario] = []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8")) if path else {}
         for s in data.get("scenarios", []):
             keywords = tuple(s.get("keywords", []) or ())
             out.append(

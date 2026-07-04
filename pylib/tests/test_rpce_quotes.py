@@ -96,3 +96,25 @@ def test_random_quotes_seeded_is_deterministic():
     a = quotes.random_quotes(5, rng=random.Random(42))
     b = quotes.random_quotes(5, rng=random.Random(42))
     assert [q.quote for q in a] == [q.quote for q in b]
+
+
+def test_data_path_resolves_the_bundled_data_files():
+    from anki.rpce._paths import data_path
+
+    for name in (
+        "rpce_quotes.json",
+        "rpce_concepts.json",
+        "roberts_rules_of_order_12th_edition.md",
+    ):
+        assert data_path(name) is not None, name
+
+
+def test_data_path_env_override_wins(tmp_path, monkeypatch):
+    from anki.rpce import _paths
+
+    f = tmp_path / "rpce_quotes.json"
+    f.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("RPCE_DATA_DIR", str(tmp_path))
+    assert _paths.data_path("rpce_quotes.json") == f
+    # A name that exists only in the repo data dir still resolves (fallback).
+    assert _paths.data_path("rpce_concepts.json") is not None
