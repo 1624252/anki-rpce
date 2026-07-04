@@ -2434,6 +2434,27 @@ def _on_card_will_show(text: str, card, kind: str) -> str:
         return text
 
 
+def _scroll_preserve_js(view: str) -> str:
+    """Keep this view's scroll position across deck-browser re-renders.
+
+    A finished sync calls ``mw.reset()``, which re-renders the whole page and
+    would otherwise jump it back to the top. ``sessionStorage`` survives the
+    webview's re-render but the scroll offset does not — so we save the offset on
+    scroll and restore it on load, keyed per view (a fresh view starts at top)."""
+    key = "rpce_scroll_" + view
+    return (
+        "<script>(function(){"
+        f"var K='{key}';"
+        "function save(){try{sessionStorage.setItem(K,String(window.scrollY||0));}catch(e){}}"
+        "function restore(){try{var y=parseInt(sessionStorage.getItem(K)||'0',10);"
+        "if(y>0)window.scrollTo(0,y);}catch(e){}}"
+        "var t;window.addEventListener('scroll',function(){clearTimeout(t);"
+        "t=setTimeout(save,120);},{passive:true});"
+        "requestAnimationFrame(restore);setTimeout(restore,80);"
+        "})();</script>"
+    )
+
+
 def _on_deck_browser_content(deck_browser, content) -> None:
     """Replace the deck-browser home with the RPCE landing page (no deck
     management UI — the deck is generated for the candidate)."""
@@ -2443,14 +2464,23 @@ def _on_deck_browser_content(deck_browser, content) -> None:
     try:
         # The deck-browser webview is the single in-window canvas: the Dashboard,
         # Section II, and Simulate are all rendered here, switched by _RPCE_VIEW.
+        # ``view_key`` (when set) drives scroll preservation so a background sync's
+        # re-render doesn't scroll the page to the top; Simulate manages its own.
+        view_key: str | None
         if _RPCE_VIEW == "section2":
             content.tree = _section2_html(mw.col)
+            view_key = "section2"
         elif _RPCE_VIEW == "simulate":
             content.tree = _simulate_html(mw.col)
+            view_key = None
         elif _RPCE_VIEW == "session_done":
             content.tree = _session_done_html(mw.col)
+            view_key = "session_done"
         else:
             content.tree = _banner_html(mw.col)
+            view_key = "dashboard"
+        if view_key:
+            content.tree += _scroll_preserve_js(view_key)
         content.stats = ""
         # Hide Anki's gray deck-browser bottom bar (Get Shared / Create Deck /
         # Import File) — not part of the RPCE flow.
