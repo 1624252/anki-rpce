@@ -94,7 +94,9 @@ def _load_corpus() -> str:
     return ""
 
 
-APP_TITLE = "Speedrun for the RPCE"
+# No spaces: matches the space-free installer/app name (formal_name in
+# qt/installer/app/pyproject.toml). Shown in the window title bar.
+APP_TITLE = "SpeedrunRPCE"
 
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
 

@@ -2,8 +2,10 @@
 requires-python = ">=3.10"
 
 # This project was generated with 0.3.26 using template: https://github.com/beeware/briefcase-template @ v0.3.26
+# NB: formal_name has no spaces so the Windows install dir / macOS .app bundle
+# path stay space-free (C:\Program Files\SpeedrunRPCE, SpeedrunRPCE.app).
 [tool.briefcase]
-project_name = "Speedrun for the RPCE"
+project_name = "SpeedrunRPCE"
 bundle = "com.rpce"
 url = "https://github.com/1624252/anki-rpce"
 license = "AGPL-3.0-or-later"
@@ -11,7 +13,7 @@ license-files = ["LICENSE"]
 author = "Speedrun for the RPCE"
 
 [tool.briefcase.app.anki]
-formal_name = "Speedrun for the RPCE"
+formal_name = "SpeedrunRPCE"
 description = "A spaced-repetition study app tailored for the RPCE."
 long_description = """Speedrun for the RPCE is a focused, offline-ready study app built on Anki's spaced-repetition engine and geared toward RPCE preparation. It keeps you drilling the material you find hardest while spending less time on what you already know."""
 sources = [

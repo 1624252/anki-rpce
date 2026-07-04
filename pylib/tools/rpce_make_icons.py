@@ -15,6 +15,13 @@ In-app banner + desktop window icons:
 - ``qt/aqt/data/qt/icons/rpce_logo.png``            - window/taskbar icon (256)
 - ``qt/aqt/data/qt/icons/rpce_logo_small.png``      - desktop home banner (96)
 
+Desktop installer icons (Briefcase packages these into the app + the Windows
+MSI / macOS bundle; ``icon = "resources/anki"`` in the installer pyproject):
+
+- ``qt/installer/app/resources/anki.png``   - installer/app icon (176, square)
+- ``qt/installer/app/resources/anki.ico``   - Windows icon (multi-size ICO)
+- ``qt/installer/app/resources/anki.icns``  - macOS icon (1024 ICNS)
+
 Android launcher icons at every density (mdpi 48 / hdpi 72 / xhdpi 96 /
 xxhdpi 144 / xxxhdpi 192), under ``mobile/app/app/src/main/res/``:
 
@@ -110,6 +117,27 @@ def save(img: Image.Image, size: int, path: str) -> None:
     print(f"wrote {dest} ({size}x{size})")
 
 
+# ICO sizes Windows picks between (taskbar, Explorer, ARP, shortcut).
+ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
+
+
+def save_ico(img: Image.Image, path: str) -> None:
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    base = img.resize((256, 256), Image.LANCZOS).convert("RGBA")
+    base.save(dest, format="ICO", sizes=[(s, s) for s in ICO_SIZES])
+    print(f"wrote {dest} (ICO {ICO_SIZES})")
+
+
+def save_icns(img: Image.Image, path: str) -> None:
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    # 1024 master; Pillow derives the smaller icns variants from it.
+    base = img.resize((1024, 1024), Image.LANCZOS).convert("RGBA")
+    base.save(dest, format="ICNS")
+    print(f"wrote {dest} (ICNS 1024)")
+
+
 def save_text(text: str, path: str) -> None:
     dest = Path(path)
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -132,6 +160,12 @@ def main() -> None:
     save(square, 512, "mobile/app/app/src/main/assets/rpce_logo.png")
     save(tile, 256, "qt/aqt/data/qt/icons/rpce_logo.png")
     save(square, 96, "qt/aqt/data/qt/icons/rpce_logo_small.png")
+
+    # Desktop installer icons (rounded tile, matching the window icon).
+    installer = "qt/installer/app/resources"
+    save(tile, 176, f"{installer}/anki.png")
+    save_ico(tile, f"{installer}/anki.ico")
+    save_icns(tile, f"{installer}/anki.icns")
 
     # Legacy launcher icons (API < 26) at every density.
     for density, px in LAUNCHER_PX.items():

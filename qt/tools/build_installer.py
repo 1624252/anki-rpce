@@ -78,7 +78,7 @@ def get_briefcase_sources_path(out_dir: Path) -> Path:
             / "anki"
             / "macos"
             / "app"
-            / "Speedrun for the RPCE.app"
+            / "SpeedrunRPCE.app"
             / "Contents"
             / "Resources"
         )
