@@ -95,6 +95,21 @@ def full(col: Collection, upload: bool) -> None:
     )
 
 
+def full_sync_direction(required: int, adopted: bool) -> str:
+    """Direction rule for a forced full sync — mirrors aqt.rpce._full_sync_direction.
+
+    A device joining an account that already holds data ADOPTS it (download)
+    instead of overwriting it; only a device that already owns the account uploads
+    on a conflict. This is the fix for the cross-device "sync doesn't work after
+    installing on another device" bug (a fresh install used to upload over the
+    account)."""
+    if required == sp.SyncCollectionResponse.FULL_DOWNLOAD:
+        return "download"
+    if required == sp.SyncCollectionResponse.FULL_UPLOAD:
+        return "upload"
+    return "upload" if adopted else "download"  # FULL_SYNC conflict
+
+
 def main() -> None:
     # spec §7b uses 10 + 10; override with RPCE_SYNC_REVIEWS for a quick run.
     n = int(os.environ.get("RPCE_SYNC_REVIEWS", "10"))
@@ -107,7 +122,9 @@ def main() -> None:
     a.decks.set_current(deck_id)  # queue the RPCE new cards
     a._backend.sync_collection(auth=_auth(a), sync_media=False)  # -> full required
     full(a, upload=True)
-    print(f"Phase 1: device A uploaded the deck (cards={a.card_count()}, reviews={revlog(a)})")
+    print(
+        f"Phase 1: device A uploaded the deck (cards={a.card_count()}, reviews={revlog(a)})"
+    )
 
     # --- Phase 2: device B downloads; must match A exactly. ---
     b = Collection(b_path)
@@ -153,9 +170,46 @@ def main() -> None:
         f"reviews={revlog(a)} on both, consistent"
     )
 
+    # --- Phase 5: a FRESH device (C) seeds its OWN deck, then signs into the same
+    # account. The account already holds data, so the first sync is a full-sync
+    # CONFLICT. A fresh device must ADOPT the account (download), never upload over
+    # it — the regression this whole fix is about. ---
+    account_reviews = revlog(a)
+    c_path = str(tmp / "deviceC.anki2")
+    c = Collection(c_path)
+    build_starter_deck(c)  # fresh install seeds its own (review-less) deck first
+    assert revlog(c) == 0, "device C starts with no reviews of its own"
+    resp = c._backend.sync_collection(auth=_auth(c), sync_media=False)
+    assert resp.required in _FULL, (
+        "fresh non-empty device vs populated account = full sync"
+    )
+    # A brand-new device has not adopted this account, so the rule picks download.
+    direction = full_sync_direction(resp.required, adopted=False)
+    assert direction == "download", (
+        f"fresh device must adopt (download), not {direction}"
+    )
+    full(c, upload=(direction == "upload"))
+    c.close()
+    c = Collection(c_path)
+    assert revlog(c) == account_reviews, (
+        f"device C adopted the account's reviews ({account_reviews}), got {revlog(c)}"
+    )
+    # And the account itself is untouched: A still sees every review (nothing clobbered).
+    normal_sync(a)
+    assert revlog(a) == account_reviews, (
+        "the fresh device did not overwrite the account"
+    )
+    print(
+        f"Phase 5: a fresh install adopted the account ({revlog(c)} reviews) instead "
+        f"of clobbering it — cross-device sync preserved"
+    )
+
     a.close()
     b.close()
-    print("\nSYNC OK: two-way sync + conflict resolution verified.")
+    c.close()
+    print(
+        "\nSYNC OK: two-way sync + conflict resolution + fresh-device adopt verified."
+    )
 
 
 if __name__ == "__main__":

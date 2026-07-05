@@ -968,21 +968,83 @@ def _auto_full_upload(mw, server_usn, on_done) -> None:
     mw.closeAllWindows(lambda: aqt.sync.full_upload(mw, server_usn, on_done))
 
 
+# Device-local record of which AnkiWeb account this profile has fully reconciled
+# with at least once. Kept in the profile (never synced) and keyed by account so
+# switching accounts re-adopts. Until a device has adopted an account, a full-sync
+# CONFLICT means "a fresh install joined an account that already holds data" — so
+# it DOWNLOADS (adopts) instead of uploading, and never clobbers the other
+# device's collection. See _full_sync_direction.
+_ADOPTED_KEY = "rpce_adopted_account"
+# True while a forced full up/download is in flight this sync cycle. A cycle that
+# needed a full sync may be a first-time adopt (or a failed transfer), so we only
+# mark an account adopted after a *clean* (no-full-sync) cycle confirms our schema
+# already matches the server.
+_full_sync_dispatched = False
+
+
+def _current_sync_user(mw) -> str | None:
+    """The AnkiWeb username this profile is signed in as (device-local)."""
+    try:
+        return mw.pm.profile.get("syncUser") or None
+    except Exception:
+        return None
+
+
+def _account_adopted(mw) -> bool:
+    """True once this device has reconciled with the current account, so a later
+    full-sync conflict is our own change (e.g. a content re-seed) to upload —
+    not a fresh device joining an account it must adopt."""
+    user = _current_sync_user(mw)
+    return bool(user) and mw.pm.profile.get(_ADOPTED_KEY) == user
+
+
+def _mark_account_adopted(mw) -> None:
+    user = _current_sync_user(mw)
+    if user:
+        mw.pm.profile[_ADOPTED_KEY] = user
+
+
+def _full_sync_direction(required: int, adopted: bool) -> str:
+    """Choose 'upload' or 'download' for a forced full sync WITHOUT clobbering an
+    account a fresh device is joining (the cross-device sync bug):
+
+    * FULL_DOWNLOAD — server ahead / this device empty → download.
+    * FULL_UPLOAD  — server empty → upload (seed it from here).
+    * FULL_SYNC    — genuine conflict, both sides hold a collection: a device that
+      has not adopted this account yet downloads (adopts it, preserving the other
+      device's data); one that already owns it uploads (push a local re-seed).
+
+    Pure decision logic so it can be unit-tested (see qt/tests/test_rpce_sync.py).
+    """
+    from anki.sync_pb2 import SyncCollectionResponse as R
+
+    if required == R.FULL_DOWNLOAD:
+        return "download"
+    if required == R.FULL_UPLOAD:
+        return "upload"
+    return "upload" if adopted else "download"  # FULL_SYNC conflict
+
+
 def _auto_full_sync(mw, out, on_done) -> None:
     """Resolve Anki's full-sync conflict without the scary Download/Upload dialog.
 
-    A full sync is forced only when the device and AnkiWeb schemas differ (the
-    two apps each seed their own deck). It can't merge, so we apply a documented
-    conflict rule: the desktop holds the authoritative generated deck, so on a
-    conflict it UPLOADS (desktop wins); the phone then downloads once. If the
-    server is strictly newer (FULL_DOWNLOAD, local behind), take its copy. After
-    this one alignment, every later sync is incremental and reviews combine."""
+    A full sync is forced when the device and AnkiWeb schemas differ (each app
+    seeds its own deck; a content re-seed also bumps the schema). It can't merge,
+    so we pick a direction with _full_sync_direction: a device joining an account
+    that already holds data ADOPTS it (download) rather than overwriting it, which
+    is what let a fresh MSI install wipe the other device's collection. Only a
+    device that already owns the account uploads on a conflict. After this one
+    alignment, every later sync is incremental and reviews combine."""
     import aqt.sync
 
+    global _full_sync_dispatched
+    _full_sync_dispatched = True
+
     server_usn = out.server_media_usn if mw.pm.media_syncing_enabled() else None
-    if out.required == out.FULL_DOWNLOAD:
+    direction = _full_sync_direction(out.required, _account_adopted(mw))
+    if direction == "download":
         mw.closeAllWindows(lambda: aqt.sync.full_download(mw, server_usn, on_done))
-    else:  # FULL_UPLOAD or FULL_SYNC conflict → desktop is the source of truth
+    else:
         mw.closeAllWindows(lambda: aqt.sync.full_upload(mw, server_usn, on_done))
 
 
@@ -2787,15 +2849,23 @@ def _on_sync_will_start(*args) -> None:
 def _on_sync_finished(*args) -> None:
     """Clear the syncing state, stamp the last-synced time, refresh the
     indicator back to 'Synced · just now'."""
-    global _syncing
+    global _syncing, _full_sync_dispatched
     _syncing = False
     try:
         if aqt.mw and aqt.mw.col:
             import time
 
             aqt.mw.col.set_config("rpce:last_sync", int(time.time()))
+        # A clean cycle (no forced full up/download) means our schema already
+        # matches the account: we own it. Record that so a future content re-seed
+        # UPLOADS rather than re-adopting. A cycle that needed a full sync might be
+        # a first-time adopt or a failed transfer, so we wait for the next clean
+        # sync to confirm before marking adopted (never clobber on the retry).
+        if aqt.mw and not _full_sync_dispatched:
+            _mark_account_adopted(aqt.mw)
     except Exception as exc:
         print(f"RPCE last-sync stamp error: {exc}")
+    _full_sync_dispatched = False
     _redraw_toolbar()
 
 

@@ -254,6 +254,21 @@ devices, the merge resolves by Anki's higher-`usn` / last-writer rule. Verified:
 review 10 cards offline on one side and 10 different cards on the other,
 reconnect, and all 20 land once with none lost or doubled (spec §7b).
 
+**Full-sync direction (cross-device install):** because each app seeds its own
+deck, the *first* sync between a device and an account is a forced full sync
+(schemas differ) that can't merge. The direction is chosen so a device joining an
+account **adopts** it instead of overwriting it:
+
+- empty account → the device **uploads** (seeds it);
+- an account that already holds another device's data → a device that has not yet
+  synced it **downloads** (adopts it), and only a device that already owns the
+  account uploads on a conflict (so a content re-seed still propagates).
+
+This is why installing the desktop (MSI) and signing into an account you already
+use on another device pulls that data down rather than wiping it. Proven by
+Phase 5 of `just rpce-sync-test`; the pure rule is unit-tested in
+`qt/tests/test_rpce_sync.py`.
+
 ---
 
 ## 5. AI Examiner layer
