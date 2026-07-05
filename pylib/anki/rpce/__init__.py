@@ -446,6 +446,36 @@ def _precedence_notes(col: Collection, deck_id: int) -> None:
     )
 
 
+#: Collection-config keys holding the user's synced practice tallies (Section II
+#: graded answers + simulator responses), wiped alongside the review log on logout.
+RESULT_CONFIG_KEYS = (
+    "rpce:graded_scenarios",
+    "rpce:section2_graded",
+    "rpce:sim_responses",
+)
+
+
+def reset_local_progress(col: Collection) -> None:
+    """Wipe every local study result so nothing survives a logout: each card goes
+    back to new (dropping interval/ease/reps/lapses), the review log and RPCE
+    practice tallies are cleared, and the schema is bumped so the NEXT sync is a
+    forced full sync. Callers pair this with a DOWNLOAD-on-conflict sync direction
+    (desktop clears its adopt flag; the phone always downloads), so signing back in
+    restores the account's data from AnkiWeb rather than uploading the wipe."""
+    cids = list(col.find_cards(""))
+    if cids:
+        # reset_counts zeroes reps/lapses too (they feed the memory score);
+        # restore_position keeps the add order.
+        col.sched.schedule_cards_as_new(cids, restore_position=True, reset_counts=True)
+    col.db.execute("delete from revlog")
+    for key in RESULT_CONFIG_KEYS:
+        try:
+            col.remove_config(key)
+        except Exception:
+            pass
+    col.mod_schema(check=False)
+
+
 def build_starter_deck(
     col: Collection,
     name: str = "RPCE",

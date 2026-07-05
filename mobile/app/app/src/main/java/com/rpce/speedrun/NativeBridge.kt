@@ -63,4 +63,8 @@ object NativeBridge {
 
     /** Full upload/download (first join or after a schema change). */
     external fun fullSync(hkey: String, endpoint: String, upload: Boolean): String
+
+    /** Wipe local study results (cards back to new, review log + tallies cleared)
+     *  on logout; forces the next sync to a full download so re-login restores. */
+    external fun resetProgress(): String
 }

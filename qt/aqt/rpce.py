@@ -2278,8 +2278,23 @@ def _set_session_length() -> None:
             mw.moveToState("deckBrowser")
 
 
+def _reset_local_progress(mw) -> None:
+    """Wipe this device's local study results so nothing survives a logout. Paired
+    with the cleared adopt flag, the forced full sync DOWNLOADS on re-login,
+    restoring the account's data from AnkiWeb rather than uploading the wipe."""
+    from anki.rpce import reset_local_progress
+
+    col = mw.col
+    if col is None:
+        return
+    reset_local_progress(col)  # cards→new, revlog + tallies cleared, schema bumped
+    _interleave_new_cards(col)  # restore the even question-kind mix
+    col.save()
+
+
 def _logout_ankiweb() -> None:
-    """Log out of AnkiWeb (clear saved sync auth); local reviews are kept."""
+    """Log out of AnkiWeb: clear the saved sync auth AND wipe local study results,
+    so no progress lingers on the device between users."""
     from aqt.utils import tooltip
 
     mw = aqt.mw
@@ -2287,10 +2302,14 @@ def _logout_ankiweb() -> None:
         return
     try:
         mw.pm.clear_sync_auth()
+        # Forget that this device adopted the account, so signing back in DOWNLOADS
+        # (re-adopts) the server's data instead of uploading the wiped collection.
+        mw.pm.profile.pop(_ADOPTED_KEY, None)
+        _reset_local_progress(mw)
         _redraw_toolbar()
-        if mw.state == "deckBrowser":  # refresh so the Log out link disappears
-            mw.deckBrowser.refresh()
-        tooltip("Logged out of AnkiWeb. Your local reviews are kept.")
+        # Back to the dashboard: rebuilds the deck view and reappears the Log in link.
+        mw.moveToState("deckBrowser")
+        tooltip("Logged out of AnkiWeb. Local results cleared from this device.")
     except Exception as exc:
         print(f"RPCE logout error: {exc}")
 

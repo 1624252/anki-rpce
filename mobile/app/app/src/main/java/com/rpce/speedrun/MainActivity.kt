@@ -265,5 +265,9 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun fullSync(hkey: String, endpoint: String, upload: Boolean): String =
             NativeBridge.fullSync(hkey, endpoint, upload)
+
+        /** Wipe local study results on logout (see NativeBridge.resetProgress). */
+        @JavascriptInterface
+        fun resetProgress(): String = NativeBridge.resetProgress()
     }
 }

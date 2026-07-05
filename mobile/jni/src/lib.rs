@@ -46,8 +46,12 @@ fn now_millis() -> i64 {
 
 /// Run a protobuf service method against the shared backend.
 fn run(service: u32, method: u32, input: Vec<u8>) -> Result<Vec<u8>, String> {
-    let guard = BACKEND.lock().map_err(|_| "backend lock poisoned".to_string())?;
-    let backend = guard.as_ref().ok_or_else(|| "collection not open".to_string())?;
+    let guard = BACKEND
+        .lock()
+        .map_err(|_| "backend lock poisoned".to_string())?;
+    let backend = guard
+        .as_ref()
+        .ok_or_else(|| "collection not open".to_string())?;
     backend
         .run_service_method(service, method, &input)
         .map_err(|err_bytes| {
@@ -181,7 +185,10 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_selectDeck(
         Err(e) => return reply(env, err(&e)),
     };
     if did == 0 {
-        return reply(env, serde_json::json!({ "ok": true, "found": false }).to_string());
+        return reply(
+            env,
+            serde_json::json!({ "ok": true, "found": false }).to_string(),
+        );
     }
     let set = anki_proto::decks::DeckId { did };
     match run(SVC_DECKS, 22, set.encode_to_vec()) {
@@ -242,7 +249,10 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_nextCard(
         if let Ok(mut last) = LAST_CARD.lock() {
             *last = None;
         }
-        return reply(env, serde_json::json!({ "ok": true, "hasCard": false }).to_string());
+        return reply(
+            env,
+            serde_json::json!({ "ok": true, "hasCard": false }).to_string(),
+        );
     };
     let card_id = qc.card.as_ref().map(|c| c.id).unwrap_or(0);
     // Cache for answering.
@@ -255,24 +265,22 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_nextCard(
         partial_render: false,
     };
     match run(SVC_CARD_RENDERING, 6, render_req.encode_to_vec()) {
-        Ok(bytes) => match anki_proto::card_rendering::RenderCardResponse::decode(bytes.as_slice()) {
-            Ok(r) => reply(
-                env,
-                {
-                    let (concept, domain) = card_concept_domain(card_id);
-                    serde_json::json!({
-                        "ok": true,
-                        "hasCard": true,
-                        "cardId": card_id,
-                        "question": nodes_to_html(&r.question_nodes),
-                        "answer": nodes_to_html(&r.answer_nodes),
-                        "css": r.css,
-                        "concept": concept,
-                        "domain": domain,
-                    })
-                    .to_string()
-                },
-            ),
+        Ok(bytes) => match anki_proto::card_rendering::RenderCardResponse::decode(bytes.as_slice())
+        {
+            Ok(r) => reply(env, {
+                let (concept, domain) = card_concept_domain(card_id);
+                serde_json::json!({
+                    "ok": true,
+                    "hasCard": true,
+                    "cardId": card_id,
+                    "question": nodes_to_html(&r.question_nodes),
+                    "answer": nodes_to_html(&r.answer_nodes),
+                    "css": r.css,
+                    "concept": concept,
+                    "domain": domain,
+                })
+                .to_string()
+            }),
             Err(_) => reply(env, err("decode render failed")),
         },
         Err(e) => reply(env, err(&e)),
@@ -342,7 +350,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_syncLogin(
     let req = anki_proto::sync::SyncLoginRequest {
         username,
         password,
-        endpoint: if endpoint.is_empty() { None } else { Some(endpoint) },
+        endpoint: if endpoint.is_empty() {
+            None
+        } else {
+            Some(endpoint)
+        },
     };
     match run(SVC_SYNC, 3, req.encode_to_vec()) {
         Ok(bytes) => match anki_proto::sync::SyncAuth::decode(bytes.as_slice()) {
@@ -373,7 +385,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_syncCollection(
     let endpoint = jstr(&mut env, &endpoint);
     let auth = anki_proto::sync::SyncAuth {
         hkey,
-        endpoint: if endpoint.is_empty() { None } else { Some(endpoint) },
+        endpoint: if endpoint.is_empty() {
+            None
+        } else {
+            Some(endpoint)
+        },
         io_timeout_secs: None,
     };
     let req = anki_proto::sync::SyncCollectionRequest {
@@ -412,7 +428,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_fullSync(
     let endpoint = jstr(&mut env, &endpoint);
     let auth = anki_proto::sync::SyncAuth {
         hkey,
-        endpoint: if endpoint.is_empty() { None } else { Some(endpoint) },
+        endpoint: if endpoint.is_empty() {
+            None
+        } else {
+            Some(endpoint)
+        },
         io_timeout_secs: None,
     };
     let req = anki_proto::sync::FullUploadOrDownloadRequest {
@@ -426,6 +446,58 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_fullSync(
     }
 }
 
+/// Wipe local study results on logout so nothing survives on the device: every
+/// card back to new (drops interval/ease/reps/lapses), review log cleared, RPCE
+/// tallies cleared, and the schema bumped so the NEXT sync is a forced full sync.
+/// `resolveFull` always DOWNLOADS on a full-sync conflict, so signing back in
+/// restores the account's data from AnkiWeb rather than uploading this wipe.
+#[no_mangle]
+pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_resetProgress(
+    env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let ids: Vec<i64> = match db_query("SELECT id FROM cards", serde_json::json!([])) {
+        Ok(v) => v
+            .as_array()
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|r| r.as_array()?.first()?.as_i64())
+                    .collect()
+            })
+            .unwrap_or_default(),
+        Err(e) => return reply(env, err(&e)),
+    };
+    if !ids.is_empty() {
+        // Scheduler method 19 = ScheduleCardsAsNew (see _backend_generated.py).
+        let req = anki_proto::scheduler::ScheduleCardsAsNewRequest {
+            card_ids: ids,
+            log: false,
+            restore_position: true,
+            reset_counts: true, // also zero reps/lapses (they feed the memory score)
+            context: None,
+        };
+        if let Err(e) = run(SVC_SCHEDULER, 19, req.encode_to_vec()) {
+            return reply(env, err(&e));
+        }
+    }
+    // Clear the review log + RPCE synced tallies.
+    let cleanup = [
+        "DELETE FROM revlog",
+        "DELETE FROM config WHERE key IN \
+         ('rpce:graded_scenarios','rpce:section2_graded','rpce:sim_responses')",
+    ];
+    for sql in cleanup {
+        if let Err(e) = db_execute(sql) {
+            return reply(env, err(&e));
+        }
+    }
+    // mod_schema: scm just needs to advance past ls to force a full sync.
+    if let Err(e) = db_execute(&format!("UPDATE col SET scm={}", now_millis())) {
+        return reply(env, err(&e));
+    }
+    reply(env, ok())
+}
+
 // ---------------------------------------------------------------------------
 // The three RPCE scores (memory / performance / readiness) + give-up rule.
 // Ported from pylib/anki/rpce/scores.py so the phone shows the SAME honest
@@ -437,11 +509,20 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_fullSync(
 const DOMAINS: [(i64, &str); 7] = [
     (1, "Motions in General and Main Motions"),
     (2, "Subsidiary and Privileged Motions"),
-    (3, "Incidental Motions and Motions that Bring a Question Again Before the Assembly"),
+    (
+        3,
+        "Incidental Motions and Motions that Bring a Question Again Before the Assembly",
+    ),
     (4, "Organization and Conduct of Meetings"),
     (5, "Voting, Nominations, and Elections"),
-    (6, "Being and Serving as a Professional Parliamentarian and Teaching Parliamentary Procedure"),
-    (7, "Boards and Committees, and Writing and Interpreting Bylaws"),
+    (
+        6,
+        "Being and Serving as a Professional Parliamentarian and Teaching Parliamentary Procedure",
+    ),
+    (
+        7,
+        "Boards and Committees, and Writing and Interpreting Bylaws",
+    ),
 ];
 
 const MIN_REVIEWS: i64 = 200;
@@ -458,12 +539,33 @@ fn db_query(sql: &str, args: serde_json::Value) -> Result<serde_json::Value, Str
         "kind": "query", "sql": sql, "args": args, "first_row_only": false,
     });
     let bytes = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
-    let guard = BACKEND.lock().map_err(|_| "backend lock poisoned".to_string())?;
-    let backend = guard.as_ref().ok_or_else(|| "collection not open".to_string())?;
+    let guard = BACKEND
+        .lock()
+        .map_err(|_| "backend lock poisoned".to_string())?;
+    let backend = guard
+        .as_ref()
+        .ok_or_else(|| "collection not open".to_string())?;
     let out = backend
         .run_db_command_bytes(&bytes)
         .map_err(|e| String::from_utf8_lossy(&e).into_owned())?;
     serde_json::from_slice(&out).map_err(|e| e.to_string())
+}
+
+/// Run a single write statement (no params) through the shared backend's db
+/// command. `[[]]` is one empty param row, so the statement runs exactly once.
+fn db_execute(sql: &str) -> Result<(), String> {
+    let payload = serde_json::json!({ "kind": "executemany", "sql": sql, "args": [[]] });
+    let bytes = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    let guard = BACKEND
+        .lock()
+        .map_err(|_| "backend lock poisoned".to_string())?;
+    let backend = guard
+        .as_ref()
+        .ok_or_else(|| "collection not open".to_string())?;
+    backend
+        .run_db_command_bytes(&bytes)
+        .map(|_| ())
+        .map_err(|e| String::from_utf8_lossy(&e).into_owned())
 }
 
 fn recall_estimate(reps: i64, lapses: i64) -> f64 {
@@ -537,7 +639,11 @@ fn range_from(v: &[f64]) -> (Option<f64>, Option<f64>, Option<f64>, &'static str
     }
     let point = mean(v);
     let n = v.len();
-    let se = if n > 1 { pstdev(v) / (n as f64).sqrt() } else { 0.5 };
+    let se = if n > 1 {
+        pstdev(v) / (n as f64).sqrt()
+    } else {
+        0.5
+    };
     let margin = 1.96 * se;
     (
         Some(point),
@@ -600,7 +706,7 @@ fn is_pe_concept(id: &str) -> bool {
 fn concept_coverage() -> (i64, i64, f64, f64) {
     use std::collections::{HashMap, HashSet};
     let _ = MIN_ITEMS_PER_CONCEPT; // superseded by the mastery rule below
-    // Cards + their concept tags (denominator = distinct PE concepts present).
+                                   // Cards + their concept tags (denominator = distinct PE concepts present).
     let rows = match db_query(
         "SELECT c.id, n.tags FROM cards c JOIN notes n ON c.nid = n.id \
          WHERE n.tags LIKE '%rpce::concept::%'",
@@ -628,9 +734,11 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
                     }
                     all.insert(id.to_string());
                     card_concepts.entry(cid).or_default().push(id.to_string());
-                    if let Some(dom) = id.split('.').next().and_then(|s| s.parse::<i64>().ok())
-                    {
-                        domain_concepts.entry(dom).or_default().insert(id.to_string());
+                    if let Some(dom) = id.split('.').next().and_then(|s| s.parse::<i64>().ok()) {
+                        domain_concepts
+                            .entry(dom)
+                            .or_default()
+                            .insert(id.to_string());
                     }
                 }
             }
@@ -710,8 +818,16 @@ fn concept_coverage() -> (i64, i64, f64, f64) {
     let mut num = 0.0;
     let mut denom = 0.0;
     for c in &all {
-        let dom = c.split('.').next().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
-        let n_in = domain_concepts.get(&dom).map(|s| s.len()).unwrap_or(1).max(1) as f64;
+        let dom = c
+            .split('.')
+            .next()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0);
+        let n_in = domain_concepts
+            .get(&dom)
+            .map(|s| s.len())
+            .unwrap_or(1)
+            .max(1) as f64;
         let w = (1.0 / n_dom) / n_in;
         denom += w;
         if let Some((s, n)) = concept_correct.get(c) {
@@ -855,7 +971,7 @@ fn scores_json() -> String {
     } else {
         (
             None,
-            Some(0.0),  // full-uncertainty abstain range (0-100%)
+            Some(0.0), // full-uncertainty abstain range (0-100%)
             Some(1.0),
             "abstain",
             format!(
@@ -865,9 +981,8 @@ fn scores_json() -> String {
         )
     };
 
-    let scenarios = scalar_i64(
-        "SELECT CAST(val AS INTEGER) FROM config WHERE key = 'rpce:graded_scenarios'",
-    );
+    let scenarios =
+        scalar_i64("SELECT CAST(val AS INTEGER) FROM config WHERE key = 'rpce:graded_scenarios'");
 
     // Readiness per section with the give-up rule.
     let section = |needs_scenarios: bool| -> serde_json::Value {
@@ -972,7 +1087,9 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_recordScenario(
     const KEY: &str = "rpce:graded_scenarios";
     // Read current count (missing key -> 0).
     let current = {
-        let req = anki_proto::generic::String { val: KEY.to_string() };
+        let req = anki_proto::generic::String {
+            val: KEY.to_string(),
+        };
         match run(9, 0, req.encode_to_vec()) {
             Ok(bytes) => anki_proto::generic::Json::decode(bytes.as_slice())
                 .ok()
@@ -988,14 +1105,19 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_recordScenario(
         undoable: false,
     };
     match run(9, 1, req.encode_to_vec()) {
-        Ok(_) => reply(env, serde_json::json!({ "ok": true, "count": next }).to_string()),
+        Ok(_) => reply(
+            env,
+            serde_json::json!({ "ok": true, "count": next }).to_string(),
+        ),
         Err(e) => reply(env, err(&e)),
     }
 }
 
 /// Read an integer config value (missing key -> 0), via the syncing config.
 fn config_int(key: &str) -> i64 {
-    let req = anki_proto::generic::String { val: key.to_string() };
+    let req = anki_proto::generic::String {
+        val: key.to_string(),
+    };
     match run(9, 0, req.encode_to_vec()) {
         Ok(bytes) => anki_proto::generic::Json::decode(bytes.as_slice())
             .ok()
@@ -1021,7 +1143,10 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_incrConfig(
         undoable: false,
     };
     match run(9, 1, req.encode_to_vec()) {
-        Ok(_) => reply(env, serde_json::json!({ "ok": true, "count": next }).to_string()),
+        Ok(_) => reply(
+            env,
+            serde_json::json!({ "ok": true, "count": next }).to_string(),
+        ),
         Err(e) => reply(env, err(&e)),
     }
 }
@@ -1034,7 +1159,10 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configInt(
     key: JString,
 ) -> jstring {
     let key = jstr(&mut env, &key);
-    reply(env, serde_json::json!({ "ok": true, "value": config_int(&key) }).to_string())
+    reply(
+        env,
+        serde_json::json!({ "ok": true, "value": config_int(&key) }).to_string(),
+    )
 }
 
 /// Ensure the RPCE deck has NO daily new-card cap and keeps the add-order.
@@ -1067,7 +1195,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_configureDeck(
         Ok(b) => b,
         Err(_) => return reply(env, err("encode deck config")),
     };
-    match run(11, 0, anki_proto::generic::Json { json: out }.encode_to_vec()) {
+    match run(
+        11,
+        0,
+        anki_proto::generic::Json { json: out }.encode_to_vec(),
+    ) {
         Ok(_) => reply(env, ok()),
         Err(e) => reply(env, err(&e)),
     }
@@ -1107,7 +1239,11 @@ pub extern "system" fn Java_com_rpce_speedrun_NativeBridge_unburyDeck(
 
 /// Sanity self-check callable from host tests: confirms engine symbols link.
 pub fn engine_info() -> String {
-    format!("anki {} ({})", anki::version::version(), anki::version::buildhash())
+    format!(
+        "anki {} ({})",
+        anki::version::version(),
+        anki::version::buildhash()
+    )
 }
 
 #[cfg(test)]

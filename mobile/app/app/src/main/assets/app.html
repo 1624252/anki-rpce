@@ -996,10 +996,15 @@ function updateNetStatus(){
 function onSyncBarTap(){ show('sync'); }
 function logout(){
   auth={hkey:'',endpoint:'',lastSync:0}; saveAuth();
+  // Wipe local study results so nothing lingers on the device between users. The
+  // engine forces a full sync, and resolveFull always downloads, so signing back
+  // in restores this account's data from AnkiWeb.
+  try{ Engine.resetProgress(); }catch(e){}
+  try{ localStorage.removeItem('rpce_reviews_count'); }catch(e){}  // local fallback tally
   el('sy-full').classList.add('hidden');
   var st=el('sy-status'); if(st){ st.classList.add('hidden'); st.textContent=''; }
-  updateNetStatus();
-  popup('Logged out','Signed out of AnkiWeb. Your local reviews stay on this device and sync again when you sign back in.','👋');
+  updateNetStatus(); try{ refreshCounts(); }catch(e){}
+  popup('Logged out','Signed out of AnkiWeb. Local results were cleared from this device; signing back in restores them from your account.','👋');
 }
 function syncNow(){
   if(!auth.hkey){ show('sync'); return; }            // need to log in first
