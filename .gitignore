@@ -33,6 +33,10 @@ docs/autoapi/
 /mobile/app/**/build/
 /mobile/app/.gradle/
 /mobile/app/local.properties
+/mobile/.idea/
+# RPCE release signing — NEVER commit the keystore or its passwords
+/mobile/app/rpce-release.jks
+/mobile/app/keystore.properties
 
 # Supabase CLI scratch (link state, versions — not source; may reference project)
 /supabase/

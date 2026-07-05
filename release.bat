@@ -27,8 +27,8 @@ set "ANKIVER=26.05"
 set "TAG=v%VER%-rpce"
 set "MSI=out\installer\dist\speedrun-rpce-%ANKIVER%-win-x64.msi"
 set "MSINAME=speedrun-rpce-%ANKIVER%-win-x64.msi"
-set "APK=mobile\app\app\build\outputs\apk\debug\app-debug.apk"
-set "APKNAME=speedrun-rpce-v%VER%-debug.apk"
+set "APK=mobile\app\app\build\outputs\apk\release\app-release.apk"
+set "APKNAME=speedrun-rpce-%ANKIVER%-android.apk"
 
 REM --- Python (built pyenv, falls back to PATH) ---
 set "PY=out\pyenv\Scripts\python.exe"
@@ -120,9 +120,9 @@ set "PYTHONPATH=out\pylib;pylib"
 set "PYTHONIOENCODING=utf-8"
 "%PY%" pylib\tools\rpce_export_assets.py mobile\app\app\src\main\assets
 if errorlevel 1 (echo asset export failed & popd & exit /b 1)
-call "%GRADLE%" --project-dir mobile/app :app:assembleDebug --no-daemon
+call "%GRADLE%" --project-dir mobile/app :app:assembleRelease --no-daemon
 if errorlevel 1 (echo APK build failed & popd & exit /b 1)
-if not exist "%APK%" (echo APK not found at %APK% & popd & exit /b 1)
+if not exist "%APK%" (echo signed release APK not found at %APK% ^(is mobile\app\keystore.properties present?^) & popd & exit /b 1)
 
 echo.
 echo === [4/6] Pushing commit + tag %TAG% (triggers the RPCE Release workflow) ===
