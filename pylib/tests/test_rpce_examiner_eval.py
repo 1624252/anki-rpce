@@ -31,10 +31,11 @@ def test_positive_and_negative_counts():
     items = ev._items()
     pos = [x for x in items if x[2]]
     neg = [x for x in items if not x[2]]
-    # 32 concepts x 2 reworded answers, 22 labelled wrong.
-    assert len(items) == 64
-    assert len(neg) == len(ev.WRONG) == 22
-    assert len(pos) == 42
+    # 32 paraphrase concepts x 2 answers (22 wrong) + the HARD batch.
+    n_hard_wrong = sum(1 for *_, ok in ev.HARD if not ok)
+    assert len(items) == 64 + len(ev.HARD)
+    assert len(neg) == len(ev.WRONG) + n_hard_wrong
+    assert len(pos) == len(items) - len(neg)
 
 
 def test_reworded_eval_no_longer_pins_at_100_percent():
@@ -45,8 +46,9 @@ def test_reworded_eval_no_longer_pins_at_100_percent():
 
 
 def test_offline_graders_separate_and_are_stable():
-    # Deterministic snapshot so a regression in the offline graders is caught.
+    # Deterministic snapshot (strict bars: acc >=4/5, false-pass >=2/5) so a
+    # regression in the offline graders is caught.
     rubric = ev._score("rubric", examiner.KeywordExaminer())
     keyword = ev._score("keyword", examiner.BaselineExaminer())
-    assert (rubric.pos_pass, rubric.neg_pass) == (34, 5)  # 81% acc / 23% fp
-    assert (keyword.pos_pass, keyword.neg_pass) == (28, 3)  # 67% acc / 14% fp
+    assert (rubric.pos_pass, rubric.neg_pass) == (35, 13)  # 70% acc / 41% fp
+    assert (keyword.pos_pass, keyword.neg_pass) == (14, 10)  # 28% acc / 31% fp

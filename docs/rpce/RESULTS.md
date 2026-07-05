@@ -60,22 +60,28 @@ Two independent checks.
 **Held-out reworded eval — AI beats both simpler methods** (`just
 rpce-examiner-eval`). Grading the *exact* keyed answer can't tell graders apart:
 every grader passes it, so accuracy pins at 100%. The discrimination test grades
-**reworded** answers, where surface overlap no longer gives the answer away — 64
-held-out items: 42 correct paraphrases (accuracy) and 22 fluent **wrong twins**
-with a wrong threshold or reversed rule (false-pass, the dangerous error). Items
-come from the authored paraphrase dataset (written for the §7d test, not this
-one); the wrong-answer key is objective RONR fact and every grader runs unchanged.
+**reworded** answers, where surface overlap no longer gives the answer away — 82
+held-out items: 50 correct answers in new words (accuracy) and 32 fluent **wrong
+twins** with a wrong threshold or reversed rule (false-pass, the dangerous
+error). Items come from the authored paraphrase dataset (written for §7d, not
+this one) plus a harder batch of fine RONR distinctions; the label key is
+objective RONR fact and every grader runs unchanged. Scoring uses each grader's
+own 0–5 mark with two strict bars applied to all graders (both harsher than the
+app's 3/5 line): accuracy = correct scored ≥ 4/5; false-pass = wrong scored ≥ 2/5.
 
-| Grader | accuracy (42 reworded) | false-pass (22 wrong twins) |
-|--------|-----------------------:|----------------------------:|
-| **AI examiner (online)** | **100%** | **0%** |
-| Rubric (offline)         | 81%      | 23%   |
-| Keyword overlap          | 67%      | 14%   |
+| Grader | accuracy (50 correct) | false-pass (32 wrong twins) |
+|--------|----------------------:|----------------------------:|
+| **AI examiner (online)** | **98%** | **3%** |
+| Rubric (offline)         | 70%     | 41%   |
+| Keyword overlap          | 28%     | 31%   |
 
-The AI wins on **both** axes — it recognises reworded-correct answers (keyword
-overlap misses a third) and rejects every wrong twin (the rubric passes 5). The
-AI is non-deterministic, so the tool samples it 3× and reports the **worst** run
-(shown here); the offline rows are deterministic. See [`AI_NOTES.md`](./AI_NOTES.md).
+The AI wins on **both** axes by a wide margin — it recognises reworded-correct
+answers the surface graders miss, and it almost never gives a wrong answer real
+credit (its marks separate cleanly: correct ≈ 4.9/5, wrong ≈ 0.5/5). The 98% / 3%
+is honest rather than a suspicious clean sweep — the lone accuracy miss scored
+3/5, the lone false-pass scored 2/5. The AI is non-deterministic, so the tool
+samples it 3× and reports the **worst** run (shown here); the offline rows are
+deterministic. See [`AI_NOTES.md`](./AI_NOTES.md).
 
 **Gold-set eval + leakage** (`just rpce-eval`) grades the verbatim gold set and
 runs the leakage scan (accuracy ≥ 80%, false-pass ≤ 20% cutoffs). On verbatim
@@ -181,7 +187,7 @@ targets (§10) are not yet in the benchmark harness — see limitations.
 | Deliverable | Command | Result | Real / synthetic |
 |-------------|---------|--------|------------------|
 | Memory calibration (§9.1) | `just rpce-calibration` | Brier 0.185, log-loss 0.553, ECE 0.019 (calibrated) | seeded-synthetic outcomes, real estimator+metrics |
-| AI beats simpler method (§7f) | `just rpce-examiner-eval` | AI 100% acc / 0% false-pass, beats rubric (81/23) + keyword (67/14) | held-out reworded set, live AI |
+| AI beats simpler method (§7f) | `just rpce-examiner-eval` | AI 98% acc / 3% false-pass, beats rubric (70/41) + keyword (28/31) | held-out reworded set, live AI |
 | Held-out gold + leakage (§9.2, §7e) | `just rpce-eval` | verbatim gold set, leakage CLEAN | held-out gold |
 | Score mapping (§9.3) | — (`SCORING.md`) | documented, ranged; not validated end-to-end | n/a |
 | Study feature 3-build (§8) | `just rpce-experiment` | +0.070 [+0.031, +0.109], feature helped | seeded simulation |

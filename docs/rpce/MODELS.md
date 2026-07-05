@@ -45,13 +45,13 @@ nothing.
   copies memory; we report the gap honestly rather than hide it.
 - **Held-out (spec §9 step 2) + beats a simpler method.** Evaluated on held-back
   exam-style questions. `rpce_examiner_eval.py` (`just rpce-examiner-eval`) grades
-  a held-out set of **reworded** answers — 42 correct paraphrases + 22 fluent
-  wrong twins — where the AI examiner beats both simpler graders on accuracy and
-  false-pass (100%/0% vs rubric 81%/23% vs keyword 67%/14%); grading verbatim
-  answers can't tell graders apart (all ~100%). The gold-set checker
-  (`rpce_gold_eval.py`) provides the ≥50-item gold set and a leakage scan so
-  nothing from the test set leaks into training. Numbers + honesty notes in
-  [`RESULTS.md`](./RESULTS.md).
+  a held-out set of **reworded** answers — 50 correct answers in new words + 32
+  fluent wrong twins — scored on strict bars (correct ≥ 4/5, wrong ≥ 2/5). The AI
+  examiner beats both simpler graders on accuracy and false-pass (98%/3% vs rubric
+  70%/41% vs keyword 28%/31%); grading verbatim answers can't tell graders apart
+  (all ~100%). The gold-set checker (`rpce_gold_eval.py`) provides the ≥50-item
+  gold set and a leakage scan so nothing from the test set leaks into training.
+  Numbers + honesty notes in [`RESULTS.md`](./RESULTS.md).
 
 ## 3. Readiness — "what would the student score today, and how sure are we?"
 

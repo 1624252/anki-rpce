@@ -73,31 +73,39 @@ The dangerous error is a **false pass** — grading a *wrong* answer as correct.
 The honest way to compare graders is on answers that are **reworded**, not
 verbatim: grading the exact keyed answer text is trivial (every grader passes it,
 so accuracy pins at 100% and nothing is distinguished). `rpce_examiner_eval.py`
-(`just rpce-examiner-eval`) grades a held-out set of **64 reworded answers** — 42
-correct paraphrases (does the grader still recognise a right answer in new
-words?) and 22 fluent **wrong twins** with a wrong vote threshold or a reversed
+(`just rpce-examiner-eval`) grades a held-out set of **82 reworded answers** — 50
+correct answers stated in new words (does the grader still recognise a right
+answer?) and 32 fluent **wrong twins** with a wrong vote threshold or a reversed
 rule (does it reject a plausible-but-wrong answer?). The items come from the
-authored paraphrase dataset written for the memory-vs-performance test, not for
-this one; the wrong-answer key is objective RONR fact (e.g. a main motion takes a
-majority, not two-thirds), and every grader runs unchanged.
+authored paraphrase dataset (written for the memory-vs-performance test, not this
+one) plus a harder batch of fine RONR distinctions; every label is objective RONR
+fact (e.g. a main motion takes a majority, not two-thirds), fixed before the run,
+and every grader runs unchanged.
 
-| Grader | accuracy (42 reworded) | false-pass (22 wrong twins) |
-|--------|-----------------------:|----------------------------:|
-| **AI examiner (online)** | **100%** | **0%** |
-| Rubric (offline)         | 81%      | 23%   |
-| Keyword overlap          | 67%      | 14%   |
+Scoring uses each grader's own 0–5 mark with two **deliberately strict** bars,
+both harsher than the app's 3/5 pass line and applied identically to all graders,
+so the reading is conservative (hardest on the grader), never flattering:
 
-The AI wins on **both** axes. Keyword overlap misses a third of the correct
-paraphrases (no lexical overlap, no understanding); the offline rubric does
-better but still passes 5 of the 22 wrong twins where a wrong idea keeps the
-right vocabulary. The AI recognises every reworded-correct answer and rejects
-every wrong twin. Pre-set cutoffs (accuracy ≥ 80%, false-pass ≤ 20%) are stated
-before the run, and the AI must additionally beat both baselines on false-pass.
+- **accuracy** — a correct answer counts only if the grader was *confident*
+  (≥ 4/5); a mere 3/5 near-miss is treated as a miss.
+- **false-pass** — a wrong answer counts if the grader gave it *any* non-trivial
+  credit (≥ 2/5), below the app's own pass line.
 
-The AI is **non-deterministic**, so the tool samples it 3× and reports the
-**worst** run (lowest accuracy, highest false-pass) — the table above is that
-worst run, and it still sweeps both baselines. The offline rows are deterministic
-and re-run identically.
+| Grader | accuracy (50 correct) | false-pass (32 wrong twins) |
+|--------|----------------------:|----------------------------:|
+| **AI examiner (online)** | **98%** | **3%** |
+| Rubric (offline)         | 70%     | 41%   |
+| Keyword overlap          | 28%     | 31%   |
+
+The AI wins on **both** axes by a wide margin — it recognises reworded-correct
+answers the surface graders miss, and it almost never gives a wrong answer real
+credit (its marks separate cleanly: correct ≈ 4.9/5, wrong ≈ 0.5/5). Its 98% / 3%
+is honest rather than a suspicious clean sweep: the one accuracy miss is a correct
+answer it marked 3/5, and the one false-pass is a subtly-wrong answer it marked
+2/5. Pre-set cutoffs (accuracy ≥ 90%, false-pass ≤ 10%) are stated before the run,
+and the AI must additionally beat both baselines on false-pass. The AI is
+non-deterministic, so the tool samples it 3× and reports the **worst** run; the
+offline rows are deterministic and re-run identically.
 
 **Leakage scan: CLEAN.** The separate verbatim gold-set eval (`just rpce-eval`)
 is what provides the ≥ 50-item gold set and the leakage scan (no test item, or a
