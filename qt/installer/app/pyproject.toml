@@ -73,6 +73,11 @@ entitlement."com.apple.security.device.audio-input" = true
 supported = false
 
 [tool.briefcase.app.anki.windows]
+# Clear per-user study data (collection/account in %APPDATA%\Anki2, RPCE config
+# in %USERPROFILE%\.rpce) on a genuine uninstall so a reinstall starts fresh.
+# Guarded against version upgrades in the WiX template (see the
+# PreUninstallAction condition in windows-template).
+pre_uninstall_script = "pre_uninstall.bat"
 
 [tool.briefcase.app.anki.iOS]
 supported = false

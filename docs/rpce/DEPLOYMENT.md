@@ -125,6 +125,28 @@ Output lands in `out/installer/dist`:
 Install it on a clean VM to verify it runs without dev tools — this is the
 spec's "runs on a clean machine" proof.
 
+### 2d. Uninstall clears saved data (fresh reinstall)
+
+Study data lives **outside** the installed program files, so a stock uninstall
+would leave it behind and a reinstall would resurrect the old collection +
+AnkiWeb account. The data locations (Windows):
+
+- `%APPDATA%\Anki2` — collection, profiles, and the AnkiWeb sync login.
+- `%USERPROFILE%\.rpce` — RPCE config (AI on/off flag, proxy URL, API key).
+
+The Windows MSI runs `qt/installer/app/pre_uninstall.bat` on uninstall to remove
+both, so a later install starts fresh. It is wired via `pre_uninstall_script` in
+`qt/installer/app/pyproject.toml` and the WiX `PreUninstallAction`, conditioned
+`REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE` — so a **version upgrade keeps your
+data**; only a real uninstall clears it. For the default per-user install the
+script runs in your user context, so `%APPDATA%`/`%USERPROFILE%` resolve to you.
+
+> This takes effect in **rebuilt** installers (`tools/build-installer` /
+> `release.bat`); an already-installed MSI has no such hook. macOS (drag-to-
+> Trash) and the Linux zip have no uninstaller to hook — remove
+> `~/Library/Application Support/Anki2` / `~/.local/share/Anki2` and `~/.rpce`
+> by hand there.
+
 ---
 
 ## 3. Phone (Android first)

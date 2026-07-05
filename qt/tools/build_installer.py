@@ -243,6 +243,7 @@ def build(args: argparse.Namespace) -> None:
     )
     prune_webengine_locales(out_dir)
     bundle_rpce_data(out_dir)
+    guard_pre_uninstall_against_upgrades(out_dir)
     compile_sources(out_dir, version)
     if not args.skip_fcitx:
         bundle_fcitx(out_dir)  # pragma: no cover
@@ -268,9 +269,42 @@ def get_signing_args() -> list[str]:
     return ["--identity", identity] if identity else ["--adhoc-sign"]
 
 
+def guard_pre_uninstall_against_upgrades(out_dir: Path) -> None:
+    """Only wipe user data on a *real* uninstall, not a version upgrade.
+
+    ``pre_uninstall.bat`` (wired via ``pre_uninstall_script`` in the app's
+    pyproject) clears ``%APPDATA%\\Anki2`` + ``%USERPROFILE%\\.rpce`` so a
+    reinstall starts fresh. The Briefcase Windows template fires that
+    PreUninstallAction whenever ``REMOVE="ALL"`` — which is *also* true when a
+    MajorUpgrade removes the old product, so an in-place upgrade would wipe the
+    user's data. The template is a pinned submodule we can't edit reproducibly,
+    so we patch the generated WiX here (we own this build step): add
+    ``AND NOT UPGRADINGPRODUCTCODE`` to the condition. Idempotent and a no-op
+    off Windows / if the action isn't present.
+    """
+    if sys.platform != "win32":
+        return
+    import re
+
+    guard = " AND NOT UPGRADINGPRODUCTCODE"
+    app_dir_win = out_dir / "build" / "anki" / "windows" / "app"
+    pattern = re.compile(
+        r'(Action="PreUninstallAction"[^>]*?Condition=\')REMOVE="ALL"(\')'
+    )
+    for wxs in app_dir_win.glob("*.wxs"):
+        text = wxs.read_text(encoding="utf-8")
+        if "UPGRADINGPRODUCTCODE" in text:
+            continue  # already guarded
+        new_text, n = pattern.subn(rf'\1REMOVE="ALL"{guard}\2', text)
+        if n:
+            wxs.write_text(new_text, encoding="utf-8")
+            print(f"Patched upgrade-guard into {wxs.name} ({n} site)")
+
+
 def package(args: argparse.Namespace) -> None:
     version = args.version
     config_args = get_briefcase_config_args(args)
+    guard_pre_uninstall_against_upgrades(out_dir)
     shutil.rmtree(out_dir / "dist", ignore_errors=True)
     subprocess.check_call(
         [
