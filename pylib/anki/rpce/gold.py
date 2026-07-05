@@ -65,6 +65,67 @@ def parse_gold(text: str) -> list[GoldQ]:
     return gold
 
 
+def authored_gold_questions() -> list[GoldQ]:
+    """Known-correct MCQs from the authored bank
+    (``data/rpce_authored_questions.json``), converted to gold questions and
+    **labelled with their source**. Used to augment the parsed sample set to the
+    >=50 gold items §7f asks for. These are grading references only — never added
+    to :func:`training_texts` (the leakage scan), and :func:`augmented_gold`
+    additionally drops any that are near-copies of study content."""
+    import json
+
+    from ._paths import data_path
+
+    path = data_path("rpce_authored_questions.json")
+    if path is None:
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    out: list[GoldQ] = []
+    for q in data.get("questions", []):
+        if q.get("kind") != "mcq":
+            continue
+        opts = q.get("options") or []
+        idx = q.get("answer")
+        if not isinstance(idx, int) or not (0 <= idx < len(opts)):
+            continue
+        out.append(
+            GoldQ(
+                domain=f"Authored bank (rpce_authored_questions.json) D{q.get('domain')}",
+                prompt=q.get("stem", "").strip(),
+                correct=opts[idx].strip(),
+                distractors=[o.strip() for i, o in enumerate(opts) if i != idx],
+            )
+        )
+    return out
+
+
+def augmented_gold(text: str, *, target: int = 50) -> list[GoldQ]:
+    """Gold set of >=``target`` known-correct Q&A (spec §7f).
+
+    Starts from the parsed official sample questions; if that is short of
+    ``target`` it appends authored-bank MCQs — clearly labelled by source —
+    skipping any that near-duplicate study content (so the leakage scan stays
+    clean) or an item already selected. If neither source can reach ``target``,
+    returns everything available (the caller reports the honest count)."""
+    selected = parse_gold(text)
+    if len(selected) >= target:
+        return selected
+    train = training_texts()
+    have = [g.prompt for g in selected]
+    for gq in authored_gold_questions():
+        if len(selected) >= target:
+            break
+        if not gq.prompt or not gq.correct:
+            continue
+        if any(examiner.jaccard(gq.prompt, t) >= 0.8 for t in train):
+            continue  # would leak into study content
+        if any(examiner.jaccard(gq.prompt, p) >= 0.8 for p in have):
+            continue  # duplicate of an already-selected gold item
+        selected.append(gq)
+        have.append(gq.prompt)
+    return selected
+
+
 def training_texts() -> list[str]:
     """Our study content — the 'train' side of the leakage scan."""
     texts: list[str] = []

@@ -1,0 +1,43 @@
+{
+  "metric": "accuracy on new, reworded scenario questions",
+  "hypothesis": "Rotating a concept through escalating formats (Transfer Ladder ON) yields higher accuracy on NEW, reworded scenario questions than drilling one format (ladder OFF) or plain card memorisation, at equal study time, because varied practice builds transferable understanding while single-format drill builds format familiarity that does not transfer (Spiky POV 2; Insight 1).",
+  "honesty": "This is a DETERMINISTIC, SEEDED SIMULATED learner demonstrating a fair, re-runnable 3-build test at EQUAL study time - NOT real students. The transfer advantage is a modelled parameter; real learner data is needed to draw a substantive conclusion.",
+  "seed": 20260705,
+  "n_learners": 40,
+  "n_concepts": 32,
+  "study_steps_per_concept": 6,
+  "budget_per_arm": {
+    "full": 192,
+    "ablation": 192,
+    "plain": 192
+  },
+  "equal_study_time": true,
+  "arms": {
+    "full": {
+      "mean": 0.853125,
+      "low": 0.8269039021290547,
+      "high": 0.8793460978709453
+    },
+    "ablation": {
+      "mean": 0.783203125,
+      "low": 0.7540631745455125,
+      "high": 0.8123430754544875
+    },
+    "plain": {
+      "mean": 0.714453125,
+      "low": 0.6878634614051717,
+      "high": 0.7410427885948283
+    }
+  },
+  "feature_effect_full_minus_ablation": {
+    "mean": 0.06992187500000002,
+    "low": 0.030721330538887287,
+    "high": 0.10912241946111276
+  },
+  "vs_plain_full_minus_plain": {
+    "mean": 0.138671875,
+    "low": 0.10132811804326317,
+    "high": 0.17601563195673683
+  },
+  "feature_helped": true
+}

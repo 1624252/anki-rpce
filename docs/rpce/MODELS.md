@@ -24,10 +24,12 @@ nothing.
   retrievability when FSRS is on; a Laplace-smoothed reps/lapses estimate
   otherwise). The **range** is the spread of that per-card distribution, not a
   fabricated interval.
-- **Calibration (spec §9 step 1).** `memory_calibration` reports **Brier score**
-  and **log-loss** of past predictions vs. actual recall on held-out reviews —
-  when it says 80%, the student should recall ~80% of the time. Shown on the
-  dashboard.
+- **Calibration (spec §9 step 1).** `memory_calibration` / `metrics` report
+  **Brier score**, **log-loss**, and **ECE** of past predictions vs. actual
+  recall on held-out reviews — when it says 80%, the student should recall ~80%
+  of the time. Re-run it with `just rpce-calibration`, which writes the numbers +
+  a reliability-diagram to `docs/rpce/artifacts/calibration.{svg,json}`; results
+  and honesty caveats are in [`RESULTS.md`](./RESULTS.md).
 - **Give up.** Abstains with no reviewed cards.
 
 ## 2. Performance — "can the student answer a NEW exam-style question?"

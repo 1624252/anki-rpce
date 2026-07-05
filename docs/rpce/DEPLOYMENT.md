@@ -240,9 +240,45 @@ session; open **Readiness** for the three scores.
 
 ### 3e. Signed APK for sideload testing
 
-```bash
-./gradlew assembleRelease     # then sign with your keystore (apksigner)
-adb install -r app-release.apk
+Release signing is **wired into Gradle**. `app/build.gradle.kts` reads a
+`mobile/app/keystore.properties` file (git-ignored) and, when present, signs the
+release build with the keystore it points at. If the file is absent (CI, a fresh
+clone), the release build is simply left unsigned — nothing breaks.
+
+The keystore (`mobile/app/rpce-release.jks`) and `keystore.properties` are
+**local and git-ignored** — they are never committed. To (re)create them:
+
+```powershell
+$jbr = "C:\Program Files\Android\Android Studio\jbr"
+cd mobile/app
+# 1. Generate a keystore (dev passwords below are fine for a course sideload
+#    build; a production/store build must use a PRIVATE keystore with real
+#    secrets kept out of the repo).
+& "$jbr\bin\keytool.exe" -genkeypair -v -keystore rpce-release.jks -alias rpce `
+  -keyalg RSA -keysize 2048 -validity 10000 `
+  -storepass rpcerelease -keypass rpcerelease `
+  -dname "CN=Speedrun for the RPCE, OU=RPCE, O=RPCE, C=US"
+```
+
+Then create `mobile/app/keystore.properties` (git-ignored) with:
+
+```properties
+storeFile=rpce-release.jks
+storePassword=<store password>
+keyAlias=rpce
+keyPassword=<key password>
+```
+
+Build and verify the signed APK:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+cd mobile/app
+./gradlew :app:assembleRelease --no-daemon
+# -> app/build/outputs/apk/release/app-release.apk
+& "$env:LOCALAPPDATA\Android\Sdk\build-tools\34.0.0\apksigner.bat" `
+  verify --print-certs app/build/outputs/apk/release/app-release.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 This signed APK is the deliverable you sideload to test on a real device.
@@ -303,12 +339,16 @@ still score with it off.
   `retrieve(...)`, citing a passage or **abstaining** when none is found. This is
   both the AI-off fallback and the baseline an LLM must beat (spec §7f). The
   eval harness (`evaluate`) and leakage scanner (`find_leaks`) also run offline.
-- **LLM grader _(planned)_:** an LLM-backed grader implements the same `Examiner`
-  interface. Provide the provider API key via env/local config (never commit it);
-  with no key, the app uses the baseline above.
-- **In-app grader:** the desktop and phone Section II / Simulation screens use an
-  **offline placeholder** grader (keyword overlap) — no API calls yet — while
-  still showing the model ruling with its RONR citation + verbatim quote.
+- **LLM grader:** `LLMExaminer` (wrapped by `AutoExaminer`) implements the same
+  `Examiner` interface with an online model. Provide the key via env/local config
+  (never commit it — see `AI_NOTES.md` "Safety"); with no key it falls back to the
+  baseline above. See [`AI_NOTES.md`](./AI_NOTES.md) for what the AI does, the
+  traceable-source rule, and the measured beat-the-baseline eval.
+- **In-app grader:** the desktop Section II / Simulate screens call
+  `examiner.AutoExaminer()` (`qt/aqt/rpce.py`) — the online AI grader when a key
+  is set and AI is on (**Tools ▸ "Set AI examiner key…"**), otherwise the offline
+  keyword grader; either way it shows the ruling with its RONR citation + verbatim
+  quote. The phone is offline-only by design and always uses the keyword grader.
 - **Grounding:** retrieval runs over `data/roberts_rules_of_order_12th_edition.md`
   (regenerate per §1); every reply cites that text or abstains. Candidates are
   **not** required to cite — grading is on accuracy.
@@ -374,4 +414,7 @@ points-at-stake queue, flagging any result over its spec target.
 - [ ] A card reviewed on the phone appears on desktop after sync (and the reverse)
 - [ ] Offline-then-sync works; same-card conflict resolves per the documented rule
 - [ ] `just rpce-sync-test` prints `SYNC OK` (two-way merge + conflict, temp local server)
-- [ ] _(planned)_ LLM-backed examiner grades with an API key (AI-off still scores)
+- [ ] `just rpce-calibration` writes Brier/log-loss/ECE + `docs/rpce/artifacts/calibration.svg`
+- [ ] `just rpce-experiment` runs the 3-build study-feature test (equal study time)
+- [ ] `just rpce-card-check` classifies 50 cards into 3 buckets and blocks on the cutoff
+- [ ] LLM-backed examiner grades with an API key set (AI-off still scores) — see `AI_NOTES.md`

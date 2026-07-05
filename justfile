@@ -173,6 +173,18 @@ rpce-paraphrase:
 rpce-crash:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_crash_test.py
 
+# RPCE: memory-model calibration on held-out reviews (spec §9 Step 1) — Brier/log-loss/ECE + reliability-diagram SVG.
+rpce-calibration:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_calibration.py
+
+# RPCE: 3-build study-feature experiment (spec §8) — Transfer Ladder, equal study time, honest null-capable.
+rpce-experiment:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_experiment_run.py
+
+# RPCE: the AI card check (spec §7f) — gold set >=50 + 3-bucket card classifier with blocking cutoff.
+rpce-card-check:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_card_check.py
+
 # Build documentation site
 docs:
     {{ uv }} run --group docs sphinx-build -b html docs out/docs/html

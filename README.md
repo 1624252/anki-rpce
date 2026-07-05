@@ -112,5 +112,11 @@ Every claim has a one-command, deterministic re-run:
 | Coverage map / abstain (§7c) | shown on the dashboard; `just test-py` covers `scores` |
 | Memory→performance paraphrase gap (§7d) | `just rpce-paraphrase` |
 | AI card gold-set check + leakage scan (§7e/§7f) | `just rpce-eval` |
+| AI card check: gold set ≥50 + 3-bucket classifier (§7f) | `just rpce-card-check` |
+| Memory calibration Brier/log-loss/ECE + chart (§9.1) | `just rpce-calibration` |
+| Study-feature 3-build test, equal study time (§8) | `just rpce-experiment` |
 | Crash / offline (§7g) | `just rpce-crash` |
 | Speed benchmark p50/p95/worst (§7h) | `just bench` (add `--cards 50000`) |
+
+All results, with numbers and honest limitations, are consolidated in
+**`docs/rpce/RESULTS.md`**. Per-model write-ups are in `docs/rpce/MODELS.md`.
