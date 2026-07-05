@@ -112,6 +112,7 @@ Every claim has a one-command, deterministic re-run:
 | Coverage map / abstain (§7c) | shown on the dashboard; `just test-py` covers `scores` |
 | Memory→performance paraphrase gap (§7d) | `just rpce-paraphrase` |
 | AI card gold-set check + leakage scan (§7e/§7f) | `just rpce-eval` |
+| AI examiner beats rubric + keyword on reworded answers (§7f) | `just rpce-examiner-eval` |
 | AI card check: gold set ≥50 + 3-bucket classifier (§7f) | `just rpce-card-check` |
 | Memory calibration Brier/log-loss/ECE + chart (§9.1) | `just rpce-calibration` |
 | Study-feature 3-build test, equal study time (§8) | `just rpce-experiment` |

@@ -18,6 +18,7 @@ just rpce-paraphrase     # memory-vs-performance gap (spec §7d)
 just rpce-experiment     # 3-build study-feature test at equal study time (spec §8)
 just rpce-card-check     # AI card check: gold set >=50 + 3-bucket classifier (spec §7f)
 just rpce-eval           # gold-set examiner eval + leakage scan (spec §7e/§7f)
+just rpce-examiner-eval  # held-out reworded eval: AI beats rubric + keyword (spec §7f)
 just bench               # speed p50/p95/worst (spec §7h/§10); --cards 50000 for reference size
 ```
 
@@ -56,19 +57,36 @@ byte-for-byte reproducibility. No real-student claim is made.
 
 Two independent checks.
 
-**Gold-set examiner eval** (`just rpce-eval`) grades a held-out gold set and
-reports accuracy on known-correct answers and false-pass on distractors against
-a pre-set cutoff (accuracy ≥ 80%, false-pass ≤ 20%), plus a leakage scan. On the
-gold set (see [`AI_NOTES.md`](./AI_NOTES.md) for the full table): the AI examiner
-grades held-out items at 100% accuracy with a ~3–19% (non-deterministic)
-false-pass, beating the deterministic keyword baseline; the gold-tuned rubric row
-is labeled as a fitted ceiling, not a held-out result. Leakage scan: **CLEAN**.
+**Held-out reworded eval — AI beats both simpler methods** (`just
+rpce-examiner-eval`). Grading the *exact* keyed answer can't tell graders apart:
+every grader passes it, so accuracy pins at 100%. The discrimination test grades
+**reworded** answers, where surface overlap no longer gives the answer away — 64
+held-out items: 42 correct paraphrases (accuracy) and 22 fluent **wrong twins**
+with a wrong threshold or reversed rule (false-pass, the dangerous error). Items
+come from the authored paraphrase dataset (written for the §7d test, not this
+one); the wrong-answer key is objective RONR fact and every grader runs unchanged.
 
-**Gold set size.** Now ≥ 50 (spec §7f): 36 parsed from the official sample
-questions plus 14 from the authored bank, labeled by source. Caveat: those 14
-also seed the shipped deck; they are held out of the leakage-scanned training
-text and are disjoint from the cards being classified, so the card check has no
-train/test contamination, but they are not held out from the deck itself.
+| Grader | accuracy (42 reworded) | false-pass (22 wrong twins) |
+|--------|-----------------------:|----------------------------:|
+| **AI examiner (online)** | **100%** | **0%** |
+| Rubric (offline)         | 81%      | 23%   |
+| Keyword overlap          | 67%      | 14%   |
+
+The AI wins on **both** axes — it recognises reworded-correct answers (keyword
+overlap misses a third) and rejects every wrong twin (the rubric passes 5). The
+AI is non-deterministic, so the tool samples it 3× and reports the **worst** run
+(shown here); the offline rows are deterministic. See [`AI_NOTES.md`](./AI_NOTES.md).
+
+**Gold-set eval + leakage** (`just rpce-eval`) grades the verbatim gold set and
+runs the leakage scan (accuracy ≥ 80%, false-pass ≤ 20% cutoffs). On verbatim
+answers all graders score ~100% accuracy — this is the gold-set-size + leakage
+evidence, not the discrimination test above. Leakage scan: **CLEAN**.
+
+**Gold set size.** ≥ 50 (spec §7f): 36 parsed from the official sample questions
+plus 14 from the authored bank, labeled by source. Caveat: those 14 also seed the
+shipped deck; they are held out of the leakage-scanned training text and are
+disjoint from the cards being classified, so the card check has no train/test
+contamination, but they are not held out from the deck itself.
 
 ## 3. Score mapping / readiness (spec §9 Step 3)
 
@@ -163,7 +181,8 @@ targets (§10) are not yet in the benchmark harness — see limitations.
 | Deliverable | Command | Result | Real / synthetic |
 |-------------|---------|--------|------------------|
 | Memory calibration (§9.1) | `just rpce-calibration` | Brier 0.185, log-loss 0.553, ECE 0.019 (calibrated) | seeded-synthetic outcomes, real estimator+metrics |
-| Held-out performance (§9.2, §7f) | `just rpce-eval` | AI 100% acc / ~3–19% false-pass, beats keyword; leakage CLEAN | held-out gold |
+| AI beats simpler method (§7f) | `just rpce-examiner-eval` | AI 100% acc / 0% false-pass, beats rubric (81/23) + keyword (67/14) | held-out reworded set, live AI |
+| Held-out gold + leakage (§9.2, §7e) | `just rpce-eval` | verbatim gold set, leakage CLEAN | held-out gold |
 | Score mapping (§9.3) | — (`SCORING.md`) | documented, ranged; not validated end-to-end | n/a |
 | Study feature 3-build (§8) | `just rpce-experiment` | +0.070 [+0.031, +0.109], feature helped | seeded simulation |
 | Paraphrase gap (§7d) | `just rpce-paraphrase` | +0.214 (memory > performance) | authored + computed |

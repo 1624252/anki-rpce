@@ -161,6 +161,11 @@ bench *args:
 rpce-eval:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_gold_eval.py
 
+# RPCE: held-out reworded eval — AI examiner vs rubric vs keyword on paraphrased
+# answers + hard wrong twins (spec §7f); shows the AI beats both simpler methods.
+rpce-examiner-eval:
+    {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_examiner_eval.py
+
 # RPCE: two-way sync round-trip proof (spec §7b) — spins up a temp local sync server.
 rpce-sync-test:
     {{ if os() == "windows" { "out\\pyenv\\Scripts\\python" } else { "out/pyenv/bin/python" } }} pylib/tools/rpce_sync_test_run.py

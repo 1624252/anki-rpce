@@ -355,6 +355,10 @@ still score with it off.
 - **Gold-set eval:** `just rpce-eval` scores the examiner against the official
   RPCE sample questions (accuracy + false-pass rate vs. a preset cutoff) and runs
   the leakage scan; a failing card is blocked (spec §7e/§7f).
+- **Beats a simpler method:** `just rpce-examiner-eval` grades a held-out set of
+  reworded answers + wrong twins; the online AI examiner beats both the offline
+  rubric and keyword overlap on accuracy and false-pass (100%/0% vs 81%/23% vs
+  67%/14%). See `docs/rpce/AI_NOTES.md` / `RESULTS.md` (spec §7f).
 
 ---
 
